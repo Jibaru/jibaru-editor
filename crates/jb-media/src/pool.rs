@@ -107,12 +107,15 @@ impl Ring {
     }
 }
 
+type ImageKey = (String, Option<(u32, u32)>);
+type VideoCheckout = (Arc<Mutex<VideoDecoder>>, Arc<Mutex<Ring>>);
+
 #[derive(Default)]
 struct State {
     assets: HashMap<String, Asset>,
     video: Vec<VideoSlot>,
     audio: Vec<AudioSlot>,
-    images: HashMap<(String, Option<(u32, u32)>), (VideoFrame, u64)>,
+    images: HashMap<ImageKey, (VideoFrame, u64)>,
     image_bytes: usize,
 }
 
@@ -278,7 +281,7 @@ impl MediaPool {
         path: &Path,
         t: Ticks,
         max_size: Option<(u32, u32)>,
-    ) -> Result<(Arc<Mutex<VideoDecoder>>, Arc<Mutex<Ring>>)> {
+    ) -> Result<VideoCheckout> {
         {
             let mut st = self.state.lock().unwrap();
             let now = self.tick();

@@ -76,7 +76,7 @@ impl<'a> CpuCompositor<'a> {
         let (w, h) = (self.width as usize, self.height as usize);
         let [y, u, v] = yuv709(color);
         let mut data = vec![y; frame_size(PixelFormat::Nv12, self.width, self.height)];
-        for px in data[w * h..].chunks_exact_mut(2) {
+        for px in data[w * h..].as_chunks_mut::<2>().0 {
             px[0] = u;
             px[1] = v;
         }

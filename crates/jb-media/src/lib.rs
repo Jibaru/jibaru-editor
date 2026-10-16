@@ -11,6 +11,10 @@
 //! FFmpeg is linked dynamically and only LGPL components are used (no
 //! libx264/libx265).
 
+// Bindgen constant types differ between platforms, so some casts are
+// no-ops on one OS and required on another.
+#![allow(clippy::unnecessary_cast)]
+
 pub mod audio;
 pub mod cache;
 pub mod convert;

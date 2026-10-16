@@ -15,6 +15,8 @@
 //! The renderer is a plain closure so this crate does not depend on the GPU
 //! compositor; [`CpuCompositor`] is a simple CPU stand-in for tests.
 
+#![allow(clippy::unnecessary_cast)]
+
 mod cpu;
 
 pub use cpu::CpuCompositor;

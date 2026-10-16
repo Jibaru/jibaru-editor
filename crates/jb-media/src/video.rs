@@ -142,6 +142,21 @@ impl VideoDecoder {
     /// Frame displayed at `t` (source time), scaled to fit `max_size`.
     /// Past the end of the stream the last frame is held.
     pub fn frame_at(&mut self, t: Ticks, max_size: Option<(u32, u32)>, mode: DecodeMode) -> Result<Option<VideoFrame>> {
+        match self.frame_at_inner(t, max_size, mode) {
+            Err(e) if self.hw_name.is_some() => {
+                // Hardware decoders can fail mid-stream (unsupported profile,
+                // lost device): continue in software.
+                let path = self.info.path.clone();
+                let stats = self.stats;
+                *self = Self::open(&path, false).with_context(|| format!("software fallback after: {e}"))?;
+                self.stats = stats;
+                self.frame_at_inner(t, max_size, mode)
+            }
+            r => r,
+        }
+    }
+
+    fn frame_at_inner(&mut self, t: Ticks, max_size: Option<(u32, u32)>, mode: DecodeMode) -> Result<Option<VideoFrame>> {
         let t = t.max(0);
         if let Some(last) = &self.last_output {
             let same_size = self.last_output_size == max_size;

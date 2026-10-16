@@ -39,6 +39,8 @@ jobs:
 
       - run: cargo build --workspace --all-targets
       - run: cargo test --workspace
+      - name: Report hardware decode / encode support
+        run: cargo run -p jb-media --example hwinfo
 
   app-frontend:
     strategy:

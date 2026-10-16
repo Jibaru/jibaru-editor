@@ -107,7 +107,7 @@ impl Waveform {
         let n = u64::from_le_bytes(bytes[12..20].try_into()?) as usize;
         let body = bytes.get(20..20 + n * 4).context("truncated waveform file")?;
         let (mut min, mut max) = (Vec::with_capacity(n), Vec::with_capacity(n));
-        for c in body.chunks_exact(4) {
+        for c in body.as_chunks::<4>().0 {
             min.push(i16::from_le_bytes([c[0], c[1]]) as f32 / 32767.0);
             max.push(i16::from_le_bytes([c[2], c[3]]) as f32 / 32767.0);
         }

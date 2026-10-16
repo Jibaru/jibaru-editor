@@ -40,13 +40,15 @@ pub(crate) fn device(t: ffi::AVHWDeviceType) -> Option<*mut ffi::AVBufferRef> {
     let mut guard = DEVICES.lock().unwrap();
     let map = guard.get_or_insert_with(HashMap::new);
     let key = t as i32;
-    if !map.contains_key(&key) {
-        let mut ctx: *mut ffi::AVBufferRef = std::ptr::null_mut();
-        let ret = unsafe { ffi::av_hwdevice_ctx_create(&mut ctx, t, std::ptr::null(), std::ptr::null_mut(), 0) };
-        // Remember failures too (null) so we do not retry on every open.
-        map.insert(key, DeviceRef(if ret < 0 { std::ptr::null_mut() } else { ctx }));
-    }
-    let d = map.get(&key)?.0;
+    let d = map
+        .entry(key)
+        .or_insert_with(|| {
+            let mut ctx: *mut ffi::AVBufferRef = std::ptr::null_mut();
+            let ret = unsafe { ffi::av_hwdevice_ctx_create(&mut ctx, t, std::ptr::null(), std::ptr::null_mut(), 0) };
+            // Remember failures too (null) so we do not retry on every open.
+            DeviceRef(if ret < 0 { std::ptr::null_mut() } else { ctx })
+        })
+        .0;
     if d.is_null() {
         None
     } else {
