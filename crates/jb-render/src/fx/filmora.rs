@@ -73,18 +73,24 @@ impl Effect for AdjustColorFx {
 
 /// Filmora's exposure slider, fitted on its exports of the user projects
 /// (u_exposure 45, 46, 60, 92 and 100 against the same frames without the
-/// effect): in display space `y = 1 - (1 - x)^k` with
-/// `k = 1 + 0.01256 * s^1.244` (k = 2.43, 3.06, 4.47, 4.86 at 45, 60, 92, 100,
-/// chosen so the mean level of each measured clip matches Filmora);
-/// negative values darken with the mirrored `x^k` (not observed).
+/// effect): in display space `y = 1 - (1 - min(g x, 1))^k` with
+/// `k = 1 + 0.01256 * min(s, 50)^1.244` (2.43 at 45, 2.55 from 50 on) and
+/// `g = 1 + 0.0145 * max(s - 50, 0)` (1.15 at 60, 1.61 at 92, 1.73 at 100):
+/// above 50 the slider stops bending the curve and scales the input
+/// instead, so highlights clip (at x ≈ 0.58 for 100). The input already
+/// carries the decode-side level offset (`RenderOptions::input_bias`),
+/// which the gain amplifies per channel as in Filmora. Negative values
+/// darken with the mirrored `x^k` (not observed).
 const EXPOSURE: &str = r#"
 fn fx(uv: vec2f) -> vec4f {
     let d = to_disp(sa(uv));
     let s = p_exposure();
-    let k = 1.0 + 0.01256 * pow(abs(s), 1.244);
+    let a = abs(s);
+    let k = 1.0 + 0.01256 * pow(min(a, 50.0), 1.244);
+    let g = 1.0 + 0.0145 * max(a - 50.0, 0.0);
     let x = clamp(d.rgb, vec3f(0.0), vec3f(1.0));
     var y = pow(x, vec3f(k));
-    if (s > 0.0) { y = 1.0 - pow(1.0 - x, vec3f(k)); }
+    if (s > 0.0) { y = 1.0 - pow(1.0 - min(g * x, vec3f(1.0)), vec3f(k)); }
     return from_disp(vec4f(y, d.a));
 }
 "#;

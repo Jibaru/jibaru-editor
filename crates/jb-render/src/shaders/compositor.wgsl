@@ -84,6 +84,7 @@ fn prep_sample(suv: vec2f) -> vec4f {
     if (fmt == 3) { return sa(suv); }
     if (fmt == 0) {
         let c = sa(suv);
+        // Still images: no input offset (Filmora decodes them without it).
         var rgb = c.rgb;
         if (is_linear()) { rgb = srgb_to_lin(rgb); }
         return vec4f(rgb * c.a, c.a);
@@ -101,7 +102,8 @@ fn prep_sample(suv: vec2f) -> vec4f {
         let c = sb(suv);
         cbcr = vec2f(c.r * 255.0 + c.g * 65280.0, c.b * 255.0 + c.a * 65280.0) / 65535.0;
     }
-    var rgb = clamp(ycbcr_to_rgb(y, cbcr.x, cbcr.y, i32(u.e1.y), u.e1.z > 0.5), vec3f(0.0), vec3f(1.0));
+    // p[0].rgb: input level offset (RenderOptions::input_bias).
+    var rgb = clamp(ycbcr_to_rgb(y, cbcr.x, cbcr.y, i32(u.e1.y), u.e1.z > 0.5) + u.p[0].rgb, vec3f(0.0), vec3f(1.0));
     let transfer = i32(u.e1.w);
     if (transfer != 0) { rgb = hdr_to_sdr(rgb, transfer); }
     if (is_linear()) { rgb = srgb_to_lin(rgb); }

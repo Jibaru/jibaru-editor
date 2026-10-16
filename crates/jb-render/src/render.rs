@@ -32,19 +32,33 @@ pub struct RenderOptions {
     /// Offset added to the output RGB (8-bit code values) after compositing.
     /// Defaults to [`FILMORA_OUTPUT_BIAS`]; `[0.0; 3]` gives exact levels.
     pub output_bias: [f32; 3],
+    /// Offset added to decoded video RGB (8-bit code values) before effects.
+    /// Defaults to [`FILMORA_INPUT_BIAS`]; `[0.0; 3]` gives exact levels.
+    pub input_bias: [f32; 3],
 }
 
 /// Filmora's pipeline renders slightly darker than an exact conversion:
 /// measured against Filmora 15.7 exports of the user projects
-/// (docs/fidelity.md), its output is offset by about −1.6 Y, −0.6 Cb and
+/// (docs/fidelity.md), plain footage is offset by about −1.6 Y, −0.6 Cb and
 /// −0.85 Cr code values at every level (consistent with 8-bit truncation in
-/// its conversions), i.e. this RGB offset. It applies after effects: whites
-/// pushed up by an exposure boost land at ~252, as in Filmora.
-pub const FILMORA_OUTPUT_BIAS: [f32; 3] = [-2.9, -1.05, -2.69];
+/// its conversions), i.e. RGB (−2.9, −1.05, −2.69). Part of it happens when
+/// video is decoded ([`FILMORA_INPUT_BIAS`], not for still images: a strong
+/// exposure boost amplifies it per channel and fades take it with them) and
+/// the rest after compositing (this offset: whites pushed up by an exposure
+/// boost land at ~253). The split was fitted on the exposure 60–100 clips of Colombia 1.
+pub const FILMORA_OUTPUT_BIAS: [f32; 3] = [-2.1, -1.56, -1.79];
+
+/// Decode-side part of Filmora's level offset (see [`FILMORA_OUTPUT_BIAS`]).
+pub const FILMORA_INPUT_BIAS: [f32; 3] = [-0.8, 0.51, -0.9];
 
 impl Default for RenderOptions {
     fn default() -> Self {
-        Self { linear_light: false, source_max_size: None, output_bias: FILMORA_OUTPUT_BIAS }
+        Self {
+            linear_light: false,
+            source_max_size: None,
+            output_bias: FILMORA_OUTPUT_BIAS,
+            input_bias: FILMORA_INPUT_BIAS,
+        }
     }
 }
 
@@ -598,6 +612,8 @@ impl<'a> Frame<'a> {
                     ColorSpace::Bt2020Hlg => (2.0, 2.0),
                 };
                 u.e[1] = [format as u32 as f32, matrix, frame.full_range as u32 as f32, transfer];
+                let b = self.options.input_bias;
+                u.p[0] = [b[0] / 255.0, b[1] / 255.0, b[2] / 255.0, 0.0];
                 nested_tex = None;
             }
             LayerContent::Nested(plan) => {
