@@ -93,6 +93,49 @@ fn hblur(use_b: bool, uv: vec2f, off: vec2f, s: f32, sigma: f32) -> vec4f {
 }
 "#;
 
+/// Fast wipe along `dir` (the direction the outgoing clip leaves towards),
+/// calibrated on Filmora's Fast Wipe Left/Right previews.
+fn fast_wipe_body(dir: [f32; 2]) -> String {
+    body(&format!(
+        r#"{DBLUR}
+fn fx(uv: vec2f) -> vec4f {{
+    let p = prog();
+    let cut = 0.485;
+    let d = vec2f({:.1}, {:.1});
+    if (p < cut) {{
+        let u = seg(p, 0.44, cut);
+        return dblur(false, uv, d * (0.6 * u * u), d, 0.16 * p_blur() * u);
+    }}
+    let k = 1.0 - seg(p, cut, 0.56);
+    return dblur(true, uv, -d * (0.6 * k * k * k), d, 0.16 * p_blur() * k * k);
+}}
+"#,
+        dir[0], dir[1]
+    ))
+}
+
+/// Directional gaussian blur with wrap-around sampling (offset and sigma in uv).
+pub(crate) const DBLUR: &str = r#"
+fn dsample(use_b: bool, q: vec2f) -> vec4f {
+    let w = fract(q);
+    return select(sa(w), sb(w), use_b);
+}
+fn dblur(use_b: bool, uv: vec2f, off: vec2f, dir: vec2f, sigma: f32) -> vec4f {
+    let base = uv - off;
+    if (sigma <= 1e-4) { return dsample(use_b, base); }
+    let j = hash12(uv * u.size) - 0.5;
+    var acc = vec4f(0.0);
+    var ws = 0.0;
+    for (var i = 0; i < 40; i = i + 1) {
+        let x = (f32(i) + j - 19.5) / 10.0;
+        let w = exp(-0.5 * x * x);
+        acc = acc + w * dsample(use_b, base + dir * (x * sigma));
+        ws = ws + w;
+    }
+    return acc / ws;
+}
+"#;
+
 pub(crate) fn body(code: &str) -> String {
     format!("{HELPERS}\n{code}")
 }
@@ -244,18 +287,43 @@ fn fx(uv: vec2f) -> vec4f {
              Timing matched to Filmora: Fast Wipe Left.",
             &[ParamSpec::float("blur", "Blur", 0.0, 2.0, 1.0)],
         ),
-        body(&format!("{HBLUR}{}", r#"
-fn fx(uv: vec2f) -> vec4f {
-    let p = prog();
-    let cut = 0.485;
-    if (p < cut) {
-        let u = seg(p, 0.44, cut);
-        return hblur(false, uv, vec2f(-0.6 * u * u, 0.0), 1.0, 0.16 * p_blur() * u);
-    }
-    let k = 1.0 - seg(p, cut, 0.56);
-    return hblur(true, uv, vec2f(0.6 * k * k * k, 0.0), 1.0, 0.16 * p_blur() * k * k);
-}
-"#)),
+        fast_wipe_body([-1.0, 0.0]),
+    );
+    shader(
+        r,
+        info(
+            "jb.fast_wipe_right",
+            "Fast Wipe Right",
+            "Motion",
+            Transition,
+            "Very fast push right hidden in a strong motion blur around the cut. Matched to Filmora: Fast Wipe Right.",
+            &[ParamSpec::float("blur", "Blur", 0.0, 2.0, 1.0)],
+        ),
+        fast_wipe_body([1.0, 0.0]),
+    );
+    shader(
+        r,
+        info(
+            "jb.fast_wipe_up",
+            "Fast Wipe Up",
+            "Motion",
+            Transition,
+            "Very fast push up hidden in a strong motion blur around the cut. Matched to Filmora: Fast Wipe Up.",
+            &[ParamSpec::float("blur", "Blur", 0.0, 2.0, 1.0)],
+        ),
+        fast_wipe_body([0.0, -1.0]),
+    );
+    shader(
+        r,
+        info(
+            "jb.fast_wipe_down",
+            "Fast Wipe Down",
+            "Motion",
+            Transition,
+            "Very fast push down hidden in a strong motion blur around the cut. Matched to Filmora: Fast Wipe Down.",
+            &[ParamSpec::float("blur", "Blur", 0.0, 2.0, 1.0)],
+        ),
+        fast_wipe_body([0.0, 1.0]),
     );
     shader(
         r,
@@ -278,7 +346,7 @@ fn fx(uv: vec2f) -> vec4f {
             "Cross-fade while both clips blur and refocus. Filmora: Blur Dissolve.",
             &[ParamSpec::float("amount", "Blur amount", 0.0, 3.0, 1.0)],
         ),
-        &["@fragment fn fs_main(in: VsOut) -> @location(0) vec4f { return mix(sa(in.uv), sb(in.uv), seg(prog(), 0.25, 0.75)); }"],
+        &["@fragment fn fs_main(in: VsOut) -> @location(0) vec4f { return mix(sa(in.uv), sb(in.uv), prog()); }"],
         blur_dissolve,
     ));
     shader(
@@ -343,10 +411,26 @@ fn fx(uv: vec2f) -> vec4f {{
             "Flash",
             "Light",
             Transition,
-            "A quick white flash right at the cut. Filmora: Flash.",
-            &[],
+            "The picture washes out to white and the next clip emerges from it. Matched to Filmora: Flash.",
+            &[ParamSpec::color("color", "Color", [1.0, 1.0, 1.0, 1.0])],
         ),
-        lift_cut_body(&[(0.0, 0.0), (0.35, 0.0), (0.5, 1.0)], &[(0.0, 1.0), (0.5, 1.0), (0.7, 0.0)], [1.0; 3]),
+        body(
+            r#"
+fn fx(uv: vec2f) -> vec4f {
+    let p = prog();
+    var w: f32;
+    if (p < 0.5) {
+        let x = seg(p, 0.0, 0.44);
+        w = 0.5 * (x + x * x * (3.0 - 2.0 * x));
+    } else {
+        let x = seg(p, 0.56, 1.0);
+        w = 1.0 - 0.5 * (x + x * x * (3.0 - 2.0 * x));
+    }
+    let c = mix(sa(uv), sb(uv), smoothstep(0.3, 0.7, p));
+    return toward(c, lin_to_srgb(p_color().rgb), w);
+}
+"#,
+        ),
     );
     shader(
         r,

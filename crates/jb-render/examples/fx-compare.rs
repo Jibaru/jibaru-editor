@@ -54,10 +54,16 @@ fn main() -> anyhow::Result<()> {
     let mut start = 0.5;
     let mut len = 2.0;
     let mut count = 12usize;
+    let mut auto = false;
     if let Some(i) = args.iter().position(|a| a == "--window") {
-        start = args[i + 1].parse()?;
-        len = args[i + 2].parse()?;
-        args.drain(i..i + 3);
+        if args[i + 1] == "auto" {
+            auto = true;
+            args.drain(i..i + 2);
+        } else {
+            start = args[i + 1].parse()?;
+            len = args[i + 2].parse()?;
+            args.drain(i..i + 3);
+        }
     }
     let mut span: Option<(f64, f64)> = None;
     if let Some(i) = args.iter().position(|a| a == "--span") {
@@ -72,9 +78,23 @@ fn main() -> anyhow::Result<()> {
     let (w, h) = (256u32, 144u32);
     let (frames, fps) = decode_all(&reference, w, h)?;
     anyhow::ensure!(frames.len() > 2, "reference has no frames");
+    // Some previews end on black frames: B is the last non-black frame.
+    let mean = |f: &[u8]| f.iter().map(|v| *v as f64).sum::<f64>() / f.len() as f64;
+    let b_index = frames.iter().rposition(|f| mean(f) > 70.0).unwrap_or(frames.len() - 1);
+    let frames: Vec<Vec<u8>> = frames[..=b_index].to_vec();
     let src = MemorySource::new()
         .with("a", frame(w, h, frames[0].clone()))
         .with("b", frame(w, h, frames.last().unwrap().clone()));
+    if auto {
+        // The transition spans from the first frame that leaves A to the
+        // first frame that reaches B.
+        let (a, b) = (&frames[0], frames.last().unwrap());
+        let s0 = frames.iter().position(|f| mean_abs_diff(f, a) > 1.0).unwrap_or(0);
+        let s1 = frames.iter().position(|f| mean_abs_diff(f, b) < 1.0).unwrap_or(frames.len() - 1);
+        start = (s0 as f64 - 0.5) / fps;
+        len = ((s1 as f64 + 0.5) / fps - start).max(1.0 / fps);
+        println!("auto window: {start:.2}s + {len:.2}s");
+    }
     let mut r = Renderer::new(w, h)?;
     let project = project(w, h);
     // Reference frame indices covering the window (plus a little margin).

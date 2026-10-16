@@ -25,22 +25,6 @@ fn dblur(uv: vec2f, d: vec2f) -> vec4f {
 }
 "#;
 
-/// Radial (zoom) blur of `scene(uv)` towards the centre; `a` = relative spread.
-const ZBLUR: &str = r#"
-fn zblur(uv: vec2f, a: f32) -> vec4f {
-    if (a < 1e-4) { return scene(uv); }
-    var acc = vec4f(0.0);
-    var ws = 0.0;
-    for (var i = 0; i < 16; i = i + 1) {
-        let x = f32(i) / 15.0 - 0.5;
-        let w = 1.0 - abs(x);
-        acc = acc + w * scene(zoom_uv(uv, 1.0 + a * x, vec2f(0.5)));
-        ws = ws + w;
-    }
-    return acc / ws;
-}
-"#;
-
 /// Rotational blur of `scene(uv)` around the centre; `a` = angular spread (rad).
 const RBLUR: &str = r#"
 fn rblur(uv: vec2f, a: f32) -> vec4f {
@@ -212,24 +196,26 @@ fn fx(uv: vec2f) -> vec4f {
             "Cross Zoom",
             "Zoom",
             Transition,
-            "Fast zoom with radial blur that punches through the cut. Filmora: Cross Zoom.",
+            "Radial zoom blur that builds on the outgoing clip and slowly clears on the incoming one. \
+             Timing matched to Filmora: Cross Zoom.",
             &[BLUR_PARAM],
         ),
         format!(
+            "{}{}",
+            super::transitions::ZOOM_BLUR,
             r#"
-fn scene(uv: vec2f) -> vec4f {{
+fn fx(uv: vec2f) -> vec4f {
     let p = prog();
-    let a = sat(zoom_uv(uv, 1.0 + 1.5 * ease_in(seg(p, 0.5 - 1.0 / 3.0, 0.5)), vec2f(0.5)));
-    let b = sbt(zoom_uv(uv, 2.5 - 1.5 * ease_out(seg(p, 0.5, 0.5 + 1.0 / 3.0)), vec2f(0.5)));
-    return mix(a, b, seg(p, 0.47, 0.53));
-}}
-{ZBLUR}
-fn fx(uv: vec2f) -> vec4f {{
-    let t = abs(prog() - 0.5);
-    let a = (0.05 * (1.0 - smoothstep(0.12, 0.19, t)) + 0.08 * (1.0 - smoothstep(0.05, 0.1, t))
-        + 0.12 * (1.0 - smoothstep(0.02, 0.05, t))) * p_blur();
-    return zblur(uv, a);
-}}
+    let k = p_blur();
+    // Outgoing: blur ramps in early, zoom accelerates towards the cut.
+    let ua = seg(p, 0.0, 0.5);
+    let a = zoom_blur(false, uv, 1.0 + 0.35 * ua * ua, k * (0.3 * smoothstep(0.0, 0.25, p) + 0.25 * ua * ua * ua));
+    // Incoming: arrives zoomed and heavily blurred, clears slowly.
+    let s = seg(p, 0.47, 1.0);
+    let r = 1.0 - s;
+    let b = zoom_blur(true, uv, 1.0 + 0.4 * r * r * r, k * 0.5 * r * r);
+    return mix(a, b, smoothstep(0.45, 0.5, p));
+}
 "#
         ),
     );

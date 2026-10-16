@@ -31,6 +31,10 @@ pub const FILMORA: &[(&str, &str)] = &[
     ("2981D185-D52E-44f4-ABD5-3CE83890E32E", "jb.dissolve"),
     ("38B7DD62-E852-4B41-81E1-80901511721D", "jb.pan_slide"),
     ("521158CA-2709-4FB1-8C3C-29781494BE1F", "jb.film_burn_02"),
+    // Other store transitions cached locally (calibrated on their previews).
+    ("2DF0B554-780C-455C-921C-E83F62B59FD8", "jb.fast_wipe_right"),
+    ("AF3B9CF3-CB2F-4FC4-A9C7-6A1A9CA8B5B7", "jb.blur_dissolve"),
+    ("A679E80D-8647-4028-A366-6BFFEE34715A", "jb.cross_zoom"),
     // Audio cross-fade: if it ever reaches the video path, a dissolve is right.
     ("audio/blender/transition-fade", "jb.dissolve"),
     // Effects
