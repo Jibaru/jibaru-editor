@@ -9,13 +9,13 @@ use crate::time::Ticks;
 use std::collections::BTreeMap;
 
 /// Everything visible at one instant, bottom layer first.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, schemars::JsonSchema)]
 pub struct FramePlan {
     pub time: Ticks,
     pub layers: Vec<Layer>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, schemars::JsonSchema)]
 pub struct Layer {
     pub clip_id: Id,
     pub content: LayerContent,
@@ -30,7 +30,8 @@ pub struct Layer {
     pub transition: Option<Box<ActiveTransition>>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub enum LayerContent {
     /// A frame of a media asset at the given source time.
     Media {
@@ -44,7 +45,7 @@ pub enum LayerContent {
     Adjustment,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, schemars::JsonSchema)]
 pub struct ResolvedTransform {
     pub position: [f64; 2],
     pub scale: [f64; 2],
@@ -55,7 +56,7 @@ pub struct ResolvedTransform {
     pub fit: FitMode,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, schemars::JsonSchema)]
 pub struct ResolvedEffect {
     pub kind: String,
     pub params: BTreeMap<String, crate::param::Value>,
@@ -63,7 +64,7 @@ pub struct ResolvedEffect {
     pub progress: f64,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, schemars::JsonSchema)]
 pub struct ActiveTransition {
     pub kind: String,
     /// 0 at the start of the transition, 1 at the end.
@@ -219,7 +220,7 @@ fn evaluate_at_depth(project: &Project, seq: &Sequence, t: Ticks, depth: usize) 
 }
 
 /// One audible clip segment at an instant, for the audio mixer.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, schemars::JsonSchema)]
 pub struct AudioVoice {
     pub clip_id: Id,
     pub media_id: Id,

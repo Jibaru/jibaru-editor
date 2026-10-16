@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 /// A parameter value. Vectors and colors are stored as fixed arrays so they
 /// can be interpolated component-wise.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(tag = "type", content = "value", rename_all = "snake_case")]
 pub enum Value {
     Float(f64),
@@ -39,7 +39,7 @@ impl Value {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Interpolation {
     #[default]
@@ -63,7 +63,7 @@ impl Interpolation {
 }
 
 /// A keyframe; `time` is relative to the start of the owning clip.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct Keyframe {
     pub time: Ticks,
     pub value: Value,
@@ -72,7 +72,7 @@ pub struct Keyframe {
 }
 
 /// A parameter that is either constant or animated by keyframes.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct Param {
     pub value: Value,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]

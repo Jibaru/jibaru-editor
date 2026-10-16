@@ -11,7 +11,7 @@ pub const TICKS_PER_SECOND: i64 = 10_000_000;
 pub type Ticks = i64;
 
 /// An exact rational number, used for frame rates (e.g. 30000/1001).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct Rational {
     pub num: i64,
     pub den: i64,

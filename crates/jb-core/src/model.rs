@@ -22,7 +22,7 @@ fn is_null(v: &Extra) -> bool {
     v.is_null()
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct Project {
     pub id: Id,
     pub name: String,
@@ -35,7 +35,7 @@ pub struct Project {
     pub extra: Extra,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct ProjectSettings {
     pub width: u32,
     pub height: u32,
@@ -50,7 +50,7 @@ fn black() -> [f64; 4] {
     [0.0, 0.0, 0.0, 1.0]
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum MediaKind {
     Video,
@@ -58,7 +58,7 @@ pub enum MediaKind {
     Image,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct MediaAsset {
     pub id: Id,
     pub name: String,
@@ -78,7 +78,7 @@ pub struct MediaAsset {
     pub extra: Extra,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct Sequence {
     pub id: Id,
     pub name: String,
@@ -94,14 +94,14 @@ impl Sequence {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum TrackKind {
     Video,
     Audio,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct Track {
     pub id: Id,
     pub kind: TrackKind,
@@ -119,7 +119,7 @@ pub struct Track {
 }
 
 /// What a clip plays.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum ClipSource {
     Media {
@@ -138,7 +138,7 @@ pub enum ClipSource {
     Adjustment,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct TitleData {
     pub text: String,
     pub font_family: String,
@@ -159,20 +159,20 @@ pub struct TitleData {
     pub background: Option<[f64; 4]>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct Stroke {
     pub color: [f64; 4],
     pub width: f64,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct Shadow {
     pub color: [f64; 4],
     pub offset: [f64; 2],
     pub blur: f64,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct Clip {
     pub id: Id,
     pub name: String,
@@ -225,7 +225,7 @@ impl Clip {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct Speed {
     /// Constant playback rate (1.0 = normal).
     pub rate: f64,
@@ -250,7 +250,7 @@ impl Default for Speed {
 
 /// 2D transform in canvas space. Position is the offset of the clip center
 /// from the canvas center, in normalized canvas units (1.0 = full width/height).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct Transform {
     pub position_x: Param,
     pub position_y: Param,
@@ -285,7 +285,7 @@ impl Default for Transform {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum FitMode {
     /// Letterbox into the canvas preserving aspect ratio.
@@ -298,7 +298,7 @@ pub enum FitMode {
     None,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum BlendMode {
     #[default]
@@ -317,7 +317,7 @@ pub enum BlendMode {
     Add,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct AudioSettings {
     /// Gain in dB.
     pub gain_db: Param,
@@ -342,7 +342,7 @@ impl Default for AudioSettings {
 /// identifier from the effect registry (e.g. `"jb.blur.gaussian"`); effects
 /// imported from another format that have no registered equivalent keep
 /// their original identifier and render as a pass-through.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct EffectInstance {
     pub id: Id,
     pub kind: String,
@@ -357,7 +357,7 @@ pub struct EffectInstance {
     pub extra: Extra,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct Transition {
     pub id: Id,
     pub kind: String,
@@ -372,7 +372,7 @@ pub struct Transition {
     pub extra: Extra,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum TransitionAlignment {
     #[default]

@@ -23,7 +23,7 @@ pub enum CommandError {
 
 pub type Result<T> = std::result::Result<T, CommandError>;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(tag = "op", rename_all = "snake_case")]
 pub enum Command {
     AddMedia {
