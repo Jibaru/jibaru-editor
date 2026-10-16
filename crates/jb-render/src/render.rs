@@ -598,8 +598,16 @@ impl<'a> Frame<'a> {
             FitMode::Stretch => canvas,
             FitMode::None => [cw, ch],
         };
-        let zoom = (t.scale[0].abs().max(t.scale[1].abs()) as f32).max(1.0);
-        let k = zoom.min((cw / fitted[0]).max(ch / fitted[1]).max(1.0));
+        // Texture resolution follows the on-screen size, quantized to powers of
+        // two so animated scales reuse the same pooled textures: shrunk layers
+        // (picture-in-picture) are processed at reduced resolution, zoomed-in
+        // ones up to the source resolution.
+        let zoom = t.scale[0].abs().max(t.scale[1].abs()) as f32;
+        let k = if zoom < 1.0 {
+            2f32.powf(zoom.max(1.0 / 8.0).log2().ceil())
+        } else {
+            zoom.min((cw / fitted[0]).max(ch / fitted[1]).max(1.0))
+        };
         let res = [((fitted[0] * k).round() as u32).clamp(1, 8192), ((fitted[1] * k).round() as u32).clamp(1, 8192)];
         u.e[0] = crop_rect;
         let tex = self.cx.temp(res[0], res[1]);
