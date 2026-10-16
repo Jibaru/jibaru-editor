@@ -116,7 +116,7 @@ const ADJUST_COLOR: &[(&str, &str, f32)] = &[
 ];
 
 /// Filmora's Slide (store pack), fitted on its export of the user's project
-/// (Colombia 1 at 96.6 s, 2 s, center): every frame of each side is the clip
+/// (Project C at 96.6 s, 2 s, center): every frame of each side is the clip
 /// mapped through `src = c + (a0, b0) + k R(phi) (uv - c)` in uv space
 /// (c = frame centre; the rotation is in uv units, so it shears a 16:9 frame
 /// slightly), sampled with mirrored repeat, then box-blurred along
@@ -255,7 +255,7 @@ fn fx(uv: vec2f) -> vec4f {{
 }
 
 /// Filmora's Film Burn Transition 02, fitted on its export of the user's
-/// project (Colombia 2 at 313.9 s, 2 s, center), procedurally: each frame of
+/// project (Project D at 313.9 s, 2 s, center), procedurally: each frame of
 /// either side is a radial zoom blur of the clip (scaled by `s` about
 /// `(0.5 + cx, 0.5 + cy)`, rays averaged over a fraction `amt` towards that
 /// centre) followed by a per-channel display-space affine

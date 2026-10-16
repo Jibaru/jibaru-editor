@@ -34,7 +34,7 @@ fn beta() -> f32 {
 }
 /// Output gain (dB) of denoised voices: Filmora's denoised speech is a few
 /// dB quieter than the input even where speech dominates (−2.5 dB on
-/// average over 20 windows of Proyecto 2026-08-01, pre-gain levels −40 to
+/// average over 20 windows of Project A, pre-gain levels −40 to
 /// −20 dBFS).
 /// `JB_DENOISE_GAIN` overrides it for calibration.
 fn makeup_db() -> f32 {

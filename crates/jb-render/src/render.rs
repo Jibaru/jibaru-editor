@@ -45,7 +45,7 @@ pub struct RenderOptions {
 /// video is decoded ([`FILMORA_INPUT_BIAS`], not for still images: a strong
 /// exposure boost amplifies it per channel and fades take it with them) and
 /// the rest after compositing (this offset: whites pushed up by an exposure
-/// boost land at ~253). The split was fitted on the exposure 60–100 clips of Colombia 1.
+/// boost land at ~253). The split was fitted on the exposure 60–100 clips of Project C.
 pub const FILMORA_OUTPUT_BIAS: [f32; 3] = [-2.1, -1.56, -1.79];
 
 /// Decode-side part of Filmora's level offset (see [`FILMORA_OUTPUT_BIAS`]).
