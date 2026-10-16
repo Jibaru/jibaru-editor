@@ -37,7 +37,9 @@ fn write_png(path: &PathBuf, data: &[u8]) {
 /// Items whose output is dominated by per-pixel noise get a looser tolerance
 /// (hash noise is not bit-identical across GPU vendors).
 fn tolerance(id: &str) -> f64 {
-    const NOISY: &[&str] = &["grain", "noise", "glitch", "vhs", "film", "pelicula", "polvo", "super8", "charcoal", "shake", "strobe", "dust"];
+    const NOISY: &[&str] = &[
+        "grain", "noise", "glitch", "vhs", "film", "pelicula", "polvo", "super8", "charcoal", "shake", "strobe", "dust",
+    ];
     if NOISY.iter().any(|n| id.contains(n)) {
         12.0
     } else {

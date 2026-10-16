@@ -178,7 +178,13 @@ impl FrameSource for MemorySource {
 pub fn project(w: u32, h: u32) -> Project {
     let mut p = Project::new(
         "test",
-        ProjectSettings { width: w, height: h, frame_rate: Rational::new(30, 1), sample_rate: 48000, background: [0.0, 0.0, 0.0, 1.0] },
+        ProjectSettings {
+            width: w,
+            height: h,
+            frame_rate: Rational::new(30, 1),
+            sample_rate: 48000,
+            background: [0.0, 0.0, 0.0, 1.0],
+        },
     );
     for id in ["a", "b"] {
         p.media.push(MediaAsset {

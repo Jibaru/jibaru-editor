@@ -55,7 +55,10 @@ impl MediaCache {
                 .join("jibaru-editor")
                 .join("cache")
         } else {
-            std::env::var_os("XDG_CACHE_HOME").map(PathBuf::from).unwrap_or_else(|| home().join(".cache")).join("jibaru-editor")
+            std::env::var_os("XDG_CACHE_HOME")
+                .map(PathBuf::from)
+                .unwrap_or_else(|| home().join(".cache"))
+                .join("jibaru-editor")
         }
     }
 
@@ -71,11 +74,8 @@ impl MediaCache {
     /// Cache key of a source file: hash of path, size and mtime.
     pub fn key(path: &Path) -> Result<String> {
         let meta = std::fs::metadata(path).with_context(|| format!("cannot read {}", path.display()))?;
-        let mtime = meta
-            .modified()
-            .ok()
-            .and_then(|m| m.duration_since(std::time::UNIX_EPOCH).ok())
-            .map_or(0, |d| d.as_nanos());
+        let mtime =
+            meta.modified().ok().and_then(|m| m.duration_since(std::time::UNIX_EPOCH).ok()).map_or(0, |d| d.as_nanos());
         let canon = std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
         let mut bytes = canon.to_string_lossy().as_bytes().to_vec();
         bytes.extend_from_slice(&meta.len().to_le_bytes());

@@ -2,8 +2,8 @@
 
 use crate::util::*;
 use anyhow::{Context as _, Result};
-use ffmpeg_next as ff;
 use ff::ffi;
+use ffmpeg_next as ff;
 use jb_core::frame::ColorSpace;
 use jb_core::model::{Extra, MediaAsset, MediaKind};
 use jb_core::time::{Rational, Ticks, TICKS_PER_SECOND};
@@ -117,8 +117,7 @@ pub(crate) fn probe_input(path: &Path, ictx: &ff::format::context::Input) -> Res
     });
     let audio = ictx.streams().best(ff::media::Type::Audio);
     let fmt_duration = unsafe { (*fmt).duration };
-    let mut duration =
-        if fmt_duration > 0 { fmt_duration * (TICKS_PER_SECOND / ffi::AV_TIME_BASE as i64) } else { 0 };
+    let mut duration = if fmt_duration > 0 { fmt_duration * (TICKS_PER_SECOND / ffi::AV_TIME_BASE as i64) } else { 0 };
 
     let mut info = ProbeInfo {
         path: path.to_path_buf(),

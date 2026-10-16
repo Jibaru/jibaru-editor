@@ -7,9 +7,8 @@ use std::path::Path;
 use std::sync::Arc;
 
 fn open(path: &Path) -> Result<(DynamicImage, image::metadata::Orientation)> {
-    let reader = ImageReader::open(path)
-        .with_context(|| format!("cannot open {}", path.display()))?
-        .with_guessed_format()?;
+    let reader =
+        ImageReader::open(path).with_context(|| format!("cannot open {}", path.display()))?.with_guessed_format()?;
     let mut decoder = reader.into_decoder()?;
     let orientation = decoder.orientation().unwrap_or(image::metadata::Orientation::NoTransforms);
     let img = DynamicImage::from_decoder(decoder)?;
@@ -19,9 +18,8 @@ fn open(path: &Path) -> Result<(DynamicImage, image::metadata::Orientation)> {
 /// Display dimensions (EXIF orientation applied) without decoding pixels
 /// when the format allows it.
 pub fn image_dimensions(path: &Path) -> Result<(u32, u32, u32)> {
-    let reader = ImageReader::open(path)
-        .with_context(|| format!("cannot open {}", path.display()))?
-        .with_guessed_format()?;
+    let reader =
+        ImageReader::open(path).with_context(|| format!("cannot open {}", path.display()))?.with_guessed_format()?;
     let mut decoder = reader.into_decoder()?;
     let (w, h) = decoder.dimensions();
     use image::metadata::Orientation as O;

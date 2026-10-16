@@ -212,10 +212,9 @@ fn thumbnails_and_waveform_are_cached_on_disk() {
     assert!((w.duration() - 2 * TICKS_PER_SECOND).abs() < TICKS_PER_SECOND / 10);
     let b = w.buckets(0, 2 * TICKS_PER_SECOND, 4);
     assert!(b[0][1] < 0.02 && b[3][1] > 0.4, "{b:?}");
-    let reloaded = jb_media::Waveform::load(&cache.dir().join("waveforms").join(format!(
-        "{}.peaks",
-        MediaCache::key(&late_tone()).unwrap()
-    )))
+    let reloaded = jb_media::Waveform::load(
+        &cache.dir().join("waveforms").join(format!("{}.peaks", MediaCache::key(&late_tone()).unwrap())),
+    )
     .unwrap();
     assert_eq!(reloaded.min.len(), w.min.len());
 }
@@ -224,8 +223,9 @@ fn thumbnails_and_waveform_are_cached_on_disk() {
 fn proxy_keeps_frame_timing() {
     let src = index_clip_large();
     let dst = dir().join("proxy.mp4");
-    let report = jb_media::generate_proxy(&src, &dst, &ProxyOptions { height: 240, ..Default::default() }, &mut |_| true)
-        .unwrap();
+    let report =
+        jb_media::generate_proxy(&src, &dst, &ProxyOptions { height: 240, ..Default::default() }, &mut |_| true)
+            .unwrap();
     eprintln!("proxy: {report:?}");
     assert_eq!((report.width, report.height), (320, 240));
     assert_eq!(report.frames, FRAMES as u64);

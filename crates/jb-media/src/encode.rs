@@ -5,8 +5,8 @@
 //! GPL encoders (libx264 / libx265) are never used.
 
 use anyhow::{Context as _, Result};
-use ffmpeg_next as ff;
 use ff::ffi;
+use ffmpeg_next as ff;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum VideoCodec {

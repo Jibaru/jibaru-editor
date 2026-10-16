@@ -399,8 +399,14 @@ impl<'a> FxCx<'a> {
                     }),
                 },
                 wgpu::BindGroupEntry { binding: 1, resource: wgpu::BindingResource::Sampler(&self.pipelines.sampler) },
-                wgpu::BindGroupEntry { binding: 2, resource: wgpu::BindingResource::TextureView(pass.a.view().unwrap_or(d2)) },
-                wgpu::BindGroupEntry { binding: 3, resource: wgpu::BindingResource::TextureView(pass.b.view().unwrap_or(d2)) },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: wgpu::BindingResource::TextureView(pass.a.view().unwrap_or(d2)),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: wgpu::BindingResource::TextureView(pass.b.view().unwrap_or(d2)),
+                },
                 wgpu::BindGroupEntry {
                     binding: 4,
                     resource: wgpu::BindingResource::TextureView(pass.aux.view().unwrap_or(d2)),

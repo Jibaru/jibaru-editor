@@ -18,7 +18,13 @@ fn save(path: &str, w: u32, h: u32, data: &[u8]) -> anyhow::Result<()> {
 }
 
 /// Title styles over clip B: plain, stroke, shadow, background, multi-line.
-fn write_titles(r: &mut Renderer, project: &jb_core::Project, src: &MemorySource, out_dir: &str, sheet_w: u32) -> anyhow::Result<()> {
+fn write_titles(
+    r: &mut Renderer,
+    project: &jb_core::Project,
+    src: &MemorySource,
+    out_dir: &str,
+    sheet_w: u32,
+) -> anyhow::Result<()> {
     use jb_core::{eval::LayerContent, Shadow, Stroke, TitleData};
     let (w, h) = r.size();
     let base = TitleData {
@@ -36,9 +42,24 @@ fn write_titles(r: &mut Renderer, project: &jb_core::Project, src: &MemorySource
     let styles = [
         base.clone(),
         TitleData { stroke: Some(Stroke { color: [0.0, 0.0, 0.0, 1.0], width: 0.012 }), ..base.clone() },
-        TitleData { shadow: Some(Shadow { color: [0.0, 0.0, 0.0, 0.8], offset: [0.01, 0.012], blur: 0.01 }), ..base.clone() },
-        TitleData { background: Some([0.05, 0.05, 0.1, 0.75]), color: [1.0, 0.8, 0.1, 1.0], italic: true, bold: false, ..base.clone() },
-        TitleData { text: "Two lines\nof text".into(), font_size: 0.12, position: [0.5, 0.7], font_family: "Georgia".into(), ..base.clone() },
+        TitleData {
+            shadow: Some(Shadow { color: [0.0, 0.0, 0.0, 0.8], offset: [0.01, 0.012], blur: 0.01 }),
+            ..base.clone()
+        },
+        TitleData {
+            background: Some([0.05, 0.05, 0.1, 0.75]),
+            color: [1.0, 0.8, 0.1, 1.0],
+            italic: true,
+            bold: false,
+            ..base.clone()
+        },
+        TitleData {
+            text: "Two lines\nof text".into(),
+            font_size: 0.12,
+            position: [0.5, 0.7],
+            font_family: "Georgia".into(),
+            ..base.clone()
+        },
     ];
     let gap = 4;
     let mut sheet = vec![40u8; (sheet_w * h * 4) as usize];

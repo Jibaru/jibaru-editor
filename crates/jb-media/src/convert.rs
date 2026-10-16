@@ -388,6 +388,9 @@ mod tests {
         assert_eq!(nv.data.len(), frame_size(PixelFormat::Nv12, 32, 16));
         let back = convert_frame(&mut s, &nv, 32, 16, PixelFormat::Rgba8, ColorSpace::Bt709, true).unwrap();
         let p = &back.data[(8 * 32 + 8) * 4..(8 * 32 + 8) * 4 + 3];
-        assert!((p[0] as i32 - 200).abs() <= 3 && (p[1] as i32 - 100).abs() <= 3 && (p[2] as i32 - 50).abs() <= 3, "{p:?}");
+        assert!(
+            (p[0] as i32 - 200).abs() <= 3 && (p[1] as i32 - 100).abs() <= 3 && (p[2] as i32 - 50).abs() <= 3,
+            "{p:?}"
+        );
     }
 }

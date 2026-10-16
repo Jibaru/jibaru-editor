@@ -19,7 +19,6 @@ pub struct TexInner {
     last_used: AtomicU64,
 }
 
-
 /// Shared handle to a pooled texture.
 pub type Tex = Arc<TexInner>;
 

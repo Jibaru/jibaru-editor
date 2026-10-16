@@ -8,15 +8,18 @@ use jb_core::{Project, Ticks};
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 
-/// Imports a Filmora `.wfp` project (pending `jb-filmora`).
-pub fn filmora_open(_path: &Path) -> JbResult<Project> {
-    Err(JbError::not_implemented("Filmora .wfp import", "jb-filmora"))
+/// Imports a Filmora `.wfp` project .
+pub fn filmora_open(path: &Path) -> JbResult<Project> {
+    jb_filmora::read(path)
+        .map(|wfp| wfp.project)
+        .map_err(|e| JbError::invalid(format!("cannot read {}: {e}", path.display())))
 }
 
 /// Reports which effects/transitions/titles of a `.wfp` project map to
-/// registered Jibaru effects (pending `jb-filmora`).
-pub fn fx_coverage(_path: &Path) -> JbResult<Value> {
-    Err(JbError::not_implemented("Filmora effect coverage", "jb-filmora"))
+/// registered Jibaru effects .
+pub fn fx_coverage(path: &Path) -> JbResult<Value> {
+    let wfp = jb_filmora::read(path).map_err(|e| JbError::invalid(format!("cannot read {}: {e}", path.display())))?;
+    serde_json::to_value(jb_filmora::coverage(&wfp)).map_err(|e| JbError::invalid(e.to_string()))
 }
 
 #[derive(Debug, Clone)]

@@ -48,7 +48,13 @@ fn pan_gains(pan: f64) -> (f32, f32) {
 
 /// Mixes `frames` stereo frames of `seq`, starting at timeline sample
 /// `start_sample` (at the source's sample rate).
-pub fn mix(project: &Project, seq: &Sequence, start_sample: i64, frames: usize, source: &dyn AudioSource) -> Result<Vec<f32>> {
+pub fn mix(
+    project: &Project,
+    seq: &Sequence,
+    start_sample: i64,
+    frames: usize,
+    source: &dyn AudioSource,
+) -> Result<Vec<f32>> {
     let rate = source.sample_rate();
     let mut out = vec![0f32; frames * CHANNELS];
     let mut next_voices: Option<Vec<AudioVoice>> = None;

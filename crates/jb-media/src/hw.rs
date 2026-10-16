@@ -107,7 +107,11 @@ pub(crate) unsafe extern "C" fn get_format(
 
 /// Hardware decode device types that can be created on this machine.
 pub fn available_devices() -> Vec<String> {
-    preferred_device_types().iter().filter(|t| device(**t).map(|d| unsafe { unref(d) }).is_some()).map(|t| device_type_name(*t)).collect()
+    preferred_device_types()
+        .iter()
+        .filter(|t| device(**t).map(|d| unsafe { unref(d) }).is_some())
+        .map(|t| device_type_name(*t))
+        .collect()
 }
 
 unsafe fn unref(mut d: *mut ffi::AVBufferRef) {

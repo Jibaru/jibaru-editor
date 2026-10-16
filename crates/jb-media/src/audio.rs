@@ -4,9 +4,9 @@
 use crate::convert::AvFrame;
 use crate::util::*;
 use anyhow::{Context as _, Result};
-use ffmpeg_next as ff;
 use ff::ffi;
 use ff::packet::Ref as _;
+use ffmpeg_next as ff;
 use jb_core::time::{Ticks, TICKS_PER_SECOND};
 use std::collections::VecDeque;
 use std::path::Path;
@@ -128,9 +128,7 @@ impl AudioDecoder {
         let s1 = s0 + frames as i64;
         let buf_end = self.buf_start + (self.buf.len() / CHANNELS) as i64;
         let behind = s0 < self.buf_start;
-        let ahead = self
-            .next
-            .is_none_or(|n| samples_to_ticks(s0 - n, self.rate) > MAX_DECODE_AHEAD);
+        let ahead = self.next.is_none_or(|n| samples_to_ticks(s0 - n, self.rate) > MAX_DECODE_AHEAD);
         if (behind || ahead) && !(s0 >= self.buf_start && s1 <= buf_end) {
             self.seek(samples_to_ticks(s0, self.rate))?;
         }
@@ -165,10 +163,7 @@ impl AudioDecoder {
         };
         if ret < 0 {
             let us = (target + self.start) / (TICKS_PER_SECOND / ffi::AV_TIME_BASE as i64);
-            check(
-                unsafe { ffi::avformat_seek_file(self.input.as_mut_ptr(), -1, i64::MIN, us, us, 0) },
-                "audio seek",
-            )?;
+            check(unsafe { ffi::avformat_seek_file(self.input.as_mut_ptr(), -1, i64::MIN, us, us, 0) }, "audio seek")?;
         }
         self.decoder.flush();
         self.swr = None;

@@ -53,7 +53,16 @@ pub struct ParamSpec {
 
 impl ParamSpec {
     pub const fn float(name: &'static str, label: &'static str, min: f32, max: f32, default: f32) -> Self {
-        Self { name, label, ty: ParamType::Float, min, max, default: [default, 0.0, 0.0, 0.0], text_default: "", unit: "" }
+        Self {
+            name,
+            label,
+            ty: ParamType::Float,
+            min,
+            max,
+            default: [default, 0.0, 0.0, 0.0],
+            text_default: "",
+            unit: "",
+        }
     }
     pub const fn int(name: &'static str, label: &'static str, min: f32, max: f32, default: f32) -> Self {
         Self { ty: ParamType::Int, ..Self::float(name, label, min, max, default) }

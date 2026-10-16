@@ -249,13 +249,12 @@ fn edits_are_patched_in_place() {
     for c in [l, rv] {
         assert_eq!(clip_json(timeline(&r), &c.id)["futureField"]["nested"], serde_json::json!([1, 2, 3]));
     }
-    // SplitClip copies animations, so the right half carries its own copy
-    // of the entry transition, with a fresh identity.
+    // The entry transition stays on the left half only.
     let pre_l = &clip_json(timeline(&r), &l.id)["preTransition"];
     let pre_r = &clip_json(timeline(&r), &rv.id)["preTransition"];
     assert_eq!(pre_l, &clip_json(timeline(&orig), &a.id)["preTransition"]);
-    assert_eq!((pre_r["tlBegin"].as_i64(), pre_r["tlEnd"].as_i64()), (Some(2 * S), Some(2 * S + S / 2)));
-    assert_ne!(pre_l["thisUId"], pre_r["thisUId"]);
+    assert!(pre_r.is_null() || pre_r["display"] == serde_json::json!(false), "{pre_r}");
+    assert!(rv.animations.is_empty());
 
     let b2 = find(p, TrackKind::Video, 5 * S, "CAM_0002");
     assert_eq!((b2.speed.rate, b2.end), (1.5, 5 * S + 4 * S));

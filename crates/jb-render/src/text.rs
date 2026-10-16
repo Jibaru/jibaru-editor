@@ -74,8 +74,10 @@ impl TextEngine {
             text_h = text_h.max(run.line_top + run.line_height);
         }
         let stroke = t.stroke.as_ref().map_or(0.0, |s| s.width as f32 * ch);
-        let (sh_off, sh_blur) =
-            t.shadow.as_ref().map_or(([0.0, 0.0], 0.0), |s| ([s.offset[0] as f32 * ch, s.offset[1] as f32 * ch], s.blur as f32 * ch));
+        let (sh_off, sh_blur) = t
+            .shadow
+            .as_ref()
+            .map_or(([0.0, 0.0], 0.0), |s| ([s.offset[0] as f32 * ch, s.offset[1] as f32 * ch], s.blur as f32 * ch));
         let bg_pad = if t.background.is_some() { font_px * 0.3 } else { 0.0 };
         let spread = (stroke + sh_blur * 2.0 + sh_off[0].abs().max(sh_off[1].abs()) + bg_pad + 4.0).ceil();
         let pad = spread as i32;
@@ -115,7 +117,12 @@ impl TextEngine {
         let cx = t.position[0] as f32 * canvas[0] as f32;
         let cy = t.position[1] as f32 * canvas[1] as f32;
         let origin = [(cx - w as f32 * 0.5).round(), (cy - h as f32 * 0.5).round()];
-        let text_box = [origin[0] + pad as f32, origin[1] + pad as f32, origin[0] + pad as f32 + text_w, origin[1] + pad as f32 + text_h];
+        let text_box = [
+            origin[0] + pad as f32,
+            origin[1] + pad as f32,
+            origin[0] + pad as f32 + text_w,
+            origin[1] + pad as f32 + text_h,
+        ];
         TitleRaster { origin, width: w, height: h, sdf: sdf.iter().map(|d| f32_to_f16(*d)).collect(), text_box }
     }
 }

@@ -8,9 +8,7 @@
 //! canvas-sized textures and blend those. Adjustment layers run their effects
 //! over a copy of everything below them.
 
-use crate::fx::{
-    AuxImage, Bind, Blend, Dummies, FxCx, Pass, Pipelines, ShaderSrc, Uniforms, PRELUDE,
-};
+use crate::fx::{AuxImage, Bind, Blend, Dummies, FxCx, Pass, Pipelines, ShaderSrc, Uniforms, PRELUDE};
 use crate::pool::{Tex, TexturePool, UniformArena};
 use crate::registry::{AnimState, FxIo, FxKind, ParamValues, Registry};
 use crate::text::TextEngine;
@@ -219,7 +217,12 @@ impl Renderer {
     /// sRGB-encoded values, straight alpha) without reading it back. The
     /// texture can be sampled through an `Rgba8UnormSrgb` view for automatic
     /// decoding. Valid until the next render call.
-    pub fn render_to_texture(&mut self, project: &Project, plan: &FramePlan, source: &dyn FrameSource) -> &wgpu::Texture {
+    pub fn render_to_texture(
+        &mut self,
+        project: &Project,
+        plan: &FramePlan,
+        source: &dyn FrameSource,
+    ) -> &wgpu::Texture {
         let mut encoder = self.gpu.device.create_command_encoder(&Default::default());
         self.encode_frame(&mut encoder, project, plan, source);
         self.submit(encoder);
@@ -443,7 +446,15 @@ impl<'a> Frame<'a> {
             let out = self.apply_effects(input, &layer.effects, &mut state, layer.local_time);
             let c = self.canvas_f();
             let opacity = state.opacity.clamp(0.0, 1.0) as f32;
-            self.composite(accum, &out, [c[0] * 0.5, c[1] * 0.5], [c[0] * 0.5, c[1] * 0.5], 0.0, opacity, layer.blend_mode);
+            self.composite(
+                accum,
+                &out,
+                [c[0] * 0.5, c[1] * 0.5],
+                [c[0] * 0.5, c[1] * 0.5],
+                0.0,
+                opacity,
+                layer.blend_mode,
+            );
             return;
         }
         if let Some(p) = self.prepare(layer, depth) {
@@ -475,7 +486,16 @@ impl<'a> Frame<'a> {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn composite(&mut self, accum: &Tex, layer: &Tex, center: [f32; 2], half: [f32; 2], rot: f32, opacity: f32, mode: BlendMode) {
+    fn composite(
+        &mut self,
+        accum: &Tex,
+        layer: &Tex,
+        center: [f32; 2],
+        half: [f32; 2],
+        rot: f32,
+        opacity: f32,
+        mode: BlendMode,
+    ) {
         let code = blend_code(mode);
         let backdrop = if code != 0 {
             let b = self.cx.temp_like(accum);
@@ -769,7 +789,14 @@ impl<'a> Frame<'a> {
                         (t, v, *size)
                     })
                     .collect();
-                self.uploads.push(UploadSlot { format: f.format, width: w, height: h, planes, content: None, used_frame: frame });
+                self.uploads.push(UploadSlot {
+                    format: f.format,
+                    width: w,
+                    height: h,
+                    planes,
+                    content: None,
+                    used_frame: frame,
+                });
                 self.uploads.len() - 1
             }
         };
@@ -778,7 +805,11 @@ impl<'a> Frame<'a> {
             self.cx.queue.write_texture(
                 tex.as_image_copy(),
                 &f.data[*off..],
-                wgpu::TexelCopyBufferLayout { offset: 0, bytes_per_row: Some(*bpr as u32), rows_per_image: Some(size[1]) },
+                wgpu::TexelCopyBufferLayout {
+                    offset: 0,
+                    bytes_per_row: Some(*bpr as u32),
+                    rows_per_image: Some(size[1]),
+                },
                 wgpu::Extent3d { width: size[0], height: size[1], depth_or_array_layers: 1 },
             );
         }

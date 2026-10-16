@@ -226,13 +226,7 @@ impl MediaPool {
     }
 
     fn asset(&self, media_id: &str) -> Result<Asset> {
-        self.state
-            .lock()
-            .unwrap()
-            .assets
-            .get(media_id)
-            .cloned()
-            .with_context(|| format!("unknown media id {media_id}"))
+        self.state.lock().unwrap().assets.get(media_id).cloned().with_context(|| format!("unknown media id {media_id}"))
     }
 
     /// Video frame of `media_id` at `t`; see [`FrameSource::frame`].
@@ -415,9 +409,7 @@ impl MediaPool {
             }
             let reuse = best.map(|b| b.0).or_else(|| {
                 (count >= self.config.max_decoders_per_asset.max(1))
-                    .then(|| {
-                        st.audio.iter().enumerate().filter(|(_, s)| s.key == key).min_by_key(|(_, s)| s.last_used)
-                    })
+                    .then(|| st.audio.iter().enumerate().filter(|(_, s)| s.key == key).min_by_key(|(_, s)| s.last_used))
                     .flatten()
                     .map(|(i, _)| i)
             });

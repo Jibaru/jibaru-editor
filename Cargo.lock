@@ -1130,6 +1130,7 @@ dependencies = [
  "assert_cmd",
  "clap",
  "jb-core",
+ "jb-filmora",
  "schemars",
  "serde",
  "serde_json",

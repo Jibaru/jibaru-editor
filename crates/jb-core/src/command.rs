@@ -317,6 +317,9 @@ pub fn apply(p: &mut Project, cmd: &Command) -> Result<()> {
                 right.start = *at;
                 left.audio.fade_out = 0;
                 right.audio.fade_in = 0;
+                let cut = at - left.start;
+                split_ranged(&mut left.animations, &mut right.animations, cut);
+                split_ranged(&mut left.effects, &mut right.effects, cut);
                 let track = &mut p.sequences[s].tracks[t];
                 insert_clip(track, left)?;
                 insert_clip(track, right)?;
@@ -403,6 +406,26 @@ pub fn apply(p: &mut Project, cmd: &Command) -> Result<()> {
         }
     }
     Ok(())
+}
+
+/// Distributes effects with an active range (entry/exit animations, timed
+/// effects) between the two halves of a split at clip-local time `cut`.
+/// Unranged effects stay on both halves.
+fn split_ranged(left: &mut Vec<EffectInstance>, right: &mut Vec<EffectInstance>, cut: Ticks) {
+    left.retain(|e| e.range.is_none_or(|(a, _)| a < cut));
+    for e in left.iter_mut() {
+        if let Some((_, b)) = &mut e.range {
+            *b = (*b).min(cut);
+        }
+    }
+    right.retain(|e| e.range.is_none_or(|(_, b)| b > cut));
+    for e in right.iter_mut() {
+        e.id = new_id();
+        if let Some((a, b)) = &mut e.range {
+            *a = (*a - cut).max(0);
+            *b -= cut;
+        }
+    }
 }
 
 fn relink_right_halves(p: &mut Project, clip_id: &str, at: Ticks) {

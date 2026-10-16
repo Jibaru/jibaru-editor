@@ -5,9 +5,9 @@ use crate::convert::{decoded_to_video_frame, AvFrame, Scaler};
 use crate::probe::{probe_input, ProbeInfo};
 use crate::util::*;
 use anyhow::{Context as _, Result};
-use ffmpeg_next as ff;
 use ff::ffi;
 use ff::packet::Ref as _;
+use ffmpeg_next as ff;
 use jb_core::frame::VideoFrame;
 use jb_core::time::{Ticks, TICKS_PER_SECOND};
 use std::path::Path;
@@ -214,10 +214,7 @@ impl VideoDecoder {
         if ret < 0 {
             // Some files only seek in byte or global time; try the generic path.
             let us = (t + self.start) / (TICKS_PER_SECOND / ffi::AV_TIME_BASE as i64);
-            check(
-                unsafe { ffi::avformat_seek_file(self.input.as_mut_ptr(), -1, i64::MIN, us, us, 0) },
-                "seek",
-            )?;
+            check(unsafe { ffi::avformat_seek_file(self.input.as_mut_ptr(), -1, i64::MIN, us, us, 0) }, "seek")?;
         }
         self.decoder.flush();
         self.position = None;
@@ -279,7 +276,11 @@ impl VideoDecoder {
         }
         let ts = unsafe {
             let f = &*self.raw.0;
-            if f.best_effort_timestamp != ffi::AV_NOPTS_VALUE { f.best_effort_timestamp } else { f.pts }
+            if f.best_effort_timestamp != ffi::AV_NOPTS_VALUE {
+                f.best_effort_timestamp
+            } else {
+                f.pts
+            }
         };
         let pts = if ts == ffi::AV_NOPTS_VALUE {
             self.position.map_or(0, |p| p + self.frame_duration)

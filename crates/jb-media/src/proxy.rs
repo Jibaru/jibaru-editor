@@ -7,9 +7,9 @@ use crate::convert::{AvFrame, Scaler};
 use crate::encode::{open_video_encoder, EncoderConfig, VideoCodec};
 use crate::util::*;
 use anyhow::{Context as _, Result};
-use ffmpeg_next as ff;
 use ff::ffi;
 use ff::packet::{Mut as _, Ref as _};
+use ffmpeg_next as ff;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::sync_channel;
 use std::time::Instant;
@@ -182,7 +182,10 @@ fn run(src: &Path, dst: &Path, opts: &ProxyOptions, progress: &mut dyn FnMut(f32
         let enc_thread = scope.spawn(move || -> Result<u64> {
             let mut pkt = ff::Packet::empty();
             let mut n = 0u64;
-            let drain = |venc: &mut crate::encode::VideoEncoder, out: &mut ff::format::context::Output, pkt: &mut ff::Packet| -> Result<()> {
+            let drain = |venc: &mut crate::encode::VideoEncoder,
+                         out: &mut ff::format::context::Output,
+                         pkt: &mut ff::Packet|
+             -> Result<()> {
                 loop {
                     let r = unsafe { ffi::avcodec_receive_packet(venc.encoder.as_mut_ptr(), pkt.as_mut_ptr()) };
                     if r == EAGAIN || r == ffi::AVERROR_EOF {
@@ -266,7 +269,11 @@ fn run(src: &Path, dst: &Path, opts: &ProxyOptions, progress: &mut dyn FnMut(f32
                         o.color_primaries = f.color_primaries;
                         o.color_trc = f.color_trc;
                         o.color_range = ffi::AVColorRange::AVCOL_RANGE_MPEG;
-                        let ts = if f.best_effort_timestamp != ffi::AV_NOPTS_VALUE { f.best_effort_timestamp } else { f.pts };
+                        let ts = if f.best_effort_timestamp != ffi::AV_NOPTS_VALUE {
+                            f.best_effort_timestamp
+                        } else {
+                            f.pts
+                        };
                         scaler.run(outf.0, src)?;
                         o.pts = ts;
                         o.duration = f.duration;

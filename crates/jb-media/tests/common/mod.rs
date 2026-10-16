@@ -60,9 +60,30 @@ pub fn index_clip() -> PathBuf {
     cached("index.mp4", |out| {
         let vf = format!("color=c=black:s=320x240:r={FPS}:d=2,{INDEX_LUMA}");
         ffmpeg(&[
-            "-f", "lavfi", "-i", &vf, "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=44100:duration=2",
-            "-c:v", "mpeg4", "-q:v", "2", "-g", "25", "-bf", "2", "-c:a", "aac", "-b:a", "128k", "-shortest",
-            "-f", "mp4", out,
+            "-f",
+            "lavfi",
+            "-i",
+            &vf,
+            "-f",
+            "lavfi",
+            "-i",
+            "sine=frequency=440:sample_rate=44100:duration=2",
+            "-c:v",
+            "mpeg4",
+            "-q:v",
+            "2",
+            "-g",
+            "25",
+            "-bf",
+            "2",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "128k",
+            "-shortest",
+            "-f",
+            "mp4",
+            out,
         ]);
     })
 }
@@ -103,8 +124,17 @@ pub fn index_clip_hevc() -> Option<PathBuf> {
 pub fn late_tone() -> PathBuf {
     cached("late-tone.m4a", |out| {
         ffmpeg(&[
-            "-f", "lavfi", "-i", "aevalsrc='if(gte(t,1),0.5*sin(2*PI*1000*t),0)':s=48000:d=2", "-c:a", "aac",
-            "-b:a", "192k", "-f", "mp4", out,
+            "-f",
+            "lavfi",
+            "-i",
+            "aevalsrc='if(gte(t,1),0.5*sin(2*PI*1000*t),0)':s=48000:d=2",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "192k",
+            "-f",
+            "mp4",
+            out,
         ]);
     })
 }
@@ -113,8 +143,17 @@ pub fn late_tone() -> PathBuf {
 pub fn ten_bit_clip() -> PathBuf {
     cached("tenbit.mkv", |out| {
         ffmpeg(&[
-            "-f", "lavfi", "-i", "color=c=gray:s=128x96:r=25:d=0.4", "-c:v", "ffv1", "-pix_fmt", "yuv420p10le",
-            "-f", "matroska", out,
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=gray:s=128x96:r=25:d=0.4",
+            "-c:v",
+            "ffv1",
+            "-pix_fmt",
+            "yuv420p10le",
+            "-f",
+            "matroska",
+            out,
         ]);
     })
 }
@@ -123,7 +162,15 @@ pub fn ten_bit_clip() -> PathBuf {
 pub fn alpha_clip() -> PathBuf {
     cached("alpha.mov", |out| {
         ffmpeg(&[
-            "-f", "lavfi", "-i", "color=c=red@0.5:s=64x48:r=25:d=0.4,format=rgba", "-c:v", "png", "-f", "mov", out,
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=red@0.5:s=64x48:r=25:d=0.4,format=rgba",
+            "-c:v",
+            "png",
+            "-f",
+            "mov",
+            out,
         ]);
     })
 }

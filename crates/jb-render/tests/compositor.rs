@@ -85,9 +85,7 @@ fn solid_colors_and_blend_modes() {
     let src = MemorySource::new();
     let bottom = [0.5, 0.25, 1.0, 1.0];
     let top = [0.5, 1.0, 0.2, 1.0];
-    let to_disp = |c: [f64; 4]| c.map(|v| {
-        if v <= 0.0031308 { v * 12.92 } else { 1.055 * v.powf(1.0 / 2.4) - 0.055 }
-    });
+    let to_disp = |c: [f64; 4]| c.map(|v| if v <= 0.0031308 { v * 12.92 } else { 1.055 * v.powf(1.0 / 2.4) - 0.055 });
     let (b, t) = (to_disp(bottom), to_disp(top));
     type BlendFn = Box<dyn Fn(f64, f64) -> f64>;
     let cases: Vec<(BlendMode, BlendFn)> = vec![
@@ -176,7 +174,8 @@ fn titles_render_fill_stroke_shadow_background() {
     let mut l = media_layer("t");
     l.content = LayerContent::Title(title("HI"));
     let out = r.render(&p, &FramePlan { time: 0, layers: vec![l.clone()] }, &src);
-    let reds = (0..180).flat_map(|y| (0..320).map(move |x| (x, y))).filter(|&(x, y)| pixel(&out, x, y)[0] > 200).count();
+    let reds =
+        (0..180).flat_map(|y| (0..320).map(move |x| (x, y))).filter(|&(x, y)| pixel(&out, x, y)[0] > 200).count();
     assert!(reds > 500, "fill pixels: {reds}");
     // Text is centred: nothing in the left and right margins.
     assert!((0..180).all(|y| pixel(&out, 5, y)[0] == 0 && pixel(&out, 314, y)[0] == 0));

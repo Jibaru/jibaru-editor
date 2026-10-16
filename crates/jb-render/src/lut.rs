@@ -96,7 +96,13 @@ impl Lut3d {
                 data.extend_from_slice(&f32_to_f16(c).to_le_bytes());
             }
         }
-        AuxImage { width: self.size, height: self.size, depth: self.size, format: wgpu::TextureFormat::Rgba16Float, data }
+        AuxImage {
+            width: self.size,
+            height: self.size,
+            depth: self.size,
+            format: wgpu::TextureFormat::Rgba16Float,
+            data,
+        }
     }
 }
 
