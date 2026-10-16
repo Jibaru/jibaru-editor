@@ -4,6 +4,13 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+
+# Many commits land on main in quick succession: one run at a time per ref,
+# and a newer push replaces the pending one instead of queueing them all.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   rust:
@@ -28,14 +35,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $name = "ffmpeg-n9.0-latest-win64-lgpl-shared-9.0"
-          $url = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/$name.zip"
-          Invoke-WebRequest $url -OutFile "$env:RUNNER_TEMP\ffmpeg.zip"
-          Expand-Archive "$env:RUNNER_TEMP\ffmpeg.zip" -DestinationPath $env:RUNNER_TEMP
-          $dir = Join-Path $env:RUNNER_TEMP $name
-          "FFMPEG_DIR=$dir" | Out-File -FilePath $env:GITHUB_ENV -Append
-          "LIBCLANG_PATH=C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_ENV -Append
-          "$dir\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
+          scripts/ffmpeg/fetch-windows.ps1
           # bindgen in ffmpeg-sys-next's build script can overflow the
           # default 1 MB main-thread stack on Windows.
           "RUSTFLAGS=-C link-arg=/STACK:16777216" | Out-File -FilePath $env:GITHUB_ENV -Append
@@ -74,3 +74,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm build
+
+  # Release-mode packages with the LGPL FFmpeg bundled (`pnpm tauri build` on
+  # both platforms), smoke tested on the runner. See docs/packaging.md.
+  packages:
+    uses: ./.github/workflows/build.yml
+    secrets: inherit

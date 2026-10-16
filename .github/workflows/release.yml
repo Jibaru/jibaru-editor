@@ -1,0 +1,66 @@
+# Builds the macOS (arm64) and Windows (x64) packages and attaches them to a
+# draft GitHub Release. Runs on `v*` tags and by hand (Actions > Release >
+# Run workflow), where the tag defaults to v<workspace version>.
+#
+# Signing is used only when the secrets exist (see docs/packaging.md):
+#   macOS:   APPLE_CERTIFICATE, APPLE_CERTIFICATE_PASSWORD, APPLE_SIGNING_IDENTITY,
+#            and for notarization APPLE_ID, APPLE_PASSWORD, APPLE_TEAM_ID
+#   Windows: WINDOWS_CERTIFICATE, WINDOWS_CERTIFICATE_PASSWORD
+# Without them the macOS app is ad-hoc signed and Windows binaries are unsigned.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (default: v<workspace version>)"
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+    secrets: inherit
+    with:
+      upload-name-prefix: release
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: dist
+          merge-multiple: true
+      - name: Create or update the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          version="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)"
+          if [ "${GITHUB_REF_TYPE}" = tag ]; then
+            tag="${GITHUB_REF_NAME}"
+          else
+            tag="${INPUT_TAG:-v$version}"
+          fi
+          if [ "$tag" != "v$version" ]; then
+            echo "::warning::tag $tag does not match the workspace version $version"
+          fi
+          (cd dist && sha256sum * > SHA256SUMS.txt)
+          ls -la dist
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            gh release create "$tag" --draft --target "$GITHUB_SHA" \
+              --title "Jibaru Editor ${tag#v}" --generate-notes
+          fi
+          gh release upload "$tag" dist/* --clobber
+          echo "Draft release: $(gh release view "$tag" --json url --jq .url)" >> "$GITHUB_STEP_SUMMARY"

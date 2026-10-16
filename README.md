@@ -63,6 +63,23 @@ cargo run --release -p jb-export --example bench_export -- /path/to/clip.mp4
 Set `JB_NO_HWDEC=1` / `JB_NO_HWENC=1` to force software decoding / encoding
 and `JB_FFMPEG_LOG=info` for FFmpeg logs.
 
+### Packaging and releases
+
+Distributed builds bundle an LGPL shared FFmpeg (built from source on macOS,
+BtbN's LGPL build on Windows) inside the app and the CLI packages:
+
+```sh
+scripts/ffmpeg/build-macos.sh ~/ffmpeg-lgpl          # LGPL FFmpeg, ~5 min
+FFMPEG_DIR=~/ffmpeg-lgpl cargo build --release -p jb-cli -p jb-mcp
+(cd app && FFMPEG_DIR=~/ffmpeg-lgpl pnpm tauri build --bundles app)
+scripts/package/macos.sh ~/ffmpeg-lgpl dist          # .dmg, .app.zip, jb CLI zip
+```
+
+CI builds and smoke tests these packages on every push; pushing a `v*` tag
+(or running the Release workflow by hand) attaches them to a draft GitHub
+Release, signed when signing secrets are configured. See
+[docs/packaging.md](docs/packaging.md) for Windows, signing and details.
+
 ### FFmpeg licensing
 
 FFmpeg is always linked dynamically and the editor only uses LGPL
@@ -70,7 +87,8 @@ components: hardware encoders (VideoToolbox, NVENC, Quick Sync, AMF, Media
 Foundation), libopenh264 or FFmpeg's native MPEG-4 encoder as software
 fallbacks, and the native AAC encoder. GPL encoders (libx264, libx265) are
 never used. The Homebrew FFmpeg is a GPL build and is fine for development;
-distributed builds must bundle an LGPL build.
+distributed builds bundle an LGPL build (see
+[docs/packaging.md](docs/packaging.md)).
 
 ## License
 

@@ -1,0 +1,184 @@
+# Builds distributable packages with an LGPL FFmpeg bundled, then smoke tests
+# them on the runner: the packaged `jb` renders a generated clip
+# (decode -> GPU render -> encode, WARP on Windows runners), `jb-mcp` answers
+# an MCP session, and the installed app starts without missing libraries.
+# Called by ci.yml (every push to main and PRs) and release.yml.
+name: Build packages
+
+on:
+  workflow_call:
+    inputs:
+      upload-name-prefix:
+        type: string
+        default: packages
+
+env:
+  FFMPEG_VERSION: "9.0.2"
+
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            platform: macos-arm64
+          - os: windows-latest
+            platform: windows-x64
+    runs-on: ${{ matrix.os }}
+    env:
+      HAS_APPLE_CERT: ${{ secrets.APPLE_CERTIFICATE != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: package
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: app/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: app/pnpm-lock.yaml
+
+      # --- FFmpeg (LGPL, shared) ---------------------------------------------
+      - name: Cache LGPL FFmpeg (macOS)
+        if: runner.os == 'macOS'
+        id: ffmpeg-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/ffmpeg-lgpl
+          key: ffmpeg-lgpl-${{ env.FFMPEG_VERSION }}-${{ matrix.platform }}-${{ hashFiles('scripts/ffmpeg/build-macos.sh') }}
+      - name: Build LGPL FFmpeg (macOS)
+        if: runner.os == 'macOS' && steps.ffmpeg-cache.outputs.cache-hit != 'true'
+        run: scripts/ffmpeg/build-macos.sh ~/ffmpeg-lgpl arm64
+      - name: Use LGPL FFmpeg (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          echo "FFMPEG_DIR=$HOME/ffmpeg-lgpl" >> "$GITHUB_ENV"
+          echo "FFMPEG_BIN=$HOME/ffmpeg-lgpl/bin" >> "$GITHUB_ENV"
+          echo "MACOSX_DEPLOYMENT_TARGET=11.0" >> "$GITHUB_ENV"
+          ~/ffmpeg-lgpl/bin/ffprobe -hide_banner -buildconf | head -30
+      - name: Fetch LGPL FFmpeg (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $dir = scripts/ffmpeg/fetch-windows.ps1
+          "FFMPEG_BIN=$dir\bin" | Out-File -FilePath $env:GITHUB_ENV -Append
+          # bindgen needs a bigger main-thread stack; the static CRT avoids a
+          # dependency on the Visual C++ redistributable.
+          "RUSTFLAGS=-C link-arg=/STACK:16777216 -C target-feature=+crt-static" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      # --- Build -------------------------------------------------------------
+      - name: Build jb and jb-mcp
+        run: cargo build --release --locked -p jb-cli -p jb-mcp
+      - run: pnpm install --frozen-lockfile
+        working-directory: app
+      - name: Build the app (macOS)
+        if: runner.os == 'macOS'
+        working-directory: app
+        run: pnpm tauri build --bundles app
+      - name: Build the app and installer (Windows)
+        if: runner.os == 'Windows'
+        working-directory: app
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          ../scripts/package/windows-prepare.ps1 -FfmpegDir $env:FFMPEG_DIR
+          pnpm tauri build --bundles nsis --config src-tauri/tauri.bundle.conf.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      # --- Package -----------------------------------------------------------
+      - name: Import signing certificate (macOS)
+        if: runner.os == 'macOS' && env.HAS_APPLE_CERT == 'true'
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          kc="$RUNNER_TEMP/signing.keychain-db"
+          pw="$(uuidgen)"
+          echo "$APPLE_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$pw" "$kc"
+          security set-keychain-settings -lut 21600 "$kc"
+          security unlock-keychain -p "$pw" "$kc"
+          security import "$RUNNER_TEMP/cert.p12" -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$kc"
+          security set-key-partition-list -S apple-tool:,apple: -k "$pw" "$kc"
+          security list-keychain -d user -s "$kc" $(security list-keychains -d user | tr -d '"')
+          rm "$RUNNER_TEMP/cert.p12"
+      - name: Package (macOS)
+        if: runner.os == 'macOS'
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: scripts/package/macos.sh ~/ffmpeg-lgpl dist
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: scripts/package/windows.ps1 -FfmpegDir $env:FFMPEG_DIR -OutDir dist
+
+      # --- Smoke tests on the packaged binaries ------------------------------
+      - name: Smoke test the CLI package
+        shell: bash
+        run: |
+          set -euo pipefail
+          zip="$(ls dist/jb-*.zip)"
+          mkdir -p "$RUNNER_TEMP/cli"
+          unzip -q -o "$zip" -d "$RUNNER_TEMP/cli"
+          bin="$(dirname "$(find "$RUNNER_TEMP/cli" -name 'jb' -o -name 'jb.exe' | head -1)")"
+          py=python3; [ "$RUNNER_OS" = Windows ] && py=python
+          "$py" scripts/smoke/smoke.py "$bin" --ffmpeg "$FFMPEG_BIN/ffmpeg"
+      - name: Launch the app (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/app"
+          ditto -x -k dist/*.app.zip "$RUNNER_TEMP/app"
+          app="$RUNNER_TEMP/app/Jibaru Editor.app"
+          codesign --verify --deep --strict "$app"
+          exe="$app/Contents/MacOS/$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app/Contents/Info.plist")"
+          "$exe" > "$RUNNER_TEMP/app.log" 2>&1 &
+          pid=$!
+          sleep 15
+          if ! kill -0 $pid 2>/dev/null; then
+            wait $pid || code=$?
+            cat "$RUNNER_TEMP/app.log"
+            echo "::error::the app exited early (code ${code:-0})"
+            exit 1
+          fi
+          kill $pid
+          head -50 "$RUNNER_TEMP/app.log"
+          echo "the app is running with bundled FFmpeg"
+      - name: Install and launch the app (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $setup = Get-ChildItem dist\*-setup.exe | Select-Object -First 1
+          $dir = Join-Path $env:RUNNER_TEMP "JibaruEditor"
+          Start-Process $setup.FullName -ArgumentList "/S", "/D=$dir" -Wait
+          Get-ChildItem $dir | Format-Table Name, Length
+          if (-not (Get-ChildItem $dir -Filter "avcodec-*.dll")) { throw "FFmpeg DLLs are missing next to the executable" }
+          $exe = Get-ChildItem $dir -Filter *.exe | Where-Object { $_.Name -notmatch "^uninstall" } | Select-Object -First 1
+          # Run with FFmpeg off PATH so only the bundled DLLs can satisfy it.
+          $env:PATH = ($env:PATH -split ";" | Where-Object { $_ -and -not (Test-Path (Join-Path $_ "avcodec-*.dll")) }) -join ";"
+          $p = Start-Process $exe.FullName -PassThru
+          Start-Sleep 15
+          if ($p.HasExited) {
+            throw ("the app exited early with code 0x{0:X8} (0xC0000135 means a DLL is missing)" -f $p.ExitCode)
+          }
+          Stop-Process $p -Force
+          Write-Output "the installed app is running with bundled FFmpeg"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.upload-name-prefix }}-${{ matrix.platform }}
+          path: dist/*
+          if-no-files-found: error

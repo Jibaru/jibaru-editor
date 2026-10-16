@@ -6,3 +6,5 @@ dist/
 *.wfp
 !crates/jb-filmora/tests/fixtures/*.wfp
 /.claude/
+/app/src-tauri/ffmpeg-dlls/
+/app/src-tauri/tauri.bundle.conf.json
