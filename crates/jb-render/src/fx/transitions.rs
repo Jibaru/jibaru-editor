@@ -74,9 +74,9 @@ fn zoom_blur(use_b: bool, uv: vec2f, s: f32, amt: f32) -> vec4f {
 /// fitted frame by frame on Filmora's exports of Fast Wipe Left: the effect
 /// spans two frames on each side of the cut at the midpoint. With `f`
 /// frames (of a 2 s transition, 60 |p - 0.5|) to the cut, the clip is offset
-/// by 0.14 × 3.2^(2 - f) of the frame and box-blurred along the motion over
-/// ±0.07 × 5^(2 - f) (capped), so it travels 0.14 → 0.45 frame widths in
-/// the last two frames and is a smear on the cut frame.
+/// by 0.147, 0.52 and 0.94 of the frame at f = 2, 1, 0 (the cut frame),
+/// sampled with mirrored repeat, and gaussian-blurred along the motion with
+/// sigma 0.32 × the offset (truncated at 2 sigma).
 fn fast_wipe_body(dir: [f32; 2]) -> String {
     body(&format!(
         r#"{DBLUR}
@@ -84,24 +84,29 @@ fn fx(uv: vec2f) -> vec4f {{
     let p = prog();
     let d = vec2f({:.1}, {:.1});
     let f = 60.0 * abs(p - 0.5);
-    let off = min(0.14 * pow(3.2, 2.0 - f), 0.7);
-    // Box half-width w as a gaussian sigma (w / sqrt(3)).
-    let sigma = min(0.07 * pow(5.0, 2.0 - f), 0.45) * 0.577 * p_blur();
     if (f > 2.5) {{ return select(sa(uv), sb(uv), p >= 0.5); }}
+    let off = {};
+    let sigma = 0.32 * off * p_blur();
     if (p < 0.5) {{
         return dblur(false, uv, d * off, d, sigma);
     }}
     return dblur(true, uv, -d * off, d, sigma);
 }}
 "#,
-        dir[0], dir[1]
+        dir[0],
+        dir[1],
+        curve("f", &[(0.0, 0.94), (1.0, 0.52), (2.0, 0.147), (3.0, 0.0)])
     ))
 }
 
-/// Directional gaussian blur with wrap-around sampling (offset and sigma in uv).
+/// Directional gaussian blur with mirrored-repeat sampling (offset and sigma in uv).
 pub(crate) const DBLUR: &str = r#"
+fn dmirror(q: vec2f) -> vec2f {
+    let f = q - 2.0 * floor(q * 0.5);
+    return select(f, 2.0 - f, f > vec2f(1.0));
+}
 fn dsample(use_b: bool, q: vec2f) -> vec4f {
-    let w = fract(q);
+    let w = dmirror(q);
     return select(sa(w), sb(w), use_b);
 }
 fn dblur(use_b: bool, uv: vec2f, off: vec2f, dir: vec2f, sigma: f32) -> vec4f {
