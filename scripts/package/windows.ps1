@@ -7,6 +7,7 @@
 # Outputs in <OutDir>:
 #   jb-<version>-windows-x64.zip
 #   Jibaru-Editor-<version>-windows-x64-setup.exe   (when the installer exists)
+#   Jibaru-Editor-<version>-windows-x64-setup.exe.sig  (updater signature, when built)
 param(
   [Parameter(Mandatory)][string]$FfmpegDir,
   [Parameter(Mandatory)][string]$OutDir
@@ -61,6 +62,12 @@ if ($nsis) {
   $dest = Join-Path $OutDir "Jibaru-Editor-$version-windows-x64-setup.exe"
   Copy-Item $nsis.FullName $dest
   Write-Output "wrote $dest"
+  # The updater signature covers the file's bytes, so it survives the rename.
+  $sig = "$($nsis.FullName).sig"
+  if (Test-Path $sig) {
+    Copy-Item $sig "$dest.sig"
+    Write-Output "wrote $dest.sig"
+  }
 } else {
   Write-Output "note: no NSIS installer under $release\bundle\nsis; skipped"
 }

@@ -7,9 +7,11 @@ Homebrew's, which enables libx264/libx265) are only for development.
 | Package | Contents |
 | --- | --- |
 | `Jibaru-Editor-<v>-macos-arm64.dmg` / `.app.zip` | The app; FFmpeg dylibs in `Contents/Frameworks`, licenses in `Contents/Resources/licenses` |
-| `Jibaru-Editor-<v>-windows-x64-setup.exe` | NSIS installer; FFmpeg DLLs installed next to the executable |
+| `Jibaru-Editor-<v>-macos-arm64.app.tar.gz` + `.sig` | Updater package: the same final `.app`, signed for the updater |
+| `Jibaru-Editor-<v>-windows-x64-setup.exe` | NSIS installer; FFmpeg DLLs installed next to the executable (also the updater package, with its `.sig`) |
 | `jb-<v>-macos-arm64.zip` | `bin/jb`, `bin/jb-mcp`, `bin/ffprobe`, `lib/*.dylib`, licenses |
 | `jb-<v>-windows-x64.zip` | `jb.exe`, `jb-mcp.exe`, `ffprobe.exe`, FFmpeg DLLs, licenses |
+| `latest.json` | Updater manifest (release only, see [updates.md](updates.md)) |
 | `SHA256SUMS.txt` | Checksums (release only) |
 
 `jb import-media` probes files through the linked FFmpeg libraries; the bundled
@@ -101,7 +103,8 @@ and encode (software fallback) work with only the bundled DLLs.
 
 ## CI
 
-`.github/workflows/ci.yml` runs on every push to `main`, on PRs and by hand:
+`.github/workflows/ci.yml` runs on every push to `main` (docs-only pushes
+skipped), on PRs and by hand; a newer push cancels the running one:
 
 - `rust` (macOS, Windows): build, `hwinfo`, `cargo test --workspace`, with
   Homebrew FFmpeg on macOS and the BtbN LGPL build on Windows.
@@ -110,8 +113,9 @@ and encode (software fallback) work with only the bundled DLLs.
   (`pnpm tauri build` on both platforms), then the smoke test on the CLI
   package, plus launching the app (macOS: from the `.app.zip`; Windows:
   silent NSIS install, FFmpeg DLLs must sit next to the exe, the app must
-  stay up for 15 s with FFmpeg off `PATH`). Packages are uploaded as workflow
-  artifacts.
+  stay up for 15 s with FFmpeg off `PATH`), and the updater signatures are
+  checked. Packages are uploaded as workflow artifacts. Runs on pushes to
+  `main` and manual runs, not on PRs.
 
 ### GPU tests on CI runners
 
@@ -126,18 +130,25 @@ golden fails, the `golden-actual-*` artifact holds the rendered images.
 ## Releases
 
 `.github/workflows/release.yml` runs on `v*` tags and by hand
-(`gh workflow run release.yml [-f tag=v0.1.0]`). It runs `build.yml` and
-attaches every package plus `SHA256SUMS.txt` to a **draft** release for the
-tag (created if missing, files replaced if it exists). Publish the draft from
-the GitHub UI after checking it.
+(`gh workflow run release.yml [-f tag=v0.1.0]`). It runs `build.yml`, writes
+the updater manifest `latest.json` and attaches every package plus
+`SHA256SUMS.txt` to the release for the tag (created if missing, files
+replaced if it exists). A tag push **publishes** the release, which ships it
+to the in-app updater, then tests the update on a Windows runner; a manual
+run only refreshes a draft.
 
-To cut a release: bump `version` in `Cargo.toml`,
-`app/src-tauri/tauri.conf.json` and `app/package.json`, commit, then
-`git tag v<version> && git push origin v<version>`.
+To cut a release: `scripts/release/bump.sh <version>` (sets the version in
+`Cargo.toml`, `app/src-tauri/tauri.conf.json` and `app/package.json`),
+commit, then `git tag v<version> && git push origin main v<version>`. See
+[updates.md](updates.md) for the updater, its signing key and how to test an
+update.
 
 ### Signing
 
-Signing happens only when the corresponding repository secrets exist:
+Code signing happens only when the corresponding repository secrets exist
+(none are configured yet). Updater signing is separate and always on for
+releases: `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`
+(see [updates.md](updates.md)).
 
 | Secret | Use |
 | --- | --- |
@@ -151,6 +162,19 @@ Signing happens only when the corresponding repository secrets exist:
 Without them, the macOS app is ad-hoc signed (users must right-click > Open
 the first time, or run `xattr -dr com.apple.quarantine "/Applications/Jibaru
 Editor.app"`) and Windows binaries are unsigned (SmartScreen warns).
+
+Current state:
+
+- **macOS builds are ad-hoc signed.** A Developer ID certificate and
+  notarization require the Apple Developer Program ($99/year), so the first
+  launch of a downloaded app needs right-click > Open (or the `xattr`
+  command above). Updates are not affected: the updater downloads without the
+  quarantine flag and checks every package against our updater key, so an
+  update cannot be swapped for someone else's build.
+- **Windows builds are unsigned** until the project is approved by the
+  [SignPath Foundation](https://signpath.org/), which signs open-source
+  projects for free; SmartScreen warns on the first install. Updates are
+  verified with the updater key the same way.
 
 ## LGPL compliance
 

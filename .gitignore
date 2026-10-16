@@ -8,3 +8,4 @@ dist/
 /.claude/
 /app/src-tauri/ffmpeg-dlls/
 /app/src-tauri/tauri.bundle.conf.json
+/app/src-tauri/tauri.old.conf.json

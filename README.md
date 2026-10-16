@@ -75,10 +75,11 @@ FFMPEG_DIR=~/ffmpeg-lgpl cargo build --release -p jb-cli -p jb-mcp
 scripts/package/macos.sh ~/ffmpeg-lgpl dist          # .dmg, .app.zip, jb CLI zip
 ```
 
-CI builds and smoke tests these packages on every push; pushing a `v*` tag
-(or running the Release workflow by hand) attaches them to a draft GitHub
-Release, signed when signing secrets are configured. See
-[docs/packaging.md](docs/packaging.md) for Windows, signing and details.
+CI builds and smoke tests these packages on every push to `main`; pushing a
+`v*` tag (after `scripts/release/bump.sh <version>`) publishes them as a
+GitHub Release, which the app's built-in updater picks up. See
+[docs/packaging.md](docs/packaging.md) for Windows, signing and details, and
+[docs/updates.md](docs/updates.md) for updates and cutting a release.
 
 ### Running the desktop app
 

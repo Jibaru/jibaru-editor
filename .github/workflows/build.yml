@@ -2,7 +2,11 @@
 # them on the runner: the packaged `jb` renders a generated clip
 # (decode -> GPU render -> encode, WARP on Windows runners), `jb-mcp` answers
 # an MCP session, and the installed app starts without missing libraries.
-# Called by ci.yml (every push to main and PRs) and release.yml.
+# Called by ci.yml (pushes to main, manual runs) and release.yml.
+#
+# With the TAURI_SIGNING_PRIVATE_KEY(_PASSWORD) secrets the packages include
+# the signed updater artifacts (macOS .app.tar.gz, Windows setup .exe, each
+# with a .sig); see docs/updates.md.
 name: Build packages
 
 on:
@@ -11,6 +15,10 @@ on:
       upload-name-prefix:
         type: string
         default: packages
+      update-test:
+        description: Also build an older (0.0.1) Windows installer for the update test in release.yml
+        type: boolean
+        default: false
 
 env:
   FFMPEG_VERSION: "9.0.2"
@@ -28,6 +36,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       HAS_APPLE_CERT: ${{ secrets.APPLE_CERTIFICATE != '' }}
+      # Updater signing key (tauri signer); empty on forks, then no updater artifacts.
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -133,6 +144,20 @@ jobs:
           WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
           WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
         run: scripts/package/windows.ps1 -FfmpegDir $env:FFMPEG_DIR -OutDir dist
+      - name: Check the updater signatures
+        if: env.TAURI_SIGNING_PRIVATE_KEY != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          py=python3; [ "$RUNNER_OS" = Windows ] && py=python
+          version="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)"
+          n=0
+          for f in dist/*.app.tar.gz dist/*-setup.exe; do
+            [ -e "$f" ] || continue
+            "$py" scripts/release/verify-sig.py "$f" "$f.sig" --version "$version"
+            n=$((n + 1))
+          done
+          [ $n -gt 0 ] || { echo "::error::no updater package in dist"; exit 1; }
 
       # --- Smoke tests on the packaged binaries ------------------------------
       - name: Smoke test the CLI package
@@ -190,4 +215,24 @@ jobs:
         with:
           name: ${{ inputs.upload-name-prefix }}-${{ matrix.platform }}
           path: dist/*
+          if-no-files-found: error
+
+      # An older installer with the same updater key: release.yml installs it
+      # and checks that it updates itself to this version.
+      - name: Build an older installer for the update test (Windows)
+        if: runner.os == 'Windows' && inputs.update-test
+        working-directory: app
+        shell: pwsh
+        run: |
+          '{ "version": "0.0.1" }' | Set-Content -Encoding utf8 src-tauri/tauri.old.conf.json
+          pnpm tauri build --bundles nsis --config src-tauri/tauri.bundle.conf.json --config src-tauri/tauri.old.conf.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          New-Item -ItemType Directory -Force ../dist-old | Out-Null
+          $setup = Get-ChildItem ../target/release/bundle/nsis/*_0.0.1_*-setup.exe | Select-Object -First 1
+          Copy-Item $setup.FullName ../dist-old/Jibaru-Editor-0.0.1-windows-x64-setup.exe
+      - if: runner.os == 'Windows' && inputs.update-test
+        uses: actions/upload-artifact@v4
+        with:
+          name: update-test-windows-x64
+          path: dist-old/*
           if-no-files-found: error

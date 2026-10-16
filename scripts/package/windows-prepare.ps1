@@ -6,6 +6,9 @@
 #
 # When WINDOWS_CERTIFICATE (base64 .pfx) and WINDOWS_CERTIFICATE_PASSWORD are
 # set, the config also signs the executable, installer and uninstaller.
+# When TAURI_SIGNING_PRIVATE_KEY is set it enables createUpdaterArtifacts, so
+# `tauri build` signs the installer for the updater (`<setup>.exe.sig`). The
+# updater runs that same installer, so updates carry the FFmpeg DLLs too.
 #
 #   scripts/package/windows-prepare.ps1 -FfmpegDir <dir>
 param([Parameter(Mandatory)][string]$FfmpegDir)
@@ -30,7 +33,12 @@ if ($env:WINDOWS_CERTIFICATE -and $env:WINDOWS_CERTIFICATE_PASSWORD) {
   Write-Output "code signing enabled"
 }
 
-$conf = [ordered]@{ bundle = [ordered]@{ resources = $resources; windows = $windows } }
+$bundle = [ordered]@{ resources = $resources; windows = $windows }
+if ($env:TAURI_SIGNING_PRIVATE_KEY -or $env:TAURI_SIGNING_PRIVATE_KEY_PATH) {
+  $bundle["createUpdaterArtifacts"] = $true
+  Write-Output "updater artifacts enabled"
+}
+$conf = [ordered]@{ bundle = $bundle }
 $conf | ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8 (Join-Path $tauri "tauri.bundle.conf.json")
 Get-Content (Join-Path $tauri "tauri.bundle.conf.json") |
   Where-Object { $_ -notmatch "signCommand" }

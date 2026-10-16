@@ -12,7 +12,7 @@ on:
 # and a newer push replaces the pending one instead of queueing them all.
 concurrency:
   group: ci-${{ github.ref }}
-  # Superseded runs are cancelled: macOS runner minutes are billed at 10x.
+  # Superseded runs are cancelled so the latest commit gets the runners.
   cancel-in-progress: true
 
 jobs:
@@ -88,9 +88,11 @@ jobs:
       - run: pnpm build
 
   # Release-mode packages with the LGPL FFmpeg bundled (`pnpm tauri build` on
-  # both platforms), smoke tested on the runner. See docs/packaging.md.
-  # Expensive, so only on manual runs; releases build them too.
+  # both platforms) and the signed updater artifacts, smoke tested on the
+  # runner. See docs/packaging.md. On pushes to main and manual runs (the
+  # repository is public, so runners are free); not on PRs, which have no
+  # access to the signing secrets.
   packages:
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name != 'pull_request'
     uses: ./.github/workflows/build.yml
     secrets: inherit

@@ -15,9 +15,15 @@
 # $APPLE_ID, $APPLE_PASSWORD and $APPLE_TEAM_ID are set the DMG is notarized
 # and stapled.
 #
+# The updater package is a tarball of that final app (after the dylibs are
+# bundled and everything is signed; the one `tauri build` makes would lack
+# them). With $TAURI_SIGNING_PRIVATE_KEY (and _PASSWORD) set it is signed for
+# the updater with `tauri signer sign`, which writes the .sig next to it.
+#
 # Outputs in <out-dir>:
 #   Jibaru-Editor-<version>-macos-<arch>.dmg
 #   Jibaru-Editor-<version>-macos-<arch>.app.zip
+#   Jibaru-Editor-<version>-macos-<arch>.app.tar.gz[.sig]  (updater package)
 #   jb-<version>-macos-<arch>.zip   (jb, jb-mcp, ffprobe, FFmpeg dylibs)
 set -euo pipefail
 
@@ -153,6 +159,16 @@ if [ -d "$app_src" ]; then
 
   base="Jibaru-Editor-$version-macos-$arch"
   (cd "$stage" && ditto -c -k --sequesterRsrc --keepParent "Jibaru Editor.app" "$out/$base.app.zip")
+  # Updater package: the updater drops the first path component, so the
+  # archive holds "Jibaru Editor.app/..." at its root. No AppleDouble files.
+  COPYFILE_DISABLE=1 tar -czf "$out/$base.app.tar.gz" --no-mac-metadata -C "$stage" "Jibaru Editor.app"
+  rm -f "$out/$base.app.tar.gz.sig"
+  if [ -n "${TAURI_SIGNING_PRIVATE_KEY:-}${TAURI_SIGNING_PRIVATE_KEY_PATH:-}" ]; then
+    (cd "$root/app" && pnpm --silent tauri signer sign --app-version "$version" "$out/$base.app.tar.gz" >/dev/null)
+    echo "signed $out/$base.app.tar.gz for the updater"
+  else
+    echo "note: TAURI_SIGNING_PRIVATE_KEY is not set; the updater package is unsigned"
+  fi
   dmg_root="$stage/dmg"
   mkdir -p "$dmg_root"
   cp -R "$app" "$dmg_root/"

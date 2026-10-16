@@ -1,12 +1,17 @@
-# Builds the macOS (arm64) and Windows (x64) packages and attaches them to a
-# draft GitHub Release. Runs on `v*` tags and by hand (Actions > Release >
-# Run workflow), where the tag defaults to v<workspace version>.
+# Builds the macOS (arm64) and Windows (x64) packages, writes the updater
+# manifest (latest.json) and attaches everything to the GitHub Release.
 #
-# Signing is used only when the secrets exist (see docs/packaging.md):
+# - `v*` tag pushes publish the release (marked latest), which is what the
+#   in-app updater reads: releases/latest/download/latest.json. Then an
+#   older Windows build is installed on a runner and must update itself.
+# - Manual runs (Actions > Release > Run workflow; the tag defaults to
+#   v<workspace version>) only create or refresh a draft.
+#
+# Secrets (see docs/updates.md and docs/packaging.md):
+#   updater: TAURI_SIGNING_PRIVATE_KEY, TAURI_SIGNING_PRIVATE_KEY_PASSWORD (required)
 #   macOS:   APPLE_CERTIFICATE, APPLE_CERTIFICATE_PASSWORD, APPLE_SIGNING_IDENTITY,
-#            and for notarization APPLE_ID, APPLE_PASSWORD, APPLE_TEAM_ID
-#   Windows: WINDOWS_CERTIFICATE, WINDOWS_CERTIFICATE_PASSWORD
-# Without them the macOS app is ad-hoc signed and Windows binaries are unsigned.
+#            and for notarization APPLE_ID, APPLE_PASSWORD, APPLE_TEAM_ID (optional)
+#   Windows: WINDOWS_CERTIFICATE, WINDOWS_CERTIFICATE_PASSWORD (optional)
 name: Release
 
 on:
@@ -30,10 +35,14 @@ jobs:
     secrets: inherit
     with:
       upload-name-prefix: release
+      update-test: ${{ github.ref_type == 'tag' }}
 
   publish:
     needs: build
     runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
+      version: ${{ steps.release.outputs.version }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -41,7 +50,8 @@ jobs:
           pattern: release-*
           path: dist
           merge-multiple: true
-      - name: Create or update the draft release
+      - name: Create or update the release
+        id: release
         env:
           GH_TOKEN: ${{ github.token }}
           INPUT_TAG: ${{ inputs.tag }}
@@ -54,13 +64,89 @@ jobs:
             tag="${INPUT_TAG:-v$version}"
           fi
           if [ "$tag" != "v$version" ]; then
+            if [ "${GITHUB_REF_TYPE}" = tag ]; then
+              echo "::error::tag $tag does not match the version $version (run scripts/release/bump.sh)"
+              exit 1
+            fi
             echo "::warning::tag $tag does not match the workspace version $version"
           fi
-          (cd dist && sha256sum * > SHA256SUMS.txt)
-          ls -la dist
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
           if ! gh release view "$tag" >/dev/null 2>&1; then
             gh release create "$tag" --draft --target "$GITHUB_SHA" \
-              --title "Jibaru Editor ${tag#v}" --generate-notes
+              --title "Jibaru Editor $version" --generate-notes
           fi
+          # The release notes double as the update notes shown in the app.
+          gh release view "$tag" --json body --jq .body > "$RUNNER_TEMP/notes.md"
+          python3 scripts/release/latest-json.py dist --version "$version" \
+            --base-url "https://github.com/$GITHUB_REPOSITORY/releases/download/$tag" \
+            --notes-file "$RUNNER_TEMP/notes.md"
+          cat dist/latest.json
+          (cd dist && sha256sum * > SHA256SUMS.txt)
+          ls -la dist
           gh release upload "$tag" dist/* --clobber
-          echo "Draft release: $(gh release view "$tag" --json url --jq .url)" >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "${GITHUB_REF_TYPE}" = tag ]; then
+            gh release edit "$tag" --draft=false --latest
+            echo "Published: $(gh release view "$tag" --json url --jq .url)" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Draft release: $(gh release view "$tag" --json url --jq .url)" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  # The published manifest must be served at the updater endpoint, and an
+  # older installed build must find this version, verify it, install it and
+  # relaunch as it.
+  update-test-windows:
+    needs: publish
+    if: github.ref_type == 'tag'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check the live manifest and the Windows package
+        shell: bash
+        env:
+          VERSION: ${{ needs.publish.outputs.version }}
+        run: |
+          set -euo pipefail
+          base="https://github.com/$GITHUB_REPOSITORY/releases/latest/download"
+          curl -fsSL --retry 5 --retry-delay 10 "$base/latest.json" -o latest.json
+          cat latest.json
+          python - <<'EOF'
+          import json, os, subprocess, sys, urllib.request
+          m = json.load(open("latest.json"))
+          assert m["version"] == os.environ["VERSION"], f"latest.json is {m['version']}"
+          w = m["platforms"]["windows-x86_64"]
+          urllib.request.urlretrieve(w["url"], "setup.exe")
+          r = subprocess.run([sys.executable, "scripts/release/verify-sig.py", "setup.exe", "-", "--version", m["version"]],
+                             input=w["signature"], text=True)
+          sys.exit(r.returncode)
+          EOF
+      - name: Pick the older build
+        id: old
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.publish.outputs.tag }}
+        run: |
+          set -euo pipefail
+          mkdir -p old
+          # The previous published release, if it has the updater (a latest.json).
+          prev="$(gh release list --exclude-drafts --limit 20 --json tagName --jq '.[].tagName' | grep -vx "$TAG" | head -1 || true)"
+          if [ -n "$prev" ] && gh release view "$prev" --json assets --jq '.assets[].name' | grep -qx latest.json; then
+            gh release download "$prev" --pattern '*-windows-x64-setup.exe' --dir old
+            echo "using the previous release $prev"
+          else
+            echo "no earlier release has the updater; using the 0.0.1 build"
+          fi
+          echo "dir=old" >> "$GITHUB_OUTPUT"
+      - if: hashFiles('old/*.exe') == ''
+        uses: actions/download-artifact@v4
+        with:
+          name: update-test-windows-x64
+          path: old
+      - name: Install the older build and update it
+        shell: pwsh
+        run: |
+          $setup = Get-ChildItem old\*-setup.exe | Select-Object -First 1
+          scripts/release/update-test-windows.ps1 -Setup $setup.FullName -Expect "${{ needs.publish.outputs.version }}"
