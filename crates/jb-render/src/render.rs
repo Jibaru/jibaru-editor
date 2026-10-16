@@ -29,21 +29,22 @@ pub struct RenderOptions {
     pub linear_light: bool,
     /// Hint passed to the frame source so decoders can scale down (previews).
     pub source_max_size: Option<(u32, u32)>,
-    /// Offset added to Y, Cb and Cr of YUV sources (8-bit full-range code
-    /// values) before conversion to RGB. Defaults to [`FILMORA_YUV_BIAS`].
-    pub yuv_bias: [f32; 3],
+    /// Offset added to the output RGB (8-bit code values) after compositing.
+    /// Defaults to [`FILMORA_OUTPUT_BIAS`]; `[0.0; 3]` gives exact levels.
+    pub output_bias: [f32; 3],
 }
 
-/// Filmora's video pipeline renders YUV footage slightly darker than an exact
-/// conversion: measured against Filmora 15.7 exports of the user projects
-/// (docs/fidelity.md) its output is offset by about −1.6 Y, −0.6 Cb and
+/// Filmora's pipeline renders slightly darker than an exact conversion:
+/// measured against Filmora 15.7 exports of the user projects
+/// (docs/fidelity.md), its output is offset by about −1.6 Y, −0.6 Cb and
 /// −0.85 Cr code values at every level (consistent with 8-bit truncation in
-/// its decode and encode conversions). Still images are not affected.
-pub const FILMORA_YUV_BIAS: [f32; 3] = [-1.56, -0.61, -0.85];
+/// its conversions), i.e. this RGB offset. It applies after effects: whites
+/// pushed up by an exposure boost land at ~252, as in Filmora.
+pub const FILMORA_OUTPUT_BIAS: [f32; 3] = [-2.9, -1.05, -2.69];
 
 impl Default for RenderOptions {
     fn default() -> Self {
-        Self { linear_light: false, source_max_size: None, yuv_bias: FILMORA_YUV_BIAS }
+        Self { linear_light: false, source_max_size: None, output_bias: FILMORA_OUTPUT_BIAS }
     }
 }
 
@@ -299,7 +300,10 @@ impl Renderer {
         let bg = project.settings.background;
         let accum = f.render_plan(plan, Some(bg), 0);
         let sh = core_shaders();
-        let mut p = Pass::full(&sh.comp, &accum, Uniforms::default());
+        let mut u = Uniforms::default();
+        let b = self.options.output_bias;
+        u.p[0] = [b[0] / 255.0, b[1] / 255.0, b[2] / 255.0, 0.0];
+        let mut p = Pass::full(&sh.comp, &accum, u);
         p.fs = "fs_encode";
         p.a = Bind::Tex(&accum);
         p.target = &self.output_view;
@@ -594,8 +598,6 @@ impl<'a> Frame<'a> {
                     ColorSpace::Bt2020Hlg => (2.0, 2.0),
                 };
                 u.e[1] = [format as u32 as f32, matrix, frame.full_range as u32 as f32, transfer];
-                let b = self.options.yuv_bias;
-                u.p[0] = [b[0] / 255.0, b[1] / 255.0, b[2] / 255.0, 0.0];
                 nested_tex = None;
             }
             LayerContent::Nested(plan) => {

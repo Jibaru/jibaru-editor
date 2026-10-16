@@ -101,14 +101,7 @@ fn prep_sample(suv: vec2f) -> vec4f {
         let c = sb(suv);
         cbcr = vec2f(c.r * 255.0 + c.g * 65280.0, c.b * 255.0 + c.a * 65280.0) / 65535.0;
     }
-    // p[0].xyz: Y/Cb/Cr bias in full-range units (RenderOptions::yuv_bias).
-    var ycc = vec3f(y, cbcr);
-    if (u.e1.z > 0.5) {
-        ycc = ycc + u.p[0].xyz;
-    } else {
-        ycc = ycc + u.p[0].xyz * vec3f(219.0 / 255.0, 224.0 / 255.0, 224.0 / 255.0);
-    }
-    var rgb = clamp(ycbcr_to_rgb(ycc.x, ycc.y, ycc.z, i32(u.e1.y), u.e1.z > 0.5), vec3f(0.0), vec3f(1.0));
+    var rgb = clamp(ycbcr_to_rgb(y, cbcr.x, cbcr.y, i32(u.e1.y), u.e1.z > 0.5), vec3f(0.0), vec3f(1.0));
     let transfer = i32(u.e1.w);
     if (transfer != 0) { rgb = hdr_to_sdr(rgb, transfer); }
     if (is_linear()) { rgb = srgb_to_lin(rgb); }
@@ -233,7 +226,10 @@ fn fs_composite(in: QuadOut) -> @location(0) vec4f {
 @fragment
 fn fs_encode(in: VsOut) -> @location(0) vec4f {
     let c = to_disp(sa(in.uv));
-    return vec4f(clamp(c.rgb, vec3f(0.0), vec3f(1.0)), clamp(c.a, 0.0, 1.0));
+    // p[0].rgb: output level offset (RenderOptions::output_bias), applied to
+    // what is visible: premultiplied over black, so transparent stays clear.
+    let rgb = c.rgb + u.p[0].rgb * c.a;
+    return vec4f(clamp(rgb, vec3f(0.0), vec3f(1.0)), clamp(c.a, 0.0, 1.0));
 }
 
 // Fills the target with a working-space color given in linear RGBA (e0).

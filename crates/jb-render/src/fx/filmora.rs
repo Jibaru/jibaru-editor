@@ -41,9 +41,57 @@ impl Effect for RemapFx {
     }
 }
 
-/// Filmora "AdjustColor" slider names -> `jb.color.adjust` parameters.
+/// Filmora "AdjustColor": `u_exposure` renders through Filmora's own
+/// exposure curve ([`EXPOSURE`]), the other sliders through `jb.color.adjust`.
+pub struct AdjustColorFx {
+    pub info: FxInfo,
+    pub exposure: Arc<dyn Effect>,
+    pub adjust: RemapFx,
+}
+
+impl Effect for AdjustColorFx {
+    fn info(&self) -> &FxInfo {
+        &self.info
+    }
+
+    fn encode(&self, cx: &mut FxCx<'_>, io: &FxIo<'_>) {
+        let ev = io.params.get("u_exposure");
+        let others = ADJUST_COLOR.iter().any(|(outer, _, _)| io.params.get(outer) != 0.0);
+        if ev == 0.0 {
+            return self.adjust.encode(cx, io);
+        }
+        let given = BTreeMap::from([("exposure".to_string(), Value::Float(ev as f64))]);
+        let params = ParamValues::resolve(self.exposure.info(), &given);
+        if !others {
+            return self.exposure.encode(cx, &FxIo { params: &params, ..*io });
+        }
+        let tmp = cx.temp_like(io.out);
+        self.exposure.encode(cx, &FxIo { params: &params, out: &tmp, ..*io });
+        self.adjust.encode(cx, &FxIo { a: &tmp, ..*io });
+    }
+}
+
+/// Filmora's exposure slider, fitted on its exports of the user projects
+/// (u_exposure 45, 46, 60, 92 and 100 against the same frames without the
+/// effect): in display space `y = 1 - (1 - x)^k` with
+/// `k = 1 + 0.01256 * s^1.244` (k = 2.43, 3.06, 4.47, 4.86 at 45, 60, 92, 100,
+/// chosen so the mean level of each measured clip matches Filmora);
+/// negative values darken with the mirrored `x^k` (not observed).
+const EXPOSURE: &str = r#"
+fn fx(uv: vec2f) -> vec4f {
+    let d = to_disp(sa(uv));
+    let s = p_exposure();
+    let k = 1.0 + 0.01256 * pow(abs(s), 1.244);
+    let x = clamp(d.rgb, vec3f(0.0), vec3f(1.0));
+    var y = pow(x, vec3f(k));
+    if (s > 0.0) { y = 1.0 - pow(1.0 - x, vec3f(k)); }
+    return from_disp(vec4f(y, d.a));
+}
+"#;
+
+/// Filmora "AdjustColor" slider names -> `jb.color.adjust` parameters
+/// (`u_exposure` is handled by [`EXPOSURE`]).
 const ADJUST_COLOR: &[(&str, &str, f32)] = &[
-    ("u_exposure", "exposure", 1.0),
     ("u_brightness", "brightness", 1.0),
     ("u_contrast", "contrast", 1.0),
     ("u_saturation", "saturation", 1.0),
@@ -169,22 +217,34 @@ fn fx(uv: vec2f) -> vec4f {
 
 pub fn register(r: &mut Registry) {
     register_transitions(r);
-    if let Some(adjust) = r.get("jb.color.adjust").cloned() {
-        let params: Vec<ParamSpec> = ADJUST_COLOR
-            .iter()
-            .map(|(outer, _, _)| ParamSpec::float(outer, outer, -100.0, 100.0, 0.0))
-            .collect();
-        r.register(RemapFx {
-            info: info(
-                "jb.filmora.adjust_color",
-                "Adjust Color (Filmora)",
-                "Color",
-                FxKind::Effect,
-                "Filmora's Color panel with its native u_* parameter names; renders through jb.color.adjust.",
-                &params,
-            ),
-            inner: adjust,
-            map: ADJUST_COLOR.to_vec(),
+    shader(
+        r,
+        info(
+            "jb.filmora.exposure",
+            "Exposure (Filmora)",
+            "Color",
+            FxKind::Effect,
+            "Filmora's Color > Light > Exposure slider, fitted on Filmora exports.",
+            &[ParamSpec::float("exposure", "Exposure", -100.0, 100.0, 0.0)],
+        ),
+        EXPOSURE,
+    );
+    if let (Some(adjust), Some(exposure)) = (r.get("jb.color.adjust").cloned(), r.get("jb.filmora.exposure").cloned()) {
+        let mut params: Vec<ParamSpec> = vec![ParamSpec::float("u_exposure", "u_exposure", -100.0, 100.0, 0.0)];
+        params.extend(ADJUST_COLOR.iter().map(|(outer, _, _)| ParamSpec::float(outer, outer, -100.0, 100.0, 0.0)));
+        let info = info(
+            "jb.filmora.adjust_color",
+            "Adjust Color (Filmora)",
+            "Color",
+            FxKind::Effect,
+            "Filmora's Color panel with its native u_* parameter names: exposure follows Filmora's curve, \
+             the other sliders render through jb.color.adjust.",
+            &params,
+        );
+        r.register(AdjustColorFx {
+            adjust: RemapFx { info: info.clone(), inner: adjust, map: ADJUST_COLOR.to_vec() },
+            exposure,
+            info,
         });
     }
     shader(
