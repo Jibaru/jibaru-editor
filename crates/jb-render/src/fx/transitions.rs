@@ -52,7 +52,48 @@ fn push_blur(uv: vec2f, oa: vec2f, ob: vec2f, dir: vec2f, sigma: f32) -> vec4f {
 }
 "#;
 
-fn body(code: &str) -> String {
+/// Radial zoom blur of A or B scaled by `s` around the centre; `amt` is the
+/// fraction of the ray (towards the centre) that is averaged. Jittered taps
+/// avoid visible ghost copies at 4K.
+pub(crate) const ZOOM_BLUR: &str = r#"
+fn zoom_blur(use_b: bool, uv: vec2f, s: f32, amt: f32) -> vec4f {
+    let base = zoom_uv(uv, s, vec2f(0.5));
+    if (amt <= 1e-4) { return select(sa(base), sb(base), use_b); }
+    let j = hash12(uv * u.size);
+    var acc = vec4f(0.0);
+    for (var i = 0; i < 24; i = i + 1) {
+        let t = (f32(i) + j) / 24.0;
+        let q = vec2f(0.5) + (base - vec2f(0.5)) * (1.0 - amt * t);
+        acc = acc + select(sa(q), sb(q), use_b);
+    }
+    return acc / 24.0;
+}
+"#;
+
+/// Horizontal gaussian motion blur of A or B offset by `off` (uv) and scaled
+/// by `s`, sigma in uv widths; sampling wraps around like a pan.
+pub(crate) const HBLUR: &str = r#"
+fn hsample(use_b: bool, q: vec2f) -> vec4f {
+    let w = vec2f(fract(q.x), clamp(q.y, 0.0, 1.0));
+    return select(sa(w), sb(w), use_b);
+}
+fn hblur(use_b: bool, uv: vec2f, off: vec2f, s: f32, sigma: f32) -> vec4f {
+    let base = zoom_uv(uv, s, vec2f(0.5)) - off;
+    if (sigma <= 1e-4) { return hsample(use_b, base); }
+    let j = hash12(uv * u.size) - 0.5;
+    var acc = vec4f(0.0);
+    var ws = 0.0;
+    for (var i = 0; i < 40; i = i + 1) {
+        let x = (f32(i) + j - 19.5) / 10.0; // -2..2 sigma
+        let w = exp(-0.5 * x * x);
+        acc = acc + w * hsample(use_b, base + vec2f(x * sigma, 0.0));
+        ws = ws + w;
+    }
+    return acc / ws;
+}
+"#;
+
+pub(crate) fn body(code: &str) -> String {
     format!("{HELPERS}\n{code}")
 }
 
@@ -114,10 +155,19 @@ pub fn register(r: &mut Registry) {
             "Fade to Black",
             "Basic",
             Transition,
-            "Fades out to black and back in on the next clip. Filmora: Fade / Dip to Black.",
+            "Fades out to black and back in on the next clip. Filmora: Fade / Dip to Black \
+             (smoothstep down over 15-48%, short black hold, smoothstep up over 52-87%).",
             &[],
         ),
-        dip_body("vec3f(0.0)"),
+        body(
+            r#"
+fn fx(uv: vec2f) -> vec4f {
+    let p = prog();
+    if (p < 0.5) { return toward(sa(uv), vec3f(0.0), smoothstep(0.15, 0.48, p)); }
+    return toward(sb(uv), vec3f(0.0), 1.0 - smoothstep(0.52, 0.87, p));
+}
+"#,
+        ),
     );
     shader(
         r,
@@ -162,24 +212,26 @@ pub fn register(r: &mut Registry) {
             "Fast Zoom",
             "Zoom",
             Transition,
-            "The clip zooms in quickly right before the cut. Filmora: Fast Zoom.",
-            &[ParamSpec::float("zoom", "Zoom", 1.0, 2.0, 1.15)],
+            "The clip rushes into a radial-blurred zoom right before a hard cut; the next clip lands \
+             bright and blurred and settles. Timing matched to Filmora: Fast Zoom.",
+            &[ParamSpec::float("zoom", "Zoom", 1.0, 3.0, 1.3), ParamSpec::float("blur", "Blur", 0.0, 2.0, 1.0)],
         ),
-        body(
-            r#"
+        body(&format!("{ZOOM_BLUR}{}", r#"
 fn fx(uv: vec2f) -> vec4f {
     let p = prog();
-    let z = p_zoom();
-    let k = 1.0 / 15.0;
-    let sa_ = 1.0 + (z - 1.0) * seg(p, 0.5 - 2.0 * k, 0.5);
-    let sb_ = z + (1.0 - z) * seg(p, 0.5 + k, 0.5 + 4.0 * k);
-    let ob = seg(p, 0.5 - k, 0.5 + k);
-    let a = sa(zoom_uv(uv, sa_, vec2f(0.5)));
-    let b = sb(zoom_uv(uv, sb_, vec2f(0.5)));
-    return over(b * ob, a);
+    let cut = 0.485;
+    if (p < cut) {
+        let u = seg(p, 0.42, cut);
+        let s = 1.0 + (p_zoom() - 1.0) * u * u * u;
+        let c = zoom_blur(false, uv, s, 0.12 * p_blur() * u * u * u);
+        return bright(c, 1.0 + 0.03 * u * u * u);
+    }
+    let k = 1.0 - seg(p, cut, 0.575);
+    let s = 1.0 + 0.4 * (p_zoom() - 1.0) * k * k * k;
+    let c = zoom_blur(true, uv, s, 0.12 * p_blur() * k * k * k);
+    return bright(c, 1.0 + 0.12 * k * k * k);
 }
-"#,
-        ),
+"#)),
     );
     shader(
         r,
@@ -188,23 +240,22 @@ fn fx(uv: vec2f) -> vec4f {
             "Fast Wipe Left",
             "Motion",
             Transition,
-            "Quick push to the left with motion blur. Filmora: Fast Wipe Left.",
+            "Very fast push to the left hidden in a strong horizontal motion blur around the cut. \
+             Timing matched to Filmora: Fast Wipe Left.",
             &[ParamSpec::float("blur", "Blur", 0.0, 2.0, 1.0)],
         ),
-        body(
-            r#"
+        body(&format!("{HBLUR}{}", r#"
 fn fx(uv: vec2f) -> vec4f {
     let p = prog();
-    let k = 1.0 / 12.0;
-    let t = seg(p, 0.5 - k, 0.5 + k);
-    let oa = vec2f(-t, 0.0);
-    let ob = vec2f(1.0 - t, 0.0);
-    // gblur sigma 40 px at 1920 wide, active around the cut.
-    let on = select(0.0, 1.0, p >= 0.5 - 2.0 * k && p <= 0.5 + 2.0 * k);
-    return push_blur(uv, oa, ob, vec2f(1.0, 0.0), on * p_blur() * 40.0 / 1920.0);
+    let cut = 0.485;
+    if (p < cut) {
+        let u = seg(p, 0.44, cut);
+        return hblur(false, uv, vec2f(-0.6 * u * u, 0.0), 1.0, 0.16 * p_blur() * u);
+    }
+    let k = 1.0 - seg(p, cut, 0.56);
+    return hblur(true, uv, vec2f(0.6 * k * k * k, 0.0), 1.0, 0.16 * p_blur() * k * k);
 }
-"#,
-        ),
+"#)),
     );
     shader(
         r,

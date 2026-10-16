@@ -29,8 +29,8 @@ pub const FILMORA: &[(&str, &str)] = &[
     ("C8965C45-074B-4BF5-948E-D9373D10836C", "jb.wipe_left"),
     ("3B49DBEE-9A15-4844-B613-E2C2497EA236", "jb.fade_black"),
     ("2981D185-D52E-44f4-ABD5-3CE83890E32E", "jb.dissolve"),
-    ("38B7DD62-E852-4B41-81E1-80901511721D", "jb.slide"),
-    ("521158CA-2709-4FB1-8C3C-29781494BE1F", "jb.film_burn"),
+    ("38B7DD62-E852-4B41-81E1-80901511721D", "jb.pan_slide"),
+    ("521158CA-2709-4FB1-8C3C-29781494BE1F", "jb.film_burn_02"),
     // Audio cross-fade: if it ever reaches the video path, a dissolve is right.
     ("audio/blender/transition-fade", "jb.dissolve"),
     // Effects
