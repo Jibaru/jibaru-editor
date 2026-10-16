@@ -3,11 +3,13 @@
 
 pub mod command;
 pub mod eval;
+pub mod frame;
 pub mod model;
 pub mod param;
 pub mod time;
 
 pub use command::{apply, Command, CommandError, History};
+pub use frame::{FrameSource, PixelFormat, VideoFrame};
 pub use model::*;
 pub use param::{Interpolation, Keyframe, Param, Value};
 pub use time::{Rational, Ticks, TICKS_PER_SECOND};
