@@ -1,4 +1,4 @@
-import { menuBar, nativeMenuBar } from '../actions'
+import { menuBar, nativeMenuBar, runMenuAction } from '../actions'
 import { backend } from '../backend'
 import { openMenu, saveProject, setLayout, setState, toast, useEditor } from '../store'
 import {
@@ -86,7 +86,7 @@ export function TitleBar() {
         <button className="ticon" title="Help and documentation" onClick={() => link(`${REPO}#readme`)}><IcHeadset size={18} /></button>
         <button className="ticon" title="More" onClick={e => menuAt(e, [
           { label: 'About Jibaru Editor', action: () => toast('Jibaru Editor 0.1.0 · Apache-2.0 · Rust engine, Tauri + React UI') },
-          { label: 'Keyboard Shortcuts', action: () => import('../actions').then(m => m.runMenuAction('help.shortcuts')) },
+          { label: 'Keyboard Shortcuts', action: () => runMenuAction('help.shortcuts') },
           { label: 'Jibaru Editor on GitHub', action: () => link(REPO) },
         ])}><IcApps size={18} /></button>
         <button className="export-btn" onClick={() => setState({ exportOpen: true })}>
