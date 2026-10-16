@@ -40,10 +40,14 @@ fn sequential_decode_hits_every_frame_without_seeking() {
 fn random_access_is_frame_accurate() {
     let mut d = VideoDecoder::open(&index_clip(), true).unwrap();
     for i in [40, 3, 27, 26, 49, 0, 12, 13, 38] {
-        // Ask for a time in the middle of the frame.
-        let t = RATE.frame_start(i) + RATE.frame_duration() / 2;
+        // The nearest frame is shown: 0.4 frame in selects frame i, 0.6 in
+        // the next one.
+        let t = RATE.frame_start(i) + RATE.frame_duration() * 2 / 5;
         let f = d.frame_at(t, None, DecodeMode::Accurate).unwrap().unwrap();
         assert_eq!(index_from_luma(mean_luma(&f)), i, "frame {i}");
+        let t = RATE.frame_start(i) - RATE.frame_duration() * 2 / 5;
+        let f = d.frame_at(t.max(0), None, DecodeMode::Accurate).unwrap().unwrap();
+        assert_eq!(index_from_luma(mean_luma(&f)), i, "frame {i} from 0.6 of the previous one");
     }
     // Past the end holds the last frame.
     let f = d.frame_at(10 * TICKS_PER_SECOND, None, DecodeMode::Accurate).unwrap().unwrap();

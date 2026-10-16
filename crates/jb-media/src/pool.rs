@@ -86,7 +86,14 @@ impl Ring {
         if self.size != size {
             return None;
         }
-        self.frames.iter().find(|(f, d)| t >= f.pts && t < f.pts + d).map(|(f, _)| f.clone())
+        // Same frame selection as the decoder: the frame nearest to `t`.
+        self.frames
+            .iter()
+            .find(|(f, d)| {
+                let s = t + d / 2;
+                s >= f.pts && s < f.pts + d
+            })
+            .map(|(f, _)| f.clone())
     }
 
     fn push(&mut self, f: VideoFrame, dur: Ticks, size: Option<(u32, u32)>, cap: usize) {
@@ -246,8 +253,6 @@ impl MediaPool {
             (Some(p), Some(_)) if self.config.use_proxies => (proxy_key(media_id), p.clone()),
             _ => (media_id.to_string(), asset.path.clone()),
         };
-        // Same frame selection as the decoder (see `video::FRAME_SNAP`).
-        let t = t + crate::video::FRAME_SNAP;
         let (dec, ring) = self.checkout_video(&key, &path, t, max_size)?;
         if let Some(f) = ring.lock().unwrap().find(t, max_size) {
             self.ring_hits.fetch_add(1, Ordering::Relaxed);
