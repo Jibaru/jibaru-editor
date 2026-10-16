@@ -41,6 +41,52 @@ pub fn load_project(path: &Path) -> JbResult<Project> {
     }
 }
 
+/// A loaded project. Projects opened from a `.wfp` keep the original
+/// Filmora documents so they can be written back losslessly.
+#[derive(Debug, Clone)]
+pub struct Loaded {
+    pub project: Project,
+    pub wfp: Option<jb_filmora::WfpProject>,
+}
+
+/// Loads a project, keeping the Filmora documents of `.wfp` files.
+pub fn load_any(path: &Path) -> JbResult<Loaded> {
+    if detect_format(path)? == Format::Filmora && path.exists() {
+        let wfp = jb_filmora::read(path)
+            .map_err(|e| JbError::new(code::PARSE, format!("cannot read {}: {e}", path.display())))?;
+        return Ok(Loaded { project: wfp.project.clone(), wfp: Some(wfp) });
+    }
+    Ok(Loaded { project: load_project(path)?, wfp: None })
+}
+
+/// Saves `project` to `.jbp` or `.wfp` (by extension). Writing `.wfp`
+/// needs the Filmora documents the project was opened from; edits are
+/// patched into them. Returns the writer's warnings (edits Filmora cannot
+/// store).
+pub fn save_any(path: &Path, project: &Project, wfp: Option<&jb_filmora::WfpProject>) -> JbResult<Vec<String>> {
+    match detect_format(path)? {
+        Format::Native => save_project(path, project).map(|_| Vec::new()),
+        Format::Filmora => {
+            let Some(wfp) = wfp else {
+                return Err(JbError::new(
+                    code::UNSUPPORTED_FORMAT,
+                    "only projects opened from a .wfp can be saved as .wfp",
+                )
+                .hint("save as .jbp, or open the Filmora project you want to edit"));
+            };
+            let mut out = wfp.clone();
+            out.project = project.clone();
+            let (bytes, report) = jb_filmora::write_bytes(&out)
+                .map_err(|e| JbError::new(code::IO, format!("cannot write {}: {e}", path.display())))?;
+            let tmp = path.with_extension("wfp.tmp");
+            let io = |e: std::io::Error| JbError::new(code::IO, format!("cannot write `{}`: {e}", path.display()));
+            std::fs::write(&tmp, bytes).map_err(io)?;
+            std::fs::rename(&tmp, path).map_err(io)?;
+            Ok(report.warnings)
+        }
+    }
+}
+
 /// Saves a project in the native format, atomically (write + rename).
 pub fn save_project(path: &Path, project: &Project) -> JbResult<()> {
     if detect_format(path)? != Format::Native {

@@ -88,3 +88,53 @@ pub fn parse_range(s: &str, fps: jb_core::Rational) -> JbResult<(Ticks, Ticks)> 
     }
     Ok((a, b))
 }
+
+/// Preset names and values agents can pass to the editing commands.
+pub fn presets() -> Value {
+    use jb_core::BlendMode as B;
+    let blend = [
+        B::Normal,
+        B::Darken,
+        B::Multiply,
+        B::ColorBurn,
+        B::LinearBurn,
+        B::DarkerColor,
+        B::Lighten,
+        B::Screen,
+        B::ColorDodge,
+        B::Add,
+        B::LighterColor,
+        B::Overlay,
+        B::SoftLight,
+        B::HardLight,
+        B::VividLight,
+        B::LinearLight,
+        B::PinLight,
+        B::HardMix,
+        B::Difference,
+        B::Exclusion,
+        B::Subtract,
+        B::Divide,
+    ];
+    let registry = jb_render::Registry::builtin();
+    let animations: Vec<Value> = registry
+        .of_kind(jb_render::FxKind::Animation)
+        .map(|i| json!({ "kind": i.id, "name": i.name, "description": i.description }))
+        .collect();
+    json!({
+        "speed_ramps": jb_core::speed::PRESETS.iter().map(|(n, pts)| json!({
+            "preset": n,
+            "points": pts.iter().map(|(p, s)| json!({"position": p, "speed": s})).collect::<Vec<_>>(),
+        })).collect::<Vec<_>>(),
+        "equalizer": jb_core::Equalizer::PRESETS.iter().map(|(n, b)| json!({"preset": n, "bands_db": b})).collect::<Vec<_>>(),
+        "equalizer_frequencies_hz": jb_core::Equalizer::FREQUENCIES,
+        "normalization_targets_lufs": [-23.0, -16.0, -14.0, -12.0],
+        "blend_modes": blend,
+        "fit_modes": ["fit", "fill", "stretch", "none"],
+        "animation_placements": ["in", "out", "loop", "combo"],
+        "animations": animations,
+        "keyframe_params": jb_core::edit::PARAM_PATHS,
+        "interpolations": ["linear", "hold", "ease_in", "ease_out", "ease_in_out"],
+        "paste_attributes": ["transform", "crop", "opacity", "blend_mode", "effects", "animations", "audio", "speed"],
+    })
+}

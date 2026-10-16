@@ -17,6 +17,9 @@ pub struct Session {
     pub history: History,
     /// True when there are changes not yet written by `save_project`.
     pub dirty: bool,
+    /// Original Filmora documents when the project came from a `.wfp`,
+    /// so saving back to `.wfp` is lossless.
+    pub wfp: Option<jb_filmora::WfpProject>,
 }
 
 #[derive(Default)]
@@ -86,14 +89,14 @@ pub fn tool_defs() -> Vec<ToolDef> {
               "discard_changes": {"type": "boolean", "default": false, "description": "Allow replacing a session that has unsaved changes."},
           }), &["path"]), false),
         d("open_project", "Open project",
-          "Open a project file as the current session (replaces any open project). Supports native .jbp files (and Filmora .wfp once the importer lands). Returns a summary with sequence and track ids; use get_project for clips. Refuses to drop unsaved changes unless `discard_changes` is true.",
+          "Open a project file as the current session (replaces any open project). Supports native .jbp files and Filmora .wfp projects (the original Filmora documents are kept, so save_project can write the .wfp back losslessly; `import_warnings` lists anything that could not be mapped). Returns a summary with sequence and track ids; use get_project for clips. Refuses to drop unsaved changes unless `discard_changes` is true.",
           obj(json!({
               "path": {"type": "string", "description": "Path to a .jbp (or .wfp) file."},
               "discard_changes": {"type": "boolean", "default": false},
           }), &["path"]), false),
         d("save_project", "Save project",
-          "Write the current session to disk in the native .jbp format. Without `path` saves to the file it was opened from; with `path` saves there and makes it the session's file (save as). Edits made with execute_command/import_media/undo/redo are in memory until saved.",
-          obj(json!({ "path": {"type": "string", "description": "Optional new .jbp path (save as)."} }), &[]), false),
+          "Write the current session to disk: .jbp (native) or .wfp (only for projects opened from a .wfp; edits are patched into the original Filmora documents and `warnings` lists any edit Filmora cannot store). Without `path` saves to the file it was opened from; with `path` saves there and makes it the session's file (save as). Edits made with execute_command/import_media/undo/redo are in memory until saved.",
+          obj(json!({ "path": {"type": "string", "description": "Optional new .jbp or .wfp path (save as)."} }), &[]), false),
         d("get_project", "Get project",
           "Describe the open project. detail=\"summary\": settings, duration, media, sequences and tracks (ids, kind, flags, clip counts). detail=\"clips\" (default): also every clip with id, name, source, start/end/duration (ticks, seconds, timecode, frame), effects and transition. detail=\"full\": also the raw project model (`project`, same shape as the Project schema at jb://schema/project). Times are ticks of 100 ns (10_000_000 per second).",
           obj(json!({ "detail": {"type": "string", "enum": ["summary", "clips", "full"], "default": "clips"} }), &[]), true),
@@ -129,8 +132,17 @@ pub fn tool_defs() -> Vec<ToolDef> {
         d("get_schema", "Get schema",
           "Return a JSON Schema: `command` (input of execute_command), `project` (the project model returned by get_project detail=full) or `frame_plan` (output of evaluate_frame). Same content as resources jb://schema/{command,project,frame_plan}.",
           obj(json!({ "which": {"type": "string", "enum": ["command", "project", "frame_plan"]} }), &["which"]), true),
+        d("list_presets", "List presets",
+          "Names and values accepted by the editing commands: speed ramp presets (set_speed_ramp), equalizer presets and bands (set_equalizer), normalization targets, blend modes, fit modes, animation kinds and placements (add_animation), keyframe parameter paths and interpolations (add_keyframe) and paste_attributes attributes.",
+          obj(json!({}), &[]), true),
+        d("normalize_audio", "Normalize audio",
+          "Filmora's Auto Normalization: measures the integrated loudness of a clip's audio (on a camera video clip, its linked audio clip) and sets `normalize` so it plays at `target_lufs` (Filmora offers -23, -16, -14 and -12). One undo step; returns the measured loudness.",
+          obj(json!({
+              "clip_id": {"type": "string"},
+              "target_lufs": {"type": "number", "default": -14.0, "maximum": 0, "minimum": -70},
+          }), &["clip_id"]), false),
         d("render", "Render",
-          "Encode the open project (main sequence by default) to a video file. NOT AVAILABLE YET: returns a not_implemented error until the jb-export crate lands; use evaluate_frame to check edits meanwhile.",
+          "Encode the open project (main sequence by default) to a video file with GPU rendering and hardware encoding when available. Returns the encoder used, size, frame count, speed and any effects that have no renderer (`unknown_effects`). Use `preview` (e.g. \"540p\") for fast drafts.",
           obj(json!({
               "output": {"type": "string", "description": "Output video path, e.g. out.mp4."},
               "preview": {"type": "string", "description": "Preview height such as \"540p\"; omit for full resolution."},
@@ -139,7 +151,7 @@ pub fn tool_defs() -> Vec<ToolDef> {
               "sequence_id": {"type": "string"},
           }), &["output"]), false),
         d("preview_frame", "Preview frame",
-          "Render a single frame at `at` to an image file. NOT AVAILABLE YET: returns a not_implemented error until the jb-render crate lands; use evaluate_frame meanwhile.",
+          "Render a single frame at `at` of the main sequence to a PNG or JPEG file (by extension), e.g. to look at the result of an edit. `max_height` renders a smaller preview.",
           obj(json!({
               "at": time_schema("Timeline time."),
               "output": {"type": "string", "description": "Output image path (.png)."},
@@ -251,7 +263,7 @@ impl State {
                 let pname = a.name.unwrap_or_else(|| project_io::name_from_path(&a.path));
                 let p = project_io::new_project(&pname, a.width.unwrap_or(1920), a.height.unwrap_or(1080), fps)?;
                 project_io::save_project(&a.path, &p)?;
-                self.session = Some(Session { path: Some(a.path), history: History::new(p), dirty: false });
+                self.session = Some(Session { path: Some(a.path), history: History::new(p), dirty: false, wfp: None });
                 Ok(self.with_status(json!({ "project": self.summary(Detail::Summary)? })))
             }
             "open_project" => {
@@ -264,14 +276,19 @@ impl State {
                 }
                 let a: A = args(name, a)?;
                 self.ensure_replaceable(a.discard_changes)?;
-                let p = project_io::load_project(&a.path)?;
-                // Imported formats are saved as .jbp next to the source.
-                let path = match project_io::detect_format(&a.path)? {
-                    project_io::Format::Native => Some(a.path),
-                    _ => None,
-                };
-                self.session = Some(Session { path, history: History::new(p), dirty: false });
-                Ok(self.with_status(json!({ "project": self.summary(Detail::Summary)? })))
+                let loaded = project_io::load_any(&a.path)?;
+                let warnings = loaded.wfp.as_ref().map(|w| w.warnings.clone()).unwrap_or_default();
+                self.session = Some(Session {
+                    path: Some(a.path),
+                    history: History::new(loaded.project),
+                    dirty: false,
+                    wfp: loaded.wfp,
+                });
+                let mut out = json!({ "project": self.summary(Detail::Summary)? });
+                if !warnings.is_empty() {
+                    out["import_warnings"] = json!(warnings);
+                }
+                Ok(self.with_status(out))
             }
             "save_project" => {
                 #[derive(Deserialize)]
@@ -282,12 +299,12 @@ impl State {
                 let a: A = args(name, a)?;
                 let s = self.session_mut()?;
                 let path = a.path.or_else(|| s.path.clone()).ok_or_else(|| {
-                    JbError::invalid("this session has no file yet").hint("pass `path` ending in .jbp")
+                    JbError::invalid("this session has no file yet").hint("pass `path` ending in .jbp (or .wfp)")
                 })?;
-                project_io::save_project(&path, &s.history.project)?;
+                let warnings = project_io::save_any(&path, &s.history.project, s.wfp.as_ref())?;
                 s.path = Some(path.clone());
                 s.dirty = false;
-                Ok(self.with_status(json!({ "saved_to": path })))
+                Ok(self.with_status(json!({ "saved_to": path, "warnings": warnings })))
             }
             "get_project" => {
                 #[derive(Deserialize)]
@@ -419,6 +436,29 @@ impl State {
                 }
                 let a: A = args(name, a)?;
                 schema(&a.which)
+            }
+            "list_presets" => {
+                let _: Map<String, Value> = args(name, a)?;
+                Ok(jb_cli::presets())
+            }
+            "normalize_audio" => {
+                #[derive(Deserialize)]
+                #[serde(deny_unknown_fields)]
+                struct A {
+                    clip_id: String,
+                    target_lufs: Option<f64>,
+                }
+                let a: A = args(name, a)?;
+                let s = self.session_mut()?;
+                let target = a.target_lufs.unwrap_or(-14.0);
+                let (cmd, measured) = integrations::normalize_command(&s.history.project, &a.clip_id, target)
+                    .map_err(|e| enrich(e, &s.history.project))?;
+                let mut report = commands::execute_all(&mut s.history, &[cmd])?;
+                s.dirty = true;
+                report["measured_lufs"] = json!(measured);
+                report["target_lufs"] = json!(target);
+                report["gain_db"] = json!(target - measured);
+                Ok(self.with_status(report))
             }
             "render" => {
                 #[derive(Deserialize)]
@@ -588,6 +628,34 @@ mod tests {
         assert!(st.call("open_project", json!({"path": path})).is_ok());
         assert_eq!(st.call("redo", json!({})).unwrap_err().code, code::NOTHING_TO_REDO);
         assert_eq!(st.call("get_project", json!({"bogus": 1})).unwrap_err().code, code::INVALID_ARGUMENT);
+    }
+
+    #[test]
+    fn wfp_sessions_save_back_to_wfp() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("p.wfp");
+        let fixture = concat!(env!("CARGO_MANIFEST_DIR"), "/../jb-filmora/tests/fixtures/synthetic.wfp");
+        std::fs::copy(fixture, &path).unwrap();
+        let mut st = State::default();
+        st.call("open_project", json!({"path": path})).unwrap();
+        let clip =
+            st.call("find_clips", json!({"name": "logo"})).unwrap()["clips"][0]["id"].as_str().unwrap().to_string();
+        st.call(
+            "execute_command",
+            json!({"command": {"op": "set_blend_mode", "clip_id": clip, "blend_mode": "multiply"}}),
+        )
+        .unwrap();
+        st.call(
+            "execute_command",
+            json!({"command": {"op": "add_marker", "marker": {"time": 10_000_000, "name": "x"}}}),
+        )
+        .unwrap();
+        let saved = st.call("save_project", json!({})).unwrap();
+        assert_eq!(saved["warnings"], json!([]));
+        let again = jb_filmora::read(&path).unwrap();
+        assert_eq!(again.project.clip(&clip).unwrap().blend_mode, jb_core::BlendMode::Multiply);
+        assert_eq!(again.project.main().markers[0].name, "x");
+        assert!(st.call("list_presets", json!({})).unwrap()["speed_ramps"].as_array().unwrap().len() >= 6);
     }
 
     #[test]

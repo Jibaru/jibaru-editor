@@ -46,8 +46,8 @@ Relative file paths given to tools resolve against the server's working director
 | Tool | Purpose |
 |---|---|
 | `new_project` | Create a `.jbp` file (`path`, `width`, `height`, `fps`, `name`, `overwrite`) and open it. |
-| `open_project` | Open a `.jbp` (and `.wfp` once the Filmora importer lands). |
-| `save_project` | Save to the session file, or to `path` (save as). Edits stay in memory until you save. |
+| `open_project` | Open a `.jbp` or a Filmora `.wfp` (its original documents are kept for a lossless save). |
+| `save_project` | Save to the session file, or to `path` (save as), as `.jbp` or (for projects opened from a `.wfp`) `.wfp`. Edits stay in memory until you save; `warnings` lists edits Filmora cannot store. |
 | `get_project` | Summary of the project. `detail`: `summary` \| `clips` (default) \| `full` (raw model). |
 | `list_media` | Media assets with ids, kinds and durations. |
 | `import_media` | Probe files and add them to the media bin as one undo step. Returns the new media ids. |
@@ -56,7 +56,10 @@ Relative file paths given to tools resolve against the server's working director
 | `evaluate_frame` | Layers and audio voices at a time, so edits can be checked without rendering. |
 | `find_clips` | Filter clips by `at`, `from`/`to`, `track_id`/`track_index`, `name`, `media_id` and `sequence_id`. |
 | `get_schema` | JSON Schema for `command`, `project` or `frame_plan`. |
-| `render`, `preview_frame` | Stubs. They return `not_implemented` until `jb-export`/`jb-render` land. |
+| `render` | Encode the session (or a range, `preview: "540p"` for drafts) to a video file. |
+| `preview_frame` | Render one frame to a PNG/JPEG, to look at an edit. |
+| `list_presets` | Speed ramp, equalizer, blend mode, animation and keyframe-path names accepted by the commands. |
+| `normalize_audio` | Measure a clip's loudness and normalize it to `target_lufs` (Auto Normalization). |
 
 Resources: `jb://schema/command`, `jb://schema/project`, `jb://schema/frame_plan`, `jb://session`, `jb://project` and `jb://project/full`.
 
@@ -82,9 +85,39 @@ save_project    {}
 
 - **Times inside commands** are integer ticks of 100 ns: `10_000_000` per second.
 - **Time arguments** (`--at`, `at`, `from`, `to`, `--range`) accept seconds (`5`, `1.5s`, or a JSON number in MCP), `HH:MM:SS.mmm`, `MM:SS`, `HH:MM:SS:FF`, frames (`120f`) and ticks (`50000000t`).
-- **Commands** are JSON objects tagged by `op`: `add_media`, `remove_media`, `add_track`, `remove_track`, `set_track_flags`, `add_clip`, `remove_clip`, `move_clip`, `trim_clip`, `split_clip`, `set_speed`, `set_transform`, `set_opacity`, `set_audio`, `add_effect`, `remove_effect`, `set_effect_params`, `set_transition`, `set_title`, `rename_project` and `batch` (several commands as one undo step). `jb schema command` prints the exact schema.
-- **Generated ids**: `clip.id`, `clip.name`, `effect.id`, `transition.id` and `asset.id`/`asset.name` may be omitted, and they are generated.
+- **Commands** are JSON objects tagged by `op` (`batch` applies several as one undo step). `jb schema command` / `get_schema` print the exact schema; `jb presets` / `list_presets` list the accepted preset names. See [Editing reference](#editing-reference).
+- **Generated ids**: `clip.id`, `clip.name`, `effect.id`, `transition.id`, `marker.id` and `asset.id`/`asset.name` may be omitted, and they are generated.
 - Commands are **atomic**. A rejected command, such as one causing overlapping clips, a locked track or an unknown id, leaves the project unchanged.
+- **Filmora projects**: `.wfp` files open with their original documents kept. Saving back to `.wfp` patches only what was edited, so everything Jibaru does not model survives; edits Filmora has no place for (track names and heights, clip groups) come back as `warnings`. See `docs/filmora-format.md` §13 for how each property is stored.
+
+## Editing reference
+
+Every Filmora property-panel feature is a command. Times are ticks (10_000_000 per second); keyframe and marker times on clips are clip-local.
+
+| Area | Commands |
+|---|---|
+| Tracks | `add_track`, `remove_track`, `set_track_flags` (lock/mute/hide), `move_track` (reorder, 0 = bottom), `rename_track`, `set_track_height` |
+| Placing clips | `add_clip`, `insert_clip` (ripple insert), `overwrite_clip`, `move_clip` (moves link group and group), `remove_clip` (`ripple`), `duplicate_clip`, `replace_media`, `set_clip_enabled` |
+| Trimming | `trim_clip`, `ripple_trim` (`edge`: `start`/`end`, `to`), `roll_edit` (cut between a clip and the next adjacent one), `slip_clip` (`delta` source ticks), `split_clip` |
+| Structure | `link_clips`, `unlink_clips`, `group_clips`, `ungroup_clips`, `detach_audio`, `create_compound_clip` (nested sequence), `paste_attributes` (`transform`, `crop`, `opacity`, `blend_mode`, `effects`, `animations`, `audio`, `speed`) |
+| Transform | `set_transform`, `set_crop` (`[left, top, right, bottom]` insets), `set_flip`, `set_rotation`, `set_fit_mode` (`fit`/`fill`/`stretch`/`none`), `set_blend_mode` (22 Filmora modes), `set_opacity` |
+| Keyframes | `add_keyframe`, `remove_keyframe`, `move_keyframe`, `clear_keyframes`, `set_param`. `param`: `transform.position_x`/`position_y`/`scale_x`/`scale_y`/`scale`/`rotation`, `opacity`, `volume`, `pan`, `speed`, `effect.<effect_id>.<param>`. `interpolation`: `linear`, `hold`, `ease_in`, `ease_out`, `ease_in_out`. |
+| Speed | `set_speed` (constant, `reverse`), `set_speed_ramp` (`montage`, `hero_moment`, `bullet_time`, `jumper`, `flash_in`, `flash_out`, `custom` with `points: [{position 0..1 of the source, speed}]`, `none`), `set_reverse`, `set_maintain_pitch`, `freeze_frame` (`at`, `duration`) |
+| Audio | `set_audio`, `set_volume`, `set_pan`, `set_pitch` (semitones), `set_mute`, `set_audio_fades`, `set_normalization` (or the `normalize_audio` tool / `jb normalize`, which measure loudness), `set_equalizer` (preset or 10 `bands` in dB). On a camera video clip they change its linked audio clip. |
+| Effects & animations | `add_effect`, `remove_effect`, `set_effect_params`, `add_animation` (`placement`: `in`/`out`/`loop`/`combo`, `duration`), `remove_animation`, `replace_animation`, `set_transition` |
+| Titles | `set_title`, `set_title_style` (text, font, size, color, bold, italic, alignment, position, stroke/shadow/background (`null` removes), spacing, `animation`); works on title clips and on Filmora title template instances |
+| Markers | `add_marker` (sequence, or `clip_id`), `update_marker`, `remove_marker` |
+
+Split, trims, roll edits and speed changes keep keyframes, speed ramps, ranged effects, animations and markers attached to the content: the right half of a split continues every curve exactly where the left half stops.
+
+```jsonc
+// Ken Burns push-in with an ease, a Flash in ramp, and a -14 LUFS music bed.
+{"op": "add_keyframe", "clip_id": "C", "param": "transform.scale", "time": 0, "value": {"type": "float", "value": 1.0}}
+{"op": "add_keyframe", "clip_id": "C", "param": "transform.scale", "time": 50000000, "value": {"type": "float", "value": 1.2}, "interpolation": "ease_in_out"}
+{"op": "set_speed_ramp", "clip_id": "C", "preset": "flash_in"}
+{"op": "add_animation", "clip_id": "C", "kind": "jb.anim.fade_in", "placement": "in", "duration": 5000000}
+{"op": "set_equalizer", "clip_id": "M", "preset": "low_bass"}
+```
 
 ## CLI contract
 
@@ -97,10 +130,14 @@ jb schema [command|project|frame-plan|all]
 jb eval <project> --at <time> [--sequence ID]
 jb find-clips <project> [--at T] [--range A-B] [--track ID|INDEX] [--name S] [--media ID]
 jb import-media <project> <files...> [--dry-run]
-jb open <file.wfp>            # pending jb-filmora
-jb convert <in.wfp> <out.jbp> # pending jb-filmora
-jb fx coverage <file.wfp>     # pending jb-filmora
-jb render <project> -o out.mp4 [--preview 540p] [--range A-B]   # pending jb-export
+jb open <file.wfp> [--detail summary|clips|full]
+jb convert <in.wfp> <out.jbp> [--force]
+jb save <in> <out> [--force]  # .jbp -> .jbp, .wfp -> .wfp or .jbp (edits patched into the Filmora docs)
+jb normalize <project> --clip ID [--target -14] [-o out]
+jb presets                    # names accepted by the editing commands
+jb fx coverage <file.wfp>
+jb frame <project> --at <time> -o frame.png [--preview 540p]
+jb render <project> -o out.mp4 [--preview 540p] [--range A-B] [--sequence ID]
 ```
 
 The global `--json` flag makes every command print one JSON document on stdout:

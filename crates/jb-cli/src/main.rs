@@ -129,6 +129,28 @@ enum Cmd {
         #[arg(long)]
         dry_run: bool,
     },
+    /// Save a project under another path or format: .jbp, or .wfp for
+    /// projects opened from a .wfp (edits are patched into the original
+    /// Filmora documents).
+    Save {
+        input: PathBuf,
+        output: PathBuf,
+        #[arg(long)]
+        force: bool,
+    },
+    /// Measure a clip's loudness and turn on auto normalization (Filmora
+    /// targets: -23, -16, -14, -12 LUFS).
+    Normalize {
+        project: PathBuf,
+        #[arg(long)]
+        clip: String,
+        #[arg(long, default_value_t = -14.0, allow_hyphen_values = true)]
+        target: f64,
+        #[arg(long, short)]
+        output: Option<PathBuf>,
+    },
+    /// List presets: speed ramps, equalizer, blend modes, animations, parameter paths.
+    Presets,
     /// Effect tools.
     Fx {
         #[command(subcommand)]
@@ -283,11 +305,12 @@ fn run(cmd: Cmd) -> JbResult<Out> {
                 }
             };
             let cmds = commands::parse_commands(&text)?;
-            let mut h = History::new(project_io::load_project(&project)?);
+            let loaded = project_io::load_any(&project)?;
+            let mut h = History::new(loaded.project.clone());
             let mut report = commands::execute_all(&mut h, &cmds)?;
             let target = output.unwrap_or(project);
             if !dry_run {
-                project_io::save_project(&target, &h.project)?;
+                report["warnings"] = json!(project_io::save_any(&target, &h.project, loaded.wfp.as_ref())?);
             }
             report["dry_run"] = json!(dry_run);
             report["saved_to"] = if dry_run { Value::Null } else { json!(target) };
@@ -358,12 +381,13 @@ fn run(cmd: Cmd) -> JbResult<Out> {
             Ok(Out::new(json!({ "count": clips.len(), "clips": clips }), text))
         }
         Cmd::ImportMedia { project, files, dry_run } => {
-            let mut h = History::new(project_io::load_project(&project)?);
+            let loaded = project_io::load_any(&project)?;
+            let mut h = History::new(loaded.project.clone());
             let (cmd, mut report) = jb_cli::import_media(&h.project, &files)?;
             if let Some(cmd) = cmd {
                 commands::execute_all(&mut h, &[cmd])?;
                 if !dry_run {
-                    project_io::save_project(&project, &h.project)?;
+                    report["warnings"] = json!(project_io::save_any(&project, &h.project, loaded.wfp.as_ref())?);
                 }
             }
             report["dry_run"] = json!(dry_run);
@@ -397,6 +421,29 @@ fn run(cmd: Cmd) -> JbResult<Out> {
             let data = json!({ "input": input, "output": output, "dry_run": dry_run, "project": summary::project_summary(&p, Detail::Summary) });
             Ok(Out::new(data, format!("converted {} -> {}", input.display(), output.display())))
         }
+        Cmd::Save { input, output, force } => {
+            if output.exists() && !force && output != input {
+                return Err(JbError::invalid(format!("`{}` already exists", output.display()))
+                    .hint("pass --force to overwrite it"));
+            }
+            let loaded = project_io::load_any(&input)?;
+            let warnings = project_io::save_any(&output, &loaded.project, loaded.wfp.as_ref())?;
+            let text = format!("saved {} -> {}", input.display(), output.display());
+            Ok(Out::new(json!({ "input": input, "output": output, "warnings": warnings }), text))
+        }
+        Cmd::Normalize { project, clip, target, output } => {
+            let loaded = project_io::load_any(&project)?;
+            let mut h = History::new(loaded.project.clone());
+            let (cmd, measured) = integrations::normalize_command(&h.project, &clip, target)?;
+            let mut report = commands::execute_all(&mut h, &[cmd])?;
+            let target_path = output.unwrap_or(project);
+            report["warnings"] = json!(project_io::save_any(&target_path, &h.project, loaded.wfp.as_ref())?);
+            report["measured_lufs"] = json!(measured);
+            report["target_lufs"] = json!(target);
+            let text = format!("clip {clip}: {measured:.1} LUFS -> {target:.1} LUFS, saved {}", target_path.display());
+            Ok(Out::new(report, text))
+        }
+        Cmd::Presets => Ok(Out::json(jb_cli::presets())),
         Cmd::Fx { cmd: FxCmd::Coverage { file } } => Ok(Out::json(integrations::fx_coverage(&file)?)),
         Cmd::Frame { project, at, output, preview } => {
             let p = project_io::load_project(&project)?;

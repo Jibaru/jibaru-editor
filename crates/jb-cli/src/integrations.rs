@@ -165,3 +165,33 @@ pub fn parse_preview(s: &str) -> JbResult<u32> {
         JbError::invalid(format!("invalid preview size `{s}`")).hint("use a height like `540p` or `720p`")
     })
 }
+
+/// Measures the loudness of a clip's audio and builds the
+/// `set_normalization` command for `target` LUFS. On a camera video clip
+/// the linked audio clip is measured. Returns the command and the measured
+/// loudness.
+pub fn normalize_command(project: &Project, clip_id: &str, target: f64) -> JbResult<(jb_core::Command, f64)> {
+    let clip = project
+        .clip(clip_id)
+        .ok_or_else(|| JbError::new(crate::error::code::NOT_FOUND, format!("clip {clip_id} not found")))?;
+    let measured_id = project
+        .sequences
+        .iter()
+        .flat_map(|s| s.tracks.iter())
+        .filter(|t| t.kind == jb_core::TrackKind::Audio)
+        .flat_map(|t| t.clips.iter())
+        .find(|c| c.id != clip.id && clip.link_group.is_some() && c.link_group == clip.link_group)
+        .map_or(clip_id, |c| c.id.as_str());
+    let pool = media_pool(project, false);
+    let lufs = jb_media::mixer::clip_loudness(project, measured_id, &pool)
+        .map_err(|e| JbError::invalid(format!("cannot measure loudness: {e:#}")))?;
+    if !lufs.is_finite() {
+        return Err(JbError::invalid(format!("clip {clip_id} is silent")).hint("normalization needs audible audio"));
+    }
+    let cmd = jb_core::Command::SetNormalization {
+        clip_id: clip_id.to_string(),
+        target_lufs: Some(target),
+        measured_lufs: Some(lufs),
+    };
+    Ok((cmd, lufs))
+}

@@ -177,3 +177,23 @@ fn import_media_with_ffmpeg() {
     let (code, v) = run(&["import-media", s(&p), "/nope.mp4"]);
     assert_eq!(code, 3, "{v}");
 }
+
+#[test]
+fn wfp_projects_are_edited_in_place_and_saved_as() {
+    let dir = tempfile::tempdir().unwrap();
+    let wfp = dir.path().join("p.wfp");
+    std::fs::copy(concat!(env!("CARGO_MANIFEST_DIR"), "/../jb-filmora/tests/fixtures/synthetic.wfp"), &wfp).unwrap();
+    let r = ok(&["exec", s(&wfp), r#"{"op":"rename_project","name":"Edited in jb"}"#]);
+    assert_eq!(r["warnings"], json!([]));
+    assert_eq!(ok(&["info", s(&wfp)])["name"], "Edited in jb");
+    let copy = dir.path().join("copy.wfp");
+    ok(&["save", s(&wfp), s(&copy)]);
+    assert_eq!(ok(&["info", s(&copy)])["name"], "Edited in jb");
+    let native = dir.path().join("p.jbp");
+    ok(&["save", s(&wfp), s(&native)]);
+    // A native project cannot become a .wfp: there are no Filmora documents to patch.
+    let (code, v) = run(&["save", s(&native), s(&dir.path().join("x.wfp"))]);
+    assert_ne!(code, 0);
+    assert_eq!(v["error"]["code"], "unsupported_format");
+    assert!(ok(&["presets"])["equalizer"].as_array().unwrap().len() > 10);
+}

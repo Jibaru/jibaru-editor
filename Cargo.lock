@@ -2428,6 +2428,7 @@ dependencies = [
  "anyhow",
  "jb-cli",
  "jb-core",
+ "jb-filmora",
  "rmcp",
  "serde",
  "serde_json",
