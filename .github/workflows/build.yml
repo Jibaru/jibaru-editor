@@ -34,6 +34,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: package
+          cache-on-failure: true
       - uses: pnpm/action-setup@v4
         with:
           package_json_file: app/package.json
@@ -44,16 +45,24 @@ jobs:
           cache-dependency-path: app/pnpm-lock.yaml
 
       # --- FFmpeg (LGPL, shared) ---------------------------------------------
-      - name: Cache LGPL FFmpeg (macOS)
+      # Restored and saved separately so a later failing step does not throw
+      # away a fresh FFmpeg build.
+      - name: Restore LGPL FFmpeg (macOS)
         if: runner.os == 'macOS'
         id: ffmpeg-cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: ~/ffmpeg-lgpl
           key: ffmpeg-lgpl-${{ env.FFMPEG_VERSION }}-${{ matrix.platform }}-${{ hashFiles('scripts/ffmpeg/build-macos.sh') }}
       - name: Build LGPL FFmpeg (macOS)
         if: runner.os == 'macOS' && steps.ffmpeg-cache.outputs.cache-hit != 'true'
         run: scripts/ffmpeg/build-macos.sh ~/ffmpeg-lgpl arm64
+      - name: Save LGPL FFmpeg (macOS)
+        if: runner.os == 'macOS' && steps.ffmpeg-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/ffmpeg-lgpl
+          key: ${{ steps.ffmpeg-cache.outputs.cache-primary-key }}
       - name: Use LGPL FFmpeg (macOS)
         if: runner.os == 'macOS'
         run: |
