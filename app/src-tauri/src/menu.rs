@@ -33,6 +33,7 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
             &item("file.save_as", "Save Project As...", Some("CmdOrCtrl+Shift+S"))?,
             &PredefinedMenuItem::separator(app)?,
             &item("file.import", "Import Media Files...", Some("CmdOrCtrl+I"))?,
+            &item("file.import_folder", "Import Media Folder...", None)?,
             &PredefinedMenuItem::separator(app)?,
             &item("file.export", "Export...", Some("CmdOrCtrl+E"))?,
         ],
@@ -54,6 +55,7 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
             &PredefinedMenuItem::separator(app)?,
             &PredefinedMenuItem::select_all(app, None)?,
             &item("edit.split", "Split", Some("CmdOrCtrl+B"))?,
+            &item("edit.add_marker", "Add Marker", None)?,
         ],
     )?;
     let tools = Submenu::with_items(
@@ -65,6 +67,13 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
             &item("tools.add_audio_track", "Add Audio Track", None)?,
             &PredefinedMenuItem::separator(app)?,
             &item("tools.snapping", "Snapping", None)?,
+            &PredefinedMenuItem::separator(app)?,
+            &item("tools.freeze_frame", "Freeze Frame", None)?,
+            &item("tools.detach_audio", "Detach Audio", None)?,
+            &item("tools.mute_clip", "Mute", None)?,
+            &PredefinedMenuItem::separator(app)?,
+            &item("tools.stabilize", "Stabilization", None)?,
+            &item("tools.chroma_key", "Chroma Key", None)?,
         ],
     )?;
     let view = Submenu::with_items(
@@ -78,11 +87,30 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
             &PredefinedMenuItem::separator(app)?,
             &item("view.play", "Play/Pause", None)?,
             &item("view.stop", "Stop", Some("CmdOrCtrl+."))?,
+            &item("view.prev_frame", "Previous Frame", None)?,
+            &item("view.next_frame", "Next Frame", None)?,
+            &PredefinedMenuItem::separator(app)?,
+            &item("view.mark_in", "Mark In", None)?,
+            &item("view.mark_out", "Mark Out", None)?,
+            &item("view.clear_marks", "Clear In/Out", None)?,
+            &PredefinedMenuItem::separator(app)?,
+            &item("view.player_fullscreen", "Full Screen Preview", None)?,
+            &item("view.stats", "Show Playback Statistics", None)?,
             &PredefinedMenuItem::separator(app)?,
             &PredefinedMenuItem::fullscreen(app, None)?,
         ],
     )?;
-    let help = Submenu::with_items(app, "Help", true, &[&item("help.shortcuts", "Keyboard Shortcuts", None)?])?;
+    let help = Submenu::with_items(
+        app,
+        "Help",
+        true,
+        &[
+            &item("help.shortcuts", "Keyboard Shortcuts", None)?,
+            &PredefinedMenuItem::separator(app)?,
+            &item("help.website", "Jibaru Editor on GitHub", None)?,
+            &item("help.feedback", "Report an Issue", None)?,
+        ],
+    )?;
     Menu::with_items(app, &[&app_menu, &file, &edit, &tools, &view, &help])
 }
 

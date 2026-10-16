@@ -100,6 +100,8 @@ async fn open_project(app: AppHandle, path: String) -> Res<Snapshot> {
 struct Saved {
     snapshot: Snapshot,
     warnings: Vec<String>,
+    /// Edits saved for Jibaru only (a `.wfp` sidecar); Filmora won't show them.
+    notes: Vec<String>,
 }
 
 #[tauri::command]
@@ -107,8 +109,8 @@ fn save_project(app: AppHandle, path: Option<String>) -> Res<Saved> {
     let svc = app.state::<Services>();
     let state = app.state::<AppState>();
     with_session(&state, |s| {
-        let warnings = s.save(path.as_deref().map(Path::new), Some(&svc.backup_dir)).map_err(err)?;
-        Ok(Saved { snapshot: s.snapshot(), warnings })
+        let report = s.save(path.as_deref().map(Path::new), Some(&svc.backup_dir)).map_err(err)?;
+        Ok(Saved { snapshot: s.snapshot(), warnings: report.warnings, notes: report.notes })
     })
 }
 
@@ -150,8 +152,209 @@ fn fx_catalog() -> Vec<media::FxEntry> {
     media::catalog()
 }
 
+/// Extensions of the files the media importer accepts.
+const MEDIA_EXTENSIONS: &[&str] = &[
+    "mp4", "mov", "m4v", "mkv", "webm", "avi", "mts", "m2ts", "mp3", "wav", "m4a", "aac", "flac", "ogg", "jpg", "jpeg",
+    "png", "heic", "webp", "gif", "bmp", "tif", "tiff",
+];
+
+/// Files to import for `paths`: files as given, folders expanded to the
+/// media files inside them (recursively, sorted, hidden entries skipped).
+fn expand_media_paths(paths: Vec<String>) -> Vec<String> {
+    fn walk(dir: &Path, out: &mut Vec<String>) {
+        let Ok(entries) = std::fs::read_dir(dir) else { return };
+        let mut list: Vec<PathBuf> = entries
+            .flatten()
+            .map(|e| e.path())
+            .filter(|p| !p.file_name().and_then(|n| n.to_str()).is_some_and(|n| n.starts_with('.')))
+            .collect();
+        list.sort();
+        for p in list {
+            if p.is_dir() {
+                walk(&p, out);
+            } else if p
+                .extension()
+                .and_then(|e| e.to_str())
+                .is_some_and(|e| MEDIA_EXTENSIONS.contains(&e.to_ascii_lowercase().as_str()))
+            {
+                out.push(p.to_string_lossy().into_owned());
+            }
+        }
+    }
+    let mut out = Vec::new();
+    for p in paths {
+        let path = Path::new(&p);
+        if path.is_dir() {
+            walk(path, &mut out);
+        } else {
+            out.push(p);
+        }
+    }
+    out
+}
+
+/// Executes `cmd` as one undo step and returns the new snapshot.
+fn execute_one(app: &AppHandle, cmd: Command) -> Res<Snapshot> {
+    edit(app, |s| {
+        s.execute(&cmd)?;
+        Ok(s.snapshot())
+    })
+}
+
+fn project_clone(app: &AppHandle) -> Res<jb_core::Project> {
+    let state = app.state::<AppState>();
+    let s = state.0.lock().map_err(err)?;
+    Ok(s.history.project.clone())
+}
+
+/// Auto Normalization: measures the clip's loudness and normalizes it to
+/// `target_lufs`; `None` turns normalization off. On a camera clip the
+/// linked audio clip is measured (that is what plays).
+#[tauri::command]
+async fn normalize_clip(app: AppHandle, clip_id: String, target_lufs: Option<f64>) -> Res<Snapshot> {
+    let Some(target) = target_lufs else {
+        return execute_one(&app, Command::SetNormalization { clip_id, target_lufs: None, measured_lufs: None });
+    };
+    let project = project_clone(&app)?;
+    let clip = project.clip(&clip_id).ok_or_else(|| format!("clip {clip_id} not found"))?;
+    let measured_id = project
+        .sequences
+        .iter()
+        .flat_map(|s| s.tracks.iter())
+        .filter(|t| t.kind == jb_core::TrackKind::Audio)
+        .flat_map(|t| t.clips.iter())
+        .find(|c| c.id != clip.id && clip.link_group.is_some() && c.link_group == clip.link_group)
+        .map_or(clip_id.clone(), |c| c.id.clone());
+    let lufs = tauri::async_runtime::spawn_blocking(move || {
+        let pool = jb_media::MediaPool::for_project(&project, jb_media::PoolConfig::default());
+        jb_media::mixer::clip_loudness(&project, &measured_id, &pool)
+    })
+    .await
+    .map_err(err)?
+    .map_err(|e| format!("cannot measure loudness: {e:#}"))?;
+    if !lufs.is_finite() {
+        return Err("the clip is silent; normalization needs audible audio".into());
+    }
+    execute_one(&app, Command::SetNormalization { clip_id, target_lufs: Some(target), measured_lufs: Some(lufs) })
+}
+
+/// Stabilization: analyzes the camera motion of the clip and stores the
+/// corrections in the `data` parameter of its `jb.stabilize` effect
+/// `effect_id`, using the effect's `smoothness` (0..100, default 50).
+#[tauri::command]
+async fn analyze_stabilization(app: AppHandle, clip_id: String, effect_id: String) -> Res<Snapshot> {
+    let project = project_clone(&app)?;
+    let clip = project.clip(&clip_id).ok_or_else(|| format!("clip {clip_id} not found"))?;
+    let effect =
+        clip.effects.iter().find(|e| e.id == effect_id).ok_or_else(|| format!("effect {effect_id} not found"))?;
+    let smoothness = match effect.params.get("smoothness").map(|p| &p.value) {
+        Some(jb_core::Value::Float(v)) => *v,
+        _ => 50.0,
+    };
+    let id = clip_id.clone();
+    let data =
+        tauri::async_runtime::spawn_blocking(move || jb_media::stabilize::analyze_clip(&project, &id, smoothness))
+            .await
+            .map_err(err)?
+            .map_err(|e| format!("stabilization failed: {e:#}"))?;
+    let param = jb_core::Param { value: jb_core::Value::Text(data), keyframes: Vec::new() };
+    let params = std::collections::BTreeMap::from([("data".to_string(), param)]);
+    execute_one(&app, Command::SetEffectParams { clip_id, effect_id, params })
+}
+
+/// Decodes standard or URL-safe base64 (padding, whitespace and a
+/// `data:` URL prefix tolerated).
+fn base64_decode(s: &str) -> Result<Vec<u8>, String> {
+    let s = s.split_once(";base64,").map_or(s, |(_, b)| b);
+    let mut out = Vec::with_capacity(s.len() * 3 / 4);
+    let (mut acc, mut bits) = (0u32, 0u32);
+    for c in s.bytes() {
+        let v = match c {
+            b'A'..=b'Z' => c - b'A',
+            b'a'..=b'z' => c - b'a' + 26,
+            b'0'..=b'9' => c - b'0' + 52,
+            b'+' | b'-' => 62,
+            b'/' | b'_' => 63,
+            b'=' | b'\n' | b'\r' | b' ' => continue,
+            _ => return Err("invalid base64".into()),
+        } as u32;
+        acc = (acc << 6) | v;
+        bits += 6;
+        if bits >= 8 {
+            bits -= 8;
+            out.push((acc >> bits) as u8);
+            acc &= (1 << bits) - 1;
+        }
+    }
+    Ok(out)
+}
+
+/// Player snapshot: writes the PNG next to the project (`Snapshots/`), or to
+/// `~/Pictures/Jibaru Snapshots/` for unsaved projects, and adds it to the
+/// media library like Filmora does.
+#[tauri::command]
+async fn save_snapshot(app: AppHandle, png: String, name: String) -> Res<Snapshot> {
+    let bytes = base64_decode(&png)?;
+    if !bytes.starts_with(b"\x89PNG") {
+        return Err("snapshot is not a PNG image".into());
+    }
+    let project_dir = {
+        let state = app.state::<AppState>();
+        let s = state.0.lock().map_err(err)?;
+        s.path.as_ref().and_then(|p| p.parent().map(Path::to_path_buf))
+    };
+    let dir = snapshot_dir(project_dir);
+    std::fs::create_dir_all(&dir).map_err(err)?;
+    let file = unique_file(&dir, &sanitize(&name), "png");
+    std::fs::write(&file, &bytes).map_err(err)?;
+    import_media(app, vec![file.to_string_lossy().into_owned()]).await
+}
+
+fn snapshot_dir(project_dir: Option<PathBuf>) -> PathBuf {
+    match project_dir {
+        Some(d) => d.join("Snapshots"),
+        None => std::env::var_os("HOME")
+            .or_else(|| std::env::var_os("USERPROFILE"))
+            .map(PathBuf::from)
+            .unwrap_or_else(std::env::temp_dir)
+            .join("Pictures")
+            .join("Jibaru Snapshots"),
+    }
+}
+
+/// `dir/base.ext`, or `dir/base (2).ext`... when taken.
+fn unique_file(dir: &Path, base: &str, ext: &str) -> PathBuf {
+    let mut file = dir.join(format!("{base}.{ext}"));
+    let mut n = 2;
+    while file.exists() {
+        file = dir.join(format!("{base} ({n}).{ext}"));
+        n += 1;
+    }
+    file
+}
+
+/// Opens an http(s) URL in the default browser.
+#[tauri::command]
+fn open_url(url: String) -> Res<()> {
+    if !(url.starts_with("https://") || url.starts_with("http://")) || url.chars().any(|c| c.is_whitespace()) {
+        return Err("only http(s) URLs can be opened".into());
+    }
+    #[cfg(target_os = "macos")]
+    let r = std::process::Command::new("open").arg(&url).spawn();
+    #[cfg(target_os = "windows")]
+    let r = std::process::Command::new("rundll32").args(["url.dll,FileProtocolHandler", &url]).spawn();
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    let r = std::process::Command::new("xdg-open").arg(&url).spawn();
+    r.map(|_| ()).map_err(err)
+}
+
 #[tauri::command]
 async fn import_media(app: AppHandle, paths: Vec<String>) -> Res<Snapshot> {
+    let paths = expand_media_paths(paths);
+    if paths.is_empty() {
+        return Err("No media files found".into());
+    }
+
     let known: Vec<String> = {
         let state = app.state::<AppState>();
         let s = state.0.lock().map_err(err)?;
@@ -587,6 +790,10 @@ fn main() {
             export_status,
             reveal_path,
             default_export_dir,
+            normalize_clip,
+            analyze_stabilization,
+            save_snapshot,
+            open_url,
             quit_app,
             autosave_dir,
             automation_log
@@ -603,4 +810,31 @@ fn main() {
             }
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn decodes_base64() {
+        assert_eq!(base64_decode("aGVsbG8gd29ybGQ=").unwrap(), b"hello world");
+        assert_eq!(base64_decode("data:image/png;base64,iVBORw==").unwrap(), b"\x89PNG");
+        assert!(base64_decode("a$b").is_err());
+    }
+
+    #[test]
+    fn expands_folders_to_media_files() {
+        let dir = std::env::temp_dir().join(format!("jb-import-{}", std::process::id()));
+        std::fs::create_dir_all(dir.join("sub")).unwrap();
+        for f in ["b.mp4", "a.PNG", "notes.txt", ".hidden.mp4", "sub/c.wav"] {
+            std::fs::write(dir.join(f), b"x").unwrap();
+        }
+        let got = expand_media_paths(vec![dir.to_string_lossy().into_owned(), "/x/file.mov".into()]);
+        let names: Vec<String> =
+            got.iter().map(|p| Path::new(p).file_name().unwrap().to_string_lossy().into_owned()).collect();
+        assert_eq!(names, ["a.PNG", "b.mp4", "c.wav", "file.mov"]);
+        assert_eq!(unique_file(&dir, "b", "mp4"), dir.join("b (2).mp4"));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
 }

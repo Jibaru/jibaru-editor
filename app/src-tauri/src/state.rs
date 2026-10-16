@@ -122,16 +122,17 @@ impl Session {
     /// Saves to `path` (or the current path). An existing file is copied to
     /// `backup_dir` the first time it is overwritten in this session, and
     /// writes go through a temporary file so a failure never truncates the
-    /// original. Returns the writer's warnings.
-    pub fn save(&mut self, path: Option<&Path>, backup_dir: Option<&Path>) -> anyhow::Result<Vec<String>> {
+    /// original. Returns the writer's report (warnings: edits that could
+    /// not be written; notes: edits kept only for Jibaru).
+    pub fn save(&mut self, path: Option<&Path>, backup_dir: Option<&Path>) -> anyhow::Result<jb_filmora::WriteReport> {
         let target =
             path.map(Path::to_path_buf).or_else(|| self.path.clone()).ok_or_else(|| anyhow::anyhow!("no path"))?;
         let ext = target.extension().and_then(|e| e.to_str()).unwrap_or("").to_ascii_lowercase();
         let tmp = target.with_extension(format!("{ext}.saving"));
-        let warnings = match ext.as_str() {
+        let report = match ext.as_str() {
             "jbp" => {
                 std::fs::write(&tmp, jb_core::to_native(&self.history.project)?)?;
-                Vec::new()
+                jb_filmora::WriteReport::default()
             }
             "wfp" => {
                 let Some(wfp) = &self.wfp else {
@@ -139,7 +140,7 @@ impl Session {
                 };
                 let mut out = wfp.clone();
                 out.project = self.history.project.clone();
-                jb_filmora::write(&out, &tmp)?.warnings
+                jb_filmora::write(&out, &tmp)?
             }
             _ => anyhow::bail!("cannot save as {}; use .jbp or .wfp", target.display()),
         };
@@ -159,7 +160,7 @@ impl Session {
         }
         self.path = Some(target);
         self.saved_revision = self.revision;
-        Ok(warnings)
+        Ok(report)
     }
 }
 
