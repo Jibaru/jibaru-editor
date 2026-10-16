@@ -3,6 +3,8 @@ name: CI
 on:
   push:
     branches: [main]
+    # Docs-only changes don't need macOS/Windows runners.
+    paths-ignore: ["docs/**", "**/*.md"]
   pull_request:
   workflow_dispatch:
 
@@ -10,7 +12,8 @@ on:
 # and a newer push replaces the pending one instead of queueing them all.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: false
+  # Superseded runs are cancelled: macOS runner minutes are billed at 10x.
+  cancel-in-progress: true
 
 jobs:
   rust:
@@ -86,6 +89,8 @@ jobs:
 
   # Release-mode packages with the LGPL FFmpeg bundled (`pnpm tauri build` on
   # both platforms), smoke tested on the runner. See docs/packaging.md.
+  # Expensive, so only on manual runs; releases build them too.
   packages:
+    if: github.event_name == 'workflow_dispatch'
     uses: ./.github/workflows/build.yml
     secrets: inherit
