@@ -195,3 +195,46 @@ pub fn normalize_command(project: &Project, clip_id: &str, target: f64) -> JbRes
     };
     Ok((cmd, lufs))
 }
+
+/// Renders the library card previews (still + hover sprite) of every
+/// registry item whose id contains `filter`, plus the title templates
+/// (`title:<id>`), into `<out>/<renderer version>/`, skipping cached ones
+/// unless `force`.
+pub fn fx_previews(out: &Path, filter: &str, force: bool) -> JbResult<Value> {
+    use jb_render::preview::{sample_titles, PreviewCache, PreviewItem, SampleSource, CARD_LAYOUT, PREVIEW_VERSION};
+    let started = std::time::Instant::now();
+    let mut r = gpu_renderer(CARD_LAYOUT.frame_w, CARD_LAYOUT.frame_h, true)?;
+    let samples = SampleSource::new();
+    let cache = PreviewCache::new(out);
+    if force {
+        let _ = std::fs::remove_dir_all(&cache.dir);
+    }
+    let mut items: Vec<PreviewItem> =
+        r.registry().iter().filter(|i| i.id.contains(filter)).map(|i| PreviewItem::Fx(i.id.to_string())).collect();
+    items.extend(
+        sample_titles()
+            .into_iter()
+            .filter(|(id, _)| format!("title:{id}").contains(filter))
+            .map(|(_, t)| PreviewItem::Title(t)),
+    );
+    let (mut rendered, mut failed) = (0usize, Vec::new());
+    for item in &items {
+        let had = cache.has(item);
+        match cache.ensure(&mut r, &samples, item) {
+            Ok(_) if !had => rendered += 1,
+            Ok(_) => {}
+            Err(e) => failed.push(format!("{}: {e}", item.key())),
+        }
+    }
+    let elapsed = started.elapsed().as_secs_f64();
+    Ok(serde_json::json!({
+        "dir": cache.dir,
+        "version": PREVIEW_VERSION,
+        "items": items.len(),
+        "rendered": rendered,
+        "failed": failed,
+        "bytes": cache.size(),
+        "seconds": (elapsed * 100.0).round() / 100.0,
+        "layout": CARD_LAYOUT,
+    }))
+}

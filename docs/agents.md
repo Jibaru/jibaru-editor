@@ -137,6 +137,7 @@ jb save <in> <out> [--force]  # .jbp -> .jbp, .wfp -> .wfp or .jbp (edits patche
 jb normalize <project> --clip ID [--target -14] [-o out]
 jb presets                    # names accepted by the editing commands
 jb fx coverage <file.wfp>
+jb fx previews [-o DIR] [--filter S] [--force]  # library card stills + hover sprites
 jb frame <project> --at <time> -o frame.png [--preview 540p]
 jb render <project> -o out.mp4 [--preview 540p] [--range A-B] [--sequence ID]
 ```

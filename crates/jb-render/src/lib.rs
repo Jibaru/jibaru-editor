@@ -16,6 +16,7 @@ pub mod fx;
 mod gpu;
 pub mod lut;
 pub mod pool;
+pub mod preview;
 pub mod registry;
 mod render;
 pub mod testing;

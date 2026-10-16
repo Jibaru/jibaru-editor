@@ -2518,9 +2518,12 @@ dependencies = [
  "anyhow",
  "bytemuck",
  "cosmic-text",
+ "image",
  "jb-core",
  "png 0.18.1",
  "pollster",
+ "serde",
+ "serde_json",
  "thiserror 2.0.21",
  "wgpu",
 ]

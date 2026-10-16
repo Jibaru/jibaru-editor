@@ -188,6 +188,19 @@ enum Cmd {
 enum FxCmd {
     /// Report which effects of a .wfp project are supported.
     Coverage { file: PathBuf },
+    /// Render the library card previews (thumbnail + animated hover sprite)
+    /// of every effect, filter, transition, animation and title template.
+    Previews {
+        /// Output directory; previews go to a subfolder named after the renderer version.
+        #[arg(long, short, default_value = "fx-previews")]
+        output: PathBuf,
+        /// Only items whose id contains this text (`title:` for titles).
+        #[arg(long, default_value = "")]
+        filter: String,
+        /// Re-render items that are already cached.
+        #[arg(long)]
+        force: bool,
+    },
 }
 
 /// Successful output: JSON data plus a human rendering.
@@ -445,6 +458,9 @@ fn run(cmd: Cmd) -> JbResult<Out> {
         }
         Cmd::Presets => Ok(Out::json(jb_cli::presets())),
         Cmd::Fx { cmd: FxCmd::Coverage { file } } => Ok(Out::json(integrations::fx_coverage(&file)?)),
+        Cmd::Fx { cmd: FxCmd::Previews { output, filter, force } } => {
+            Ok(Out::json(integrations::fx_previews(&output, &filter, force)?))
+        }
         Cmd::Frame { project, at, output, preview } => {
             let p = project_io::load_project(&project)?;
             let t = timecode::parse_time(&at, p.settings.frame_rate)?;
