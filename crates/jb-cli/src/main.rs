@@ -134,6 +134,18 @@ enum Cmd {
         #[command(subcommand)]
         cmd: FxCmd,
     },
+    /// Render a single frame to a PNG or JPEG image.
+    Frame {
+        project: PathBuf,
+        /// Timeline time, e.g. `00:01:02:15` or `62.5`.
+        #[arg(long)]
+        at: String,
+        #[arg(long, short)]
+        output: PathBuf,
+        /// Preview resolution by height, e.g. `540p`.
+        #[arg(long)]
+        preview: Option<String>,
+    },
     /// Render a project to a video file.
     Render {
         project: PathBuf,
@@ -386,6 +398,12 @@ fn run(cmd: Cmd) -> JbResult<Out> {
             Ok(Out::new(data, format!("converted {} -> {}", input.display(), output.display())))
         }
         Cmd::Fx { cmd: FxCmd::Coverage { file } } => Ok(Out::json(integrations::fx_coverage(&file)?)),
+        Cmd::Frame { project, at, output, preview } => {
+            let p = project_io::load_project(&project)?;
+            let t = timecode::parse_time(&at, p.settings.frame_rate)?;
+            let h = preview.map(|s| integrations::parse_preview(&s)).transpose()?;
+            Ok(Out::json(integrations::render_frame(&p, t, &output, h)?))
+        }
         Cmd::Render { project, output, preview, range, sequence } => {
             let p = project_io::load_project(&project)?;
             let opts = RenderOptions {
