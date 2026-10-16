@@ -242,6 +242,36 @@ fn evaluate_at_depth(project: &Project, seq: &Sequence, t: Ticks, depth: usize) 
                 break;
             }
         }
+        // A transition out of the last clip of a track (Filmora's fade to black
+        // at the end of a timeline) blends into nothing: a transparent layer.
+        if !handled {
+            if let Some(a) = clips.last().filter(|a| a.transition_out.is_some() && a.contains(t)) {
+                let tr = a.transition_out.as_ref().unwrap();
+                let (from, to) = transition_window(tr, a.end);
+                if t >= from && t < to {
+                    if let Some(mut out) = layer_for(project, a, t, depth) {
+                        let empty = Layer {
+                            clip_id: a.id.clone(),
+                            content: LayerContent::Color([0.0; 4]),
+                            local_time: 0,
+                            transform: out.transform.clone(),
+                            opacity: 1.0,
+                            blend_mode: Default::default(),
+                            effects: Vec::new(),
+                            transition: None,
+                        };
+                        out.transition = Some(Box::new(ActiveTransition {
+                            kind: tr.kind.clone(),
+                            progress: (t - from) as f64 / (to - from).max(1) as f64,
+                            params: tr.params.iter().map(|(k, p)| (k.clone(), p.sample(t - from))).collect(),
+                            incoming: empty,
+                        }));
+                        layers.push(out);
+                        handled = true;
+                    }
+                }
+            }
+        }
         if handled {
             continue;
         }
