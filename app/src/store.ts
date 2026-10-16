@@ -4,7 +4,7 @@
 // sends one `Command` to the backend: the same API agents and the CLI use.
 
 import { useSyncExternalStore } from 'react'
-import { backend } from './backend'
+import { backend, type FxEntry } from './backend'
 import {
   clipFromMedia,
   findClip,
@@ -44,6 +44,7 @@ export interface EditorState {
   menu: { x: number; y: number; items: MenuItem[]; bar?: string } | null
   exportOpen: boolean
   volume: number
+  fx: FxEntry[]
 }
 
 type Listener = () => void
@@ -67,6 +68,7 @@ let state: EditorState = {
   menu: null,
   exportOpen: false,
   volume: 1,
+  fx: [],
 }
 const listeners = new Set<Listener>()
 
@@ -124,6 +126,7 @@ export async function exec(cmd: Command): Promise<boolean> {
 export async function load() {
   applySnapshot(await backend.snapshot())
   backend.onExternalChange(applySnapshot)
+  backend.fxCatalog().then(fx => setState({ fx }), () => {})
 }
 
 export async function undo() {

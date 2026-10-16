@@ -5,7 +5,8 @@
 import { newId } from '../core/model'
 import type { Command, MediaAsset, Project, ProjectSettings, Snapshot } from '../core/types'
 import { apply } from './applyCommand'
-import type { Backend, MediaUrls } from './types'
+import catalog from '../fx-catalog.json'
+import type { Backend, FxEntry, MediaUrls } from './types'
 
 const defaultSettings: ProjectSettings = {
   width: 1920,
@@ -142,6 +143,8 @@ export function createMockBackend(): Backend {
       return h.snapshot()
     },
     probeMedia: probe,
+    // Snapshot of `jibaru-editor --fx-catalog`; the app asks jb-render directly.
+    fxCatalog: async () => catalog as FxEntry[],
     async importMedia(paths) {
       const known = new Set(h.project.media.map(m => m.path))
       const assets = (await probe(paths.filter(p => !known.has(p)))).filter(a => !h.project.media.some(m => m.id === a.id))

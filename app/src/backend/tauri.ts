@@ -2,7 +2,7 @@ import { convertFileSrc, invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { open, save } from '@tauri-apps/plugin-dialog'
 import type { Command, MediaAsset, ProjectSettings, Snapshot } from '../core/types'
-import type { Backend, MediaUrls } from './types'
+import type { Backend, FxEntry, MediaUrls } from './types'
 
 const isWindows = navigator.userAgent.includes('Windows')
 
@@ -30,6 +30,7 @@ export const tauriBackend: Backend = {
   redo: () => invoke<Snapshot>('redo'),
   probeMedia: (paths: string[]) => invoke<MediaAsset[]>('probe_media', { paths }),
   importMedia: (paths: string[]) => invoke<Snapshot>('import_media', { paths }),
+  fxCatalog: () => invoke<FxEntry[]>('fx_catalog'),
   async pickFiles({ title, filters, multiple = true, directory = false }) {
     const r = await open({ title, filters, multiple, directory })
     if (r == null) return null

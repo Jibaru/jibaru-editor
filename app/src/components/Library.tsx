@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { backend } from '../backend'
 import { mediaInUse, seconds, shortDuration } from '../core/model'
 import type { MediaAsset } from '../core/types'
-import { catalog, type LibraryItem } from '../library'
+import { tabCategories, tabItems, type LibraryItem } from '../library'
 import { appendMedia, deleteSelection, importMedia, openMenu, setState, useEditor, type LibraryTab } from '../store'
 import { sep } from '../ui/ContextMenu'
 import { startLibraryDrag } from '../drag'
@@ -44,7 +44,9 @@ const TABS: { id: LibraryTab; label: string; icon: (p: { size?: number }) => Rea
   { id: 'templates', label: 'Templates', icon: IcTemplates },
 ]
 
-const SIDEBARS: Partial<Record<LibraryTab, { label: string; caret?: 'open' | 'closed'; child?: boolean }[]>> = {
+type SideItem = { label: string; caret?: 'open' | 'closed'; child?: boolean }
+
+const SIDEBARS: Partial<Record<LibraryTab, SideItem[]>> = {
   media: [
     { label: 'Project Media', caret: 'open' },
     { label: 'Folder', child: true },
@@ -54,10 +56,6 @@ const SIDEBARS: Partial<Record<LibraryTab, { label: string; caret?: 'open' | 'cl
     { label: 'Photos Library' },
   ],
   audio: [{ label: 'Project Audio', caret: 'open' }, { label: 'Music' }, { label: 'Sound Effects' }],
-  titles: [{ label: 'Default', caret: 'open' }, { label: 'Lower Thirds' }, { label: 'Subtitles' }],
-  transitions: [{ label: 'Default', caret: 'open' }, { label: 'Basic' }, { label: 'Slide' }, { label: 'Wipe' }],
-  effects: [{ label: 'Default', caret: 'open' }, { label: 'Blur' }, { label: 'Distortion' }],
-  filters: [{ label: 'Default', caret: 'open' }, { label: 'Color' }, { label: 'Film' }],
   stock: [{ label: 'Videos', caret: 'open' }, { label: 'Photos' }],
   stickers: [{ label: 'Default', caret: 'open' }],
   templates: [{ label: 'Default', caret: 'open' }],
@@ -65,8 +63,12 @@ const SIDEBARS: Partial<Record<LibraryTab, { label: string; caret?: 'open' | 'cl
 
 export function Library() {
   const tab = useEditor(s => s.libraryTab)
-  const [side, setSide] = useState(0)
-  const sidebar = SIDEBARS[tab] ?? []
+  const fx = useEditor(s => s.fx)
+  const [sides, setSides] = useState<Partial<Record<LibraryTab, number>>>({})
+  const side = sides[tab] ?? 0
+  const setSide = (i: number) => setSides(s => ({ ...s, [tab]: i }))
+  const categories = tab === 'titles' || tab === 'transitions' || tab === 'effects' || tab === 'filters' ? tabCategories(tab, fx) : null
+  const sidebar: SideItem[] = categories ? [{ label: 'All', caret: 'open' }, ...categories.map(c => ({ label: c, child: true }))] : (SIDEBARS[tab] ?? [])
   return (
     <section className="panel library">
       <div className="panel-head lib-tabs">
@@ -86,7 +88,7 @@ export function Library() {
             </button>
           ))}
         </aside>
-        <div className="lib-main">{tab === 'media' ? <MediaGrid /> : <CatalogGrid tab={tab} />}</div>
+        <div className="lib-main">{tab === 'media' ? <MediaGrid /> : <CatalogGrid tab={tab} category={categories && side > 0 ? categories[side - 1] : null} />}</div>
       </div>
     </section>
   )
@@ -220,16 +222,17 @@ function MediaCard({ media, used, selected }: { media: MediaAsset; used: boolean
   )
 }
 
-function CatalogGrid({ tab }: { tab: LibraryTab }) {
+function CatalogGrid({ tab, category }: { tab: LibraryTab; category: string | null }) {
   const project = useEditor(s => s.snap?.project)
+  const fx = useEditor(s => s.fx)
   const [query, setQuery] = useState('')
   const items: LibraryItem[] = useMemo(() => {
     if (tab === 'audio')
       return (project?.media ?? [])
         .filter(m => m.kind === 'audio')
         .map(m => ({ type: 'media', id: m.id, label: m.name, sample: 'audio' }))
-    return catalog[tab] ?? []
-  }, [tab, project])
+    return tabItems(tab, fx).filter(i => !category || i.category === category)
+  }, [tab, project, fx, category])
   const shown = items.filter(i => i.label.toLowerCase().includes(query.toLowerCase()))
   return (
     <>

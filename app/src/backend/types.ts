@@ -1,5 +1,15 @@
 import type { Command, MediaAsset, ProjectSettings, Snapshot } from '../core/types'
 
+/** An effect, filter, transition or animation implemented by jb-render. */
+export interface FxEntry {
+  id: string
+  name: string
+  category: string
+  kind: 'transition' | 'effect' | 'filter' | 'animation'
+  description: string
+  params: { name: string; label: string; ty: 'float' | 'int' | 'bool' | 'color' | 'vec2' | 'text'; min: number; max: number; default: [number, number, number, number]; unit: string }[]
+}
+
 export interface FileFilter {
   name: string
   extensions: string[]
@@ -27,6 +37,8 @@ export interface Backend {
   importMedia(paths: string[]): Promise<Snapshot>
   pickFiles(opts: { title: string; filters?: FileFilter[]; multiple?: boolean; directory?: boolean }): Promise<string[] | null>
   pickSavePath(opts: { title: string; defaultPath?: string; filters?: FileFilter[] }): Promise<string | null>
+  /** The renderer's effect registry (drives the Transitions/Effects/Filters tabs). */
+  fxCatalog(): Promise<FxEntry[]>
   /** Called when the project changes from outside this window (agents, CLI). */
   onExternalChange(cb: (s: Snapshot) => void): () => void
   media: MediaUrls

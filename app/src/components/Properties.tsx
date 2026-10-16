@@ -2,7 +2,8 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { backend } from '../backend'
 import { defaultAudio, defaultTransform, findClip, float, fps, mainSequence, newId, paramValue, seconds, sequenceDuration, sourceLength, ticks, timecode } from '../core/model'
 import type { AudioSettings, Clip, Command, EffectInstance, MediaAsset, Param, Project, Track, Transform } from '../core/types'
-import { exec, setState, useEditor, type PropsTab } from '../store'
+import { animationsFor, catalogLabel } from '../library'
+import { exec, getState, setState, useEditor, type PropsTab } from '../store'
 import { loadWave } from '../timeline/waves'
 import { Diamond, Module, NumberField, Pills, Select, Slider, SliderRow, Toggle } from '../ui/controls'
 import {
@@ -131,7 +132,7 @@ function ClipProperties({ project, clip, track, tab }: { project: Project; clip:
   } else if (active === 'animation') {
     body = <AnimationTab clip={clip} media={media} />
     reset = () => {
-      const anims = (clip.effects ?? []).filter(e => e.kind.startsWith('jb.anim.'))
+      const anims = (clip.effects ?? []).filter(e => e.kind.startsWith('jb.anim.') || getState().fx.some(f => f.id === e.kind && f.kind === 'animation'))
       if (anims.length) exec({ op: 'batch', commands: anims.map(e => ({ op: 'remove_effect', clip_id: clip.id, effect_id: e.id })) })
     }
   } else {
@@ -302,6 +303,45 @@ function VideoBasic({ clip, project }: { clip: Clip; project: Project }) {
       <Module title="Stabilization" toggle={!!fx('jb.stabilize')} onToggle={on => toggleFx('jb.stabilize', on)} defaultOpen={false} />
       <Module title="Video Denoise" toggle={!!fx('jb.denoise')} onToggle={on => toggleFx('jb.denoise', on)} defaultOpen={false} />
       <Module title="Lens Correction" toggle={!!fx('jb.lens_correction')} onToggle={on => toggleFx('jb.lens_correction', on)} defaultOpen={false} />
+      <AppliedEffects clip={clip} />
+    </>
+  )
+}
+
+const PANEL_KINDS = new Set(['jb.color.adjust', 'jb.corner_radius', 'jb.background', 'jb.shadow', 'jb.auto_enhance', 'jb.motion_blur', 'jb.stabilize', 'jb.denoise', 'jb.lens_correction', 'jb.chroma_key'])
+
+/** Effects and filters dropped from the library, with sliders from the registry schema. */
+function AppliedEffects({ clip }: { clip: Clip }) {
+  const catalog = useEditor(s => s.fx)
+  const list = (clip.effects ?? []).filter(e => {
+    if (PANEL_KINDS.has(e.kind) || e.kind.startsWith('jb.mask.')) return false
+    return catalog.find(f => f.id === e.kind)?.kind !== 'animation'
+  })
+  return (
+    <>
+      {list.map(e => {
+        const info = catalog.find(f => f.id === e.kind)
+        return (
+          <Module key={e.id} title={catalogLabel(e.kind)} toggle onToggle={() => exec({ op: 'remove_effect', clip_id: clip.id, effect_id: e.id })} keyframe>
+            {(info?.params ?? [])
+              .filter(pp => pp.ty === 'float' || pp.ty === 'int')
+              .map(pp => (
+                <SliderRow
+                  key={pp.name}
+                  label={pp.label}
+                  value={p(e.params?.[pp.name], pp.default[0])}
+                  min={pp.min}
+                  max={pp.max}
+                  step={pp.ty === 'int' ? 1 : 0.01}
+                  digits={pp.ty === 'int' ? 0 : 2}
+                  unit={pp.unit}
+                  onCommit={v => exec({ op: 'set_effect_params', clip_id: clip.id, effect_id: e.id, params: { [pp.name]: float(v) } })}
+                />
+              ))}
+            {!info && <p className="mask-hint">Imported effect: kept as is, rendered as pass-through.</p>}
+          </Module>
+        )
+      })}
     </>
   )
 }
@@ -668,22 +708,21 @@ function RampCurve({ seed }: { seed: number }) {
 
 // ---------- Animation ----------
 
-const ANIMS_IN = ['Fade In', 'Zoom In', 'Zoom Out', 'Slide Left', 'Slide Right', 'Slide Up', 'Slide Down', 'Spin', 'Bounce', 'Rise', 'Drop', 'Pop']
-const ANIMS_OUT = ['Fade Out', 'Zoom In', 'Zoom Out', 'Slide Left', 'Slide Right', 'Slide Up', 'Slide Down', 'Spin', 'Shrink', 'Sink', 'Lift', 'Blink']
-const animKind = (dir: 'in' | 'out', name: string) => `jb.anim.${dir}.${name.toLowerCase().replace(/\s+/g, '_')}`
 
 function AnimationTab({ clip, media }: { clip: Clip; media: MediaAsset | null }) {
   const [sub, setSub] = useState('Motion Presets')
   const [dir, setDir] = useState<'in' | 'out'>('in')
-  const current = (clip.effects ?? []).find(e => e.kind.startsWith(`jb.anim.${dir}.`))
-  const names = dir === 'in' ? ANIMS_IN : ANIMS_OUT
+  const fx = useEditor(s => s.fx)
+  const anims = animationsFor(fx, dir)
+  const ids = new Set(anims.map(a => a.id))
+  const current = (clip.effects ?? []).find(e => ids.has(e.kind))
   const len = clip.end - clip.start
-  const pick = (name: string | null) => {
+  const pick = (kind: string | null) => {
     const cmds: Command[] = []
     if (current) cmds.push({ op: 'remove_effect', clip_id: clip.id, effect_id: current.id })
-    if (name) {
+    if (kind) {
       const d = Math.min(10_000_000, Math.floor(len / 2))
-      const effect: EffectInstance = { id: newId(), kind: animKind(dir, name), enabled: true, params: {}, range: dir === 'in' ? [0, d] : [len - d, len] }
+      const effect: EffectInstance = { id: newId(), kind, enabled: true, params: {}, range: dir === 'in' ? [0, d] : [len - d, len] }
       cmds.push({ op: 'add_effect', clip_id: clip.id, effect })
     }
     if (cmds.length) exec({ op: 'batch', commands: cmds })
@@ -702,13 +741,13 @@ function AnimationTab({ clip, media }: { clip: Clip; media: MediaAsset | null })
             <div className="preset-thumb"><IcNone size={34} strokeWidth={1} /></div>
             <span>No Motion</span>
           </div>
-          {names.map(n => (
-            <div key={n} className={`preset ${current?.kind === animKind(dir, n) ? 'on' : ''}`} onClick={() => pick(n)} title={n}>
+          {anims.map(a => (
+            <div key={a.id} className={`preset ${current?.kind === a.id ? 'on' : ''}`} onClick={() => pick(a.id)} title={a.description}>
               <div className="preset-thumb">
                 {media && media.kind !== 'audio' ? <img src={backend.media.thumb(media.path, seconds(clip.source_in ?? 0) + 0.5, 90)} alt="" /> : <IcImage size={28} />}
                 <span className="dl"><IcDownload size={12} /></span>
               </div>
-              <span>{n}</span>
+              <span>{a.name}</span>
             </div>
           ))}
         </div>
@@ -789,14 +828,14 @@ function ColorTab({ clip, media }: { clip: Clip; media: MediaAsset | null }) {
               {row('vibrance', 'Vibrance', 'linear-gradient(90deg,#7c8a8f,#d6a04a 40%,#e040c8 75%,#a040ff)')}
               {row('saturation', 'Saturation', 'linear-gradient(90deg,#7c8a8f,#d6a04a 40%,#e040c8 75%,#a040ff)')}
             </Module>
-            <Module title="Light" toggle onToggle={() => {}} keyframe extra={<button className="kf" onClick={() => setParams({ exposure: 0, brightness: 0, contrast: 0, highlight: 0, shadow: 0, white: 0, black: 0 })}><IcReset size={16} /></button>}>
+            <Module title="Light" toggle onToggle={() => {}} keyframe extra={<button className="kf" onClick={() => setParams({ exposure: 0, brightness: 0, contrast: 0, highlights: 0, shadows: 0, whites: 0, blacks: 0 })}><IcReset size={16} /></button>}>
               {row('exposure', 'Exposure')}
               {row('brightness', 'Brightness')}
               {row('contrast', 'Contrast')}
-              {row('highlight', 'Highlight')}
-              {row('shadow', 'Shadow')}
-              {row('white', 'White')}
-              {row('black', 'Black')}
+              {row('highlights', 'Highlight')}
+              {row('shadows', 'Shadow')}
+              {row('whites', 'White')}
+              {row('blacks', 'Black')}
             </Module>
           </>
         )}
