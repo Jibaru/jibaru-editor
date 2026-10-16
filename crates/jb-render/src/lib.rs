@@ -1,1 +1,26 @@
-//! GPU compositor and effect/transition registry built on wgpu
+//! GPU compositor and effect/transition registry built on wgpu.
+//!
+//! ```no_run
+//! # fn demo(project: &jb_core::Project, source: &dyn jb_core::FrameSource) -> anyhow::Result<()> {
+//! let mut r = jb_render::Renderer::new(1920, 1080)?;
+//! let plan = jb_core::eval::evaluate(project, project.main(), 0);
+//! let frame = r.render(project, &plan, source); // RGBA8, sRGB, straight alpha
+//! assert!(r.last_report().unknown_kinds.is_empty());
+//! # let _ = frame; Ok(()) }
+//! ```
+//!
+//! See [`registry`] for the effect catalog and [`Renderer`] for the pipeline.
+
+pub mod aliases;
+pub mod fx;
+mod gpu;
+pub mod lut;
+pub mod pool;
+pub mod registry;
+mod render;
+pub mod testing;
+pub mod text;
+
+pub use gpu::{Gpu, GpuError};
+pub use registry::{AnimState, Effect, FxInfo, FxIo, FxKind, ParamSpec, ParamType, ParamValues, Registry};
+pub use render::{RenderOptions, RenderReport, Renderer};

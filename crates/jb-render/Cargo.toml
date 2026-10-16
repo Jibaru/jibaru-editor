@@ -7,3 +7,12 @@ license.workspace = true
 
 [dependencies]
 jb-core.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+wgpu = "30"
+pollster = "1"
+bytemuck = { version = "1", features = ["derive"] }
+cosmic-text = "0.19"
+
+[dev-dependencies]
+png = "0.18"
