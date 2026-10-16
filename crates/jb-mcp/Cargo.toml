@@ -5,5 +5,22 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 
+[lib]
+name = "jb_mcp"
+path = "src/lib.rs"
+
+[[bin]]
+name = "jb-mcp"
+path = "src/main.rs"
+
 [dependencies]
 jb-core.workspace = true
+jb-cli = { path = "../jb-cli" }
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+rmcp = { version = "3.5", default-features = false, features = ["server", "transport-io"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "io-std"] }
+
+[dev-dependencies]
+tempfile = "3"
