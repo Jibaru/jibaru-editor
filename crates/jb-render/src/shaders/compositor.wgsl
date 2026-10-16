@@ -101,7 +101,14 @@ fn prep_sample(suv: vec2f) -> vec4f {
         let c = sb(suv);
         cbcr = vec2f(c.r * 255.0 + c.g * 65280.0, c.b * 255.0 + c.a * 65280.0) / 65535.0;
     }
-    var rgb = clamp(ycbcr_to_rgb(y, cbcr.x, cbcr.y, i32(u.e1.y), u.e1.z > 0.5), vec3f(0.0), vec3f(1.0));
+    // p[0].xyz: Y/Cb/Cr bias in full-range units (RenderOptions::yuv_bias).
+    var ycc = vec3f(y, cbcr);
+    if (u.e1.z > 0.5) {
+        ycc = ycc + u.p[0].xyz;
+    } else {
+        ycc = ycc + u.p[0].xyz * vec3f(219.0 / 255.0, 224.0 / 255.0, 224.0 / 255.0);
+    }
+    var rgb = clamp(ycbcr_to_rgb(ycc.x, ycc.y, ycc.z, i32(u.e1.y), u.e1.z > 0.5), vec3f(0.0), vec3f(1.0));
     let transfer = i32(u.e1.w);
     if (transfer != 0) { rgb = hdr_to_sdr(rgb, transfer); }
     if (is_linear()) { rgb = srgb_to_lin(rgb); }
