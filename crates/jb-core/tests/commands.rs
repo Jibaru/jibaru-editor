@@ -430,3 +430,28 @@ fn commands_have_a_schema() {
         assert!(schema.contains(op), "{op}");
     }
 }
+
+#[test]
+fn panel_commands() {
+    let mut f = project();
+    let h = &mut f.h;
+    run(h, json!({"op": "add_clip", "track_id": f.v1, "clip": clip("c", "m", 0, 10 * S)}));
+    run(h, json!({"op": "add_effect", "clip_id": "c", "effect": {"id": "e", "kind": "jb.chroma_key", "params": {}}}));
+    run(h, json!({"op": "set_effect_enabled", "clip_id": "c", "effect_id": "e", "enabled": false}));
+    assert!(!get(h, "c").effects[0].enabled);
+    fails(h, json!({"op": "set_effect_enabled", "clip_id": "c", "effect_id": "nope", "enabled": true}));
+
+    run(h, json!({"op": "set_audio_channels", "clip_id": "c", "channels": "left"}));
+    assert_eq!(get(h, "c").audio.channels, ChannelMode::Left);
+
+    run(h, json!({"op": "set_project_settings", "width": 1080, "height": 1920}));
+    assert_eq!((h.project.settings.width, h.project.settings.height), (1080, 1920));
+    assert_eq!(h.project.settings.frame_rate, Rational::new(30, 1));
+    fails(h, json!({"op": "set_project_settings", "width": 1081}));
+    fails(h, json!({"op": "set_project_settings", "frame_rate": {"num": 0, "den": 1}}));
+
+    run(h, json!({"op": "rename_media", "media_id": "m", "name": " Beach "}));
+    assert_eq!(h.project.media("m").unwrap().name, "Beach");
+    fails(h, json!({"op": "rename_media", "media_id": "m", "name": "  "}));
+    fails(h, json!({"op": "rename_media", "media_id": "zz", "name": "x"}));
+}

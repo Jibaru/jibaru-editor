@@ -328,6 +328,13 @@ pub struct AudioVoice {
     /// Noise reduction: maximum attenuation in dB (`AudioSettings::denoise_db`).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub denoise_db: Option<f64>,
+    /// Channel routing.
+    #[serde(skip_serializing_if = "is_stereo")]
+    pub channels: crate::model::ChannelMode,
+}
+
+fn is_stereo(c: &crate::model::ChannelMode) -> bool {
+    *c == crate::model::ChannelMode::Stereo
 }
 
 fn is_zero(v: &f64) -> bool {
@@ -423,6 +430,7 @@ fn collect_voices(
                                 .map(|e| e.bands)
                                 .filter(|b| b.iter().any(|g| *g != 0.0)),
                             denoise_db: clip.audio.denoise_db.filter(|d| *d > 0.0),
+                            channels: clip.audio.channels,
                         });
                     }
                 }

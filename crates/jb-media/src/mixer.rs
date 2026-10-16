@@ -162,6 +162,7 @@ fn voice_block(source: &dyn AudioSource, v: &AudioVoice, at: i64, n: usize, rate
         }
         None => voice_raw(source, v, at, n, rate)?,
     };
+    v.channels.apply(&mut out);
     let Some(bands) = v.equalizer else { return Ok(out) };
     let cached = EQ_STATE.with(|s| s.borrow_mut().remove(&v.clip_id)).filter(|(next, b, _)| *next == at && *b == bands);
     let mut eq = match cached {
@@ -327,5 +328,35 @@ mod tests {
         assert!((got + 14.0).abs() < 0.5, "{got}");
         p.clip_mut("c").unwrap().audio.equalizer = Equalizer::preset("low_bass");
         assert!(mix(&p, p.main(), 48000, 4800, &Tone(0.5)).is_ok());
+    }
+
+    /// Signal only on the left channel.
+    struct LeftOnly;
+    impl AudioSource for LeftOnly {
+        fn audio_samples(&self, m: &str, start: Ticks, len: usize) -> Result<Vec<f32>> {
+            let mut v = Tone(0.5).audio_samples(m, start, len)?;
+            for f in v.chunks_exact_mut(2) {
+                f[1] = 0.0;
+            }
+            Ok(v)
+        }
+        fn sample_rate(&self) -> u32 {
+            48000
+        }
+    }
+
+    #[test]
+    fn channel_modes_route_channels() {
+        let energy = |x: &[f32], ch: usize| x.chunks(2).map(|f| (f[ch] * f[ch]) as f64).sum::<f64>();
+        let mut p = project(1.0, true, 0.0);
+        let out = mix(&p, p.main(), 0, 4800, &LeftOnly).unwrap();
+        assert!(energy(&out, 0) > 1.0 && energy(&out, 1) == 0.0);
+        for (mode, l, r) in
+            [(ChannelMode::Left, true, true), (ChannelMode::Right, false, false), (ChannelMode::Swap, false, true)]
+        {
+            p.clip_mut("c").unwrap().audio.channels = mode;
+            let out = mix(&p, p.main(), 0, 4800, &LeftOnly).unwrap();
+            assert_eq!((energy(&out, 0) > 1.0, energy(&out, 1) > 1.0), (l, r), "{mode:?}");
+        }
     }
 }

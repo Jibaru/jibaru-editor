@@ -376,9 +376,20 @@ pub enum Command {
         #[serde(default)]
         bands: Option<[f64; 10]>,
     },
+    /// Audio channel routing: `stereo`, `left`, `right`, `mono` or `swap`.
+    SetAudioChannels {
+        clip_id: Id,
+        channels: ChannelMode,
+    },
     AddEffect {
         clip_id: Id,
         effect: EffectInstance,
+    },
+    /// Turns an effect or animation on or off without removing it.
+    SetEffectEnabled {
+        clip_id: Id,
+        effect_id: Id,
+        enabled: bool,
     },
     RemoveEffect {
         clip_id: Id,
@@ -486,6 +497,24 @@ pub enum Command {
         marker_id: Id,
     },
     RenameProject {
+        name: String,
+    },
+    /// Changes the project canvas and timing. Omitted fields are kept.
+    /// Sizes must be positive and even (encoders need even dimensions).
+    SetProjectSettings {
+        #[serde(default)]
+        width: Option<u32>,
+        #[serde(default)]
+        height: Option<u32>,
+        #[serde(default)]
+        frame_rate: Option<crate::time::Rational>,
+        /// Canvas background color (linear RGBA).
+        #[serde(default)]
+        background: Option<[f64; 4]>,
+    },
+    /// Renames a media asset in the media library.
+    RenameMedia {
+        media_id: Id,
         name: String,
     },
     /// Applies several commands as one undo step.
@@ -719,6 +748,17 @@ pub fn apply(p: &mut Project, cmd: &Command) -> Result<()> {
             };
             ops::with_audio(p, clip_id, |a| a.equalizer = eq.clone())?
         }
+        C::SetAudioChannels { clip_id, channels } => ops::with_audio(p, clip_id, |a| a.channels = *channels)?,
+        C::SetEffectEnabled { clip_id, effect_id, enabled } => ops::with_clip(p, clip_id, |c| {
+            let e = c
+                .effects
+                .iter_mut()
+                .chain(c.animations.iter_mut())
+                .find(|e| &e.id == effect_id)
+                .ok_or_else(|| CommandError::NotFound(format!("effect {effect_id}")))?;
+            e.enabled = *enabled;
+            Ok(())
+        })?,
         C::AddEffect { clip_id, effect } => ops::with_clip(p, clip_id, |c| {
             c.effects.push(effect.clone());
             Ok(())
@@ -810,6 +850,51 @@ pub fn apply(p: &mut Project, cmd: &Command) -> Result<()> {
         C::UpdateMarker { marker } => ops::update_marker(p, marker)?,
         C::RemoveMarker { marker_id } => ops::remove_marker(p, marker_id)?,
         C::RenameProject { name } => p.name = name.clone(),
+        C::SetProjectSettings { width, height, frame_rate, background } => {
+            for (v, what) in [(width, "width"), (height, "height")] {
+                if let Some(v) = v {
+                    if *v == 0 || *v % 2 != 0 || *v > 16384 {
+                        return Err(CommandError::Invalid(format!(
+                            "{what} must be a positive even number up to 16384"
+                        )));
+                    }
+                }
+            }
+            if let Some(r) = frame_rate {
+                if r.num <= 0 || r.den <= 0 || r.num as f64 / r.den as f64 > 240.0 {
+                    return Err(CommandError::Invalid("frame rate must be positive (at most 240 fps)".into()));
+                }
+            }
+            if let Some(c) = background {
+                if c.iter().any(|v| !(0.0..=1.0).contains(v)) {
+                    return Err(CommandError::Invalid("background components must be in 0..1".into()));
+                }
+            }
+            let s = &mut p.settings;
+            if let Some(v) = width {
+                s.width = *v;
+            }
+            if let Some(v) = height {
+                s.height = *v;
+            }
+            if let Some(v) = frame_rate {
+                s.frame_rate = *v;
+            }
+            if let Some(v) = background {
+                s.background = *v;
+            }
+        }
+        C::RenameMedia { media_id, name } => {
+            if name.trim().is_empty() {
+                return Err(CommandError::Invalid("media name is empty".into()));
+            }
+            let m = p
+                .media
+                .iter_mut()
+                .find(|m| &m.id == media_id)
+                .ok_or_else(|| CommandError::NotFound(format!("media {media_id}")))?;
+            m.name = name.trim().to_string();
+        }
         C::Batch { commands } => {
             for c in commands {
                 apply(p, c)?;

@@ -458,6 +458,47 @@ pub struct AudioSettings {
     /// Noise reduction (Filmora AI Denoise): maximum attenuation of noise in dB.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub denoise_db: Option<f64>,
+    /// Channel routing ("Audio Channels" in the audio panel).
+    #[serde(default, skip_serializing_if = "is_default")]
+    pub channels: ChannelMode,
+}
+
+/// How a clip's stereo channels are routed to the output.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ChannelMode {
+    /// Left to left, right to right.
+    #[default]
+    Stereo,
+    /// The left channel on both outputs.
+    Left,
+    /// The right channel on both outputs.
+    Right,
+    /// Both channels mixed down to mono.
+    Mono,
+    /// Left and right exchanged.
+    Swap,
+}
+
+impl ChannelMode {
+    /// Remaps interleaved stereo frames in place.
+    pub fn apply(self, frames: &mut [f32]) {
+        if self == ChannelMode::Stereo {
+            return;
+        }
+        for f in frames.chunks_exact_mut(2) {
+            let (l, r) = (f[0], f[1]);
+            let (a, b) = match self {
+                ChannelMode::Stereo => (l, r),
+                ChannelMode::Left => (l, l),
+                ChannelMode::Right => (r, r),
+                ChannelMode::Mono => ((l + r) * 0.5, (l + r) * 0.5),
+                ChannelMode::Swap => (r, l),
+            };
+            f[0] = a;
+            f[1] = b;
+        }
+    }
 }
 
 impl Default for AudioSettings {
@@ -472,6 +513,7 @@ impl Default for AudioSettings {
             normalize: None,
             equalizer: None,
             denoise_db: None,
+            channels: ChannelMode::Stereo,
         }
     }
 }
