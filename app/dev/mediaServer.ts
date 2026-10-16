@@ -155,6 +155,26 @@ function listMedia(dir: string): string[] {
   return out
 }
 
+/**
+ * Real library previews in the browser build: `JB_FX_PREVIEWS=<dir>` points
+ * at the output of `jb fx previews -o <dir>` (one folder per renderer
+ * version). Without it the mock draws its own (src/backend/mockPreviews.ts).
+ *   /__jb/fxpreview-info            { version, layout } or 404
+ *   /__jb/fxpreview?fx=&part=       still or sprite JPEG
+ */
+function fxPreview(route: string, url: URL, res: ServerResponse) {
+  const root = process.env.JB_FX_PREVIEWS
+  const dir = root && fs.existsSync(root) ? fs.readdirSync(root).map(d => path.join(root, d)).find(d => fs.existsSync(path.join(d, 'info.json'))) : undefined
+  const fx = url.searchParams.get('fx')
+  const file = !dir ? null : route === 'fxpreview-info' ? path.join(dir, 'info.json') : fx ? path.join(dir, `${fx.replace(/[^A-Za-z0-9._-]/g, '_')}${url.searchParams.get('part') === 'sprite' ? '.sprite' : ''}.jpg`) : null
+  if (!file || !fs.existsSync(file)) {
+    res.statusCode = 404
+    return res.end('no previews')
+  }
+  res.writeHead(200, { 'Content-Type': file.endsWith('.json') ? 'application/json' : 'image/jpeg', 'Cache-Control': 'no-cache' })
+  res.end(fs.readFileSync(file))
+}
+
 export function devMediaServer(): Plugin {
   return {
     name: 'jb-dev-media',
@@ -167,8 +187,9 @@ export function devMediaServer(): Plugin {
           res.statusCode = code
           res.end(msg)
         }
-        if (!file || !fs.existsSync(file)) return fail(404, 'not found')
         const route = url.pathname.replace(/^\//, '')
+        if (route === 'fxpreview-info' || route === 'fxpreview') return fxPreview(route, url, res)
+        if (!file || !fs.existsSync(file)) return fail(404, 'not found')
         const send = (type: string) => (buf: Buffer) => {
           res.writeHead(200, { 'Content-Type': type, 'Cache-Control': 'max-age=31536000' })
           res.end(buf)

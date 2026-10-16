@@ -11,6 +11,7 @@ import {
   getState,
   mark,
   openMenu,
+  registerPreviewTransport,
   registerSourceClock,
   seek,
   setPlayerFullscreen,
@@ -22,6 +23,7 @@ import {
   togglePlay,
   toast,
   useEditor,
+  type PreviewTarget,
 } from '../store'
 import { Select } from '../ui/controls'
 import {
@@ -46,6 +48,7 @@ import {
 export function Player() {
   const mode = useEditor(s => s.playerMode)
   const source = useEditor(s => s.sourceMedia)
+  const previewItem = useEditor(s => s.previewItem)
   const quality = useEditor(s => s.previewQuality)
   const full = useEditor(s => s.playerFullscreen)
   const [scopes, setScopes] = useState(false)
@@ -56,10 +59,14 @@ export function Player() {
           Timeline
         </button>
         <button
-          className={mode === 'source' ? 'on' : ''}
-          disabled={!source}
-          title={source ? 'Source monitor' : 'Double-click a media item to open it here'}
-          onClick={() => source && setState({ playerMode: 'source', playing: false })}
+          className={mode === 'source' || mode === 'preview' ? 'on' : ''}
+          disabled={!source && !previewItem}
+          title={source || previewItem ? 'Source monitor' : 'Double-click a media item, or click an effect, to open it here'}
+          onClick={() => {
+            if (mode === 'preview') return
+            if (previewItem && !source) setState({ playerMode: 'preview', playing: false })
+            else if (source) setState({ playerMode: 'source', playing: false })
+          }}
         >
           Source
         </button>
@@ -81,7 +88,13 @@ export function Player() {
           <IcScope size={20} />
         </button>
       </div>
-      {mode === 'source' && source ? <SourceMonitor mediaId={source} /> : <TimelineMonitor scopes={scopes} />}
+      {mode === 'preview' && previewItem ? (
+        <ItemPreview item={previewItem} />
+      ) : mode === 'source' && source ? (
+        <SourceMonitor mediaId={source} />
+      ) : (
+        <TimelineMonitor scopes={scopes} />
+      )}
     </section>
   )
 }
@@ -419,6 +432,190 @@ function Progress({ value, max, onSeek, marks }: { value: number; max: number; o
       <div className="progress-fill" style={{ width: `${k * 100}%` }} />
       <div className="progress-knob" style={{ left: `${k * 100}%` }} />
     </div>
+  )
+}
+
+const PREVIEW_FPS = 30
+
+/**
+ * A library item playing in the player, as when a card is clicked in
+ * Filmora: it starts right away, plays once and goes back to its first
+ * frame. Transitions, animations and titles play on the sample footage;
+ * effects and filters on the timeline at the playhead (5 s). The native
+ * engine renders it like the timeline; the browser build plays the card's
+ * sprite sheet.
+ */
+function ItemPreview({ item }: { item: PreviewTarget }) {
+  const screen = useRef<HTMLDivElement>(null)
+  const canvas = useRef<HTMLCanvasElement>(null)
+  const [time, setTime] = useState(0)
+  const [dur, setDur] = useState(2 * 10_000_000)
+  const [playing, setPlaying] = useState(false)
+  const full = useEditor(s => s.playerFullscreen)
+  const info = useEditor(s => s.previewInfo)
+  const ctl = useRef<{ play(t: number): void; pause(): void; seek(t: number): void }>(null)
+  const state = useRef({ time: 0, dur: 2 * 10_000_000, playing: false })
+  state.current = { time, dur, playing }
+  const fr = { num: PREVIEW_FPS, den: 1 }
+  const frame = 10_000_000 / PREVIEW_FPS
+
+  // Back to the timeline when the preview closes.
+  useEffect(() => () => void backend.engine?.previewStop(getState().playhead), [])
+
+  useEffect(() => {
+    let alive = true
+    const c = canvas.current!
+    const g = c.getContext('2d', { alpha: false })!
+    const engine = backend.engine
+    if (engine) {
+      // Native: the engine shows the preview project; paint its frames.
+      const abort = new AbortController()
+      let seq = 0
+      let playingNow = false
+      const unEnded = engine.onEnded(() => {
+        if (!alive) return
+        playingNow = false
+        setPlaying(false)
+        setTime(0)
+        engine.seek(0, false)
+      })
+      ctl.current = {
+        play: t => (playingNow = true, setPlaying(true), engine.play(t, 1)),
+        pause: () => (playingNow = false, setPlaying(false), engine.pause()),
+        seek: t => (setTime(t), engine.seek(t, false)),
+      }
+      engine.previewStart(item.ref, getState().playhead).then(
+        async d => {
+          if (!alive) return
+          setDur(d)
+          ctl.current?.play(0)
+          while (alive) {
+            const f = await engine.nextFrame(seq, abort.signal).catch(() => null)
+            if (!f || !alive) continue
+            seq = f.seq
+            if (c.width !== f.width || c.height !== f.height) {
+              c.width = f.width
+              c.height = f.height
+            }
+            g.putImageData(new ImageData(f.pixels as Uint8ClampedArray<ArrayBuffer>, f.width, f.height), 0, 0)
+            if (playingNow && f.playing) setTime(f.time)
+          }
+        },
+        e => toast(String(e), 'error'),
+      )
+      return () => {
+        alive = false
+        abort.abort()
+        unEnded()
+      }
+    }
+    // Browser: step through the card's sprite sheet on a clock.
+    if (!info) return
+    const L = info.layout
+    const img = new Image()
+    img.src = backend.media.fxPreview(item.ref, 'sprite', info.version)
+    c.width = L.frame_w * 2
+    c.height = L.frame_h * 2
+    const total = 2 * 10_000_000
+    setDur(total)
+    let t = 0
+    let run = true
+    let last = performance.now()
+    let raf = 0
+    const draw = () => {
+      const i = Math.min(L.frames - 1, Math.floor((t / total) * L.frames))
+      if (img.complete && img.naturalWidth) g.drawImage(img, (i % L.cols) * L.frame_w, Math.floor(i / L.cols) * L.frame_h, L.frame_w, L.frame_h, 0, 0, c.width, c.height)
+    }
+    const tick = (now: number) => {
+      if (!alive) return
+      if (run) {
+        t += (now - last) * 10_000
+        if (t >= total) {
+          t = 0
+          run = false
+          setPlaying(false)
+        }
+        setTime(t)
+      }
+      last = now
+      draw()
+      raf = requestAnimationFrame(tick)
+    }
+    ctl.current = {
+      play: from => ((t = from), (run = true), setPlaying(true)),
+      pause: () => ((run = false), setPlaying(false)),
+      seek: to => ((t = Math.max(0, Math.min(total - 1, to))), setTime(t)),
+    }
+    setPlaying(true)
+    raf = requestAnimationFrame(tick)
+    return () => {
+      alive = false
+      cancelAnimationFrame(raf)
+    }
+  }, [item.key, item.ref, info])
+
+  useEffect(
+    () =>
+      registerPreviewTransport({
+        toggle: () => {
+          const s = state.current
+          if (s.playing) ctl.current?.pause()
+          else ctl.current?.play(s.time >= s.dur - frame ? 0 : s.time)
+        },
+        stop: () => {
+          ctl.current?.pause()
+          ctl.current?.seek(0)
+        },
+        step: n => {
+          const s = state.current
+          ctl.current?.pause()
+          ctl.current?.seek(Math.max(0, Math.min(s.dur - frame, s.time + n * frame + 1)))
+        },
+      }),
+    [frame],
+  )
+
+  return (
+    <>
+      <div className="screen item-preview" ref={screen} data-preview={item.key} onDoubleClick={() => setPlayerFullscreen(!full)}>
+        <canvas ref={canvas} className="stage native-stage" />
+      </div>
+      <div className="player-bottom">
+        <div className="progress-row">
+          <Progress value={time} max={dur} onSeek={t => (ctl.current?.pause(), ctl.current?.seek(t))} />
+          <span className="tc-box">{timecode(time, fr)}</span>
+          <span className="tc-sep">/</span>
+          <span className="tc-total">{timecode(dur, fr)}</span>
+        </div>
+        <div className="controls-row">
+          <button className="ticon" title="Previous frame (←)" onClick={() => stepFrames(-1)} disabled={time <= 0}>
+            <IcPrevFrame size={20} />
+          </button>
+          <button className="ticon" title="Next frame (→)" onClick={() => stepFrames(1)}>
+            <IcNextFrame size={20} />
+          </button>
+          <button className="ticon" title={playing ? 'Pause (Space)' : 'Play (Space)'} onClick={togglePlay}>
+            {playing ? <IcPause size={20} /> : <IcPlay size={20} />}
+          </button>
+          <button className="ticon" title="Stop" onClick={stop}>
+            <IcStop size={19} />
+          </button>
+          <span className="spacer" />
+          <span className="preview-name" title={item.label}>
+            {item.label}
+          </span>
+          <button className="ticon" title="Mark in (not available for previews)" disabled>
+            <IcMarkIn size={20} />
+          </button>
+          <button className="ticon" title="Mark out (not available for previews)" disabled>
+            <IcMarkOut size={20} />
+          </button>
+          <button className="ticon" title="Back to timeline" onClick={() => setState({ playerMode: 'timeline' })}>
+            <IcFullscreen size={18} />
+          </button>
+        </div>
+      </div>
+    </>
   )
 }
 

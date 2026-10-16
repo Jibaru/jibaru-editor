@@ -7,6 +7,7 @@ mod media;
 #[cfg(target_os = "macos")]
 mod menu;
 mod playback;
+mod previews;
 mod proxies;
 mod state;
 
@@ -34,6 +35,7 @@ struct Services {
     engine: Arc<Engine>,
     playback: Playback,
     proxies: Proxies,
+    previews: previews::Previews,
     exporter: export::Exporter,
     /// Set once the user confirmed closing with unsaved changes.
     force_close: AtomicBool,
@@ -392,6 +394,51 @@ async fn import_media(app: AppHandle, paths: Vec<String>) -> Res<Snapshot> {
 
 // ---------- Playback ----------
 
+/// Shows the result of `command` in the player without editing the project
+/// (no undo step): sliders call it while dragging so the frame follows the
+/// value live, then commit with `execute`. `None` shows the project again.
+#[tauri::command]
+fn preview_command(app: AppHandle, command: Option<Command>) -> Res<()> {
+    let mut project = {
+        let state = app.state::<AppState>();
+        let s = state.0.lock().map_err(err)?;
+        s.history.project.clone()
+    };
+    if let Some(cmd) = &command {
+        jb_core::apply(&mut project, cmd).map_err(err)?;
+    }
+    app.state::<Services>().playback.set_project(project);
+    Ok(())
+}
+
+// ---------- Library previews ----------
+
+/// Renderer version (for cache-busting preview URLs) and sprite layout.
+#[tauri::command]
+fn preview_info() -> serde_json::Value {
+    previews::Previews::info()
+}
+
+/// Shows a library item in the player (paused at its start, like a clip in
+/// the source monitor) and returns the preview's duration in ticks.
+#[tauri::command]
+fn preview_start(app: AppHandle, item: previews::PreviewRequest, at: Ticks) -> Res<Ticks> {
+    let project = {
+        let state = app.state::<AppState>();
+        let s = state.0.lock().map_err(err)?;
+        s.history.project.clone()
+    };
+    let (p, duration) = previews::player_project(&item, &project, at).ok_or("nothing to preview for this item")?;
+    app.state::<Services>().playback.set_preview(Some(p), 0);
+    Ok(duration)
+}
+
+/// Back to the timeline, paused at `at`.
+#[tauri::command]
+fn preview_stop(app: AppHandle, at: Ticks) {
+    app.state::<Services>().playback.set_preview(None, at);
+}
+
 #[tauri::command]
 fn playback_play(app: AppHandle, time: Ticks, rate: Option<f64>) {
     app.state::<Services>().playback.play(time, rate.unwrap_or(1.0));
@@ -670,6 +717,21 @@ fn media_response(app: &AppHandle, svc: &Services, request: &tauri::http::Reques
                 Err(e) => Err(anyhow::anyhow!("{e}")),
             }
         }
+        "fxpreview" => {
+            let req = previews::PreviewRequest {
+                fx: q.get("fx").cloned(),
+                title: q.get("title").and_then(|t| serde_json::from_str(t).ok()),
+            };
+            let part = if q.get("part").map(String::as_str) == Some("sprite") {
+                previews::Part::Sprite
+            } else {
+                previews::Part::Still
+            };
+            req.item()
+                .ok_or_else(|| anyhow::anyhow!("missing fx or title"))
+                .and_then(|item| svc.previews.get(&item, part, Duration::from_secs(30)))
+                .map(|b| Some((b, "image/jpeg", true)))
+        }
         "live" => {
             let after = num("after", 0.0) as u64;
             Ok(svc
@@ -743,11 +805,27 @@ fn main() {
                     let _ = h.emit("proxy-status", s);
                 },
             );
+            let busy = playback.clone();
+            let preview_root = app
+                .path()
+                .app_cache_dir()
+                .unwrap_or_else(|_| std::env::temp_dir().join("jibaru-editor"))
+                .join("fx-previews");
+            let previews = previews::Previews::new(preview_root, move || busy.is_playing());
+            {
+                // Render the rest of the catalog once startup has settled.
+                let p = previews.clone();
+                std::thread::Builder::new().name("jb-previews-start".into()).spawn(move || {
+                    std::thread::sleep(Duration::from_secs(4));
+                    p.prefetch_catalog();
+                })?;
+            }
             let data = app.path().app_data_dir().unwrap_or_else(|_| std::env::temp_dir().join("jibaru-editor"));
             app.manage(Services {
                 engine,
                 playback,
                 proxies,
+                previews,
                 exporter: export::Exporter::default(),
                 force_close: AtomicBool::new(false),
                 backup_dir: data.join("backups"),
@@ -802,6 +880,10 @@ fn main() {
             playback_volume,
             playback_stats,
             playback_report,
+            preview_info,
+            preview_command,
+            preview_start,
+            preview_stop,
             proxy_statuses,
             export_check,
             export_start,

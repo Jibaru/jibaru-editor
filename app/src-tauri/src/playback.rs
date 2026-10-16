@@ -31,6 +31,7 @@ use jb_core::eval::{evaluate, Layer, LayerContent};
 use jb_core::{Project, Rational, Ticks, TICKS_PER_SECOND};
 use jb_media::shuttle::Shuttle;
 use jb_media::MediaPool;
+use jb_render::preview::{is_sample, SampleSource, WithSamples};
 use jb_render::Renderer;
 use serde::Serialize;
 use std::sync::atomic::Ordering;
@@ -60,6 +61,9 @@ pub struct LiveFrame {
 
 struct Ctl {
     project: Arc<Project>,
+    /// A library item previewed in the player instead of the timeline
+    /// (see [`Playback::set_preview`]).
+    preview: Option<Arc<Project>>,
     revision: u64,
     playing: bool,
     rate: f64,
@@ -104,6 +108,8 @@ pub struct Stats {
 
 struct Inner {
     pool: Arc<MediaPool>,
+    /// Procedural footage of library previews.
+    samples: SampleSource,
     audio: Option<Arc<AudioShared>>,
     ctl: Mutex<Ctl>,
     wake: Condvar,
@@ -124,6 +130,13 @@ fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
 
 fn secs(t: f64) -> Ticks {
     (t * TICKS_PER_SECOND as f64).round() as Ticks
+}
+
+impl Ctl {
+    /// The project on screen: the library preview, or the timeline.
+    fn shown(&self) -> Arc<Project> {
+        self.preview.clone().unwrap_or_else(|| self.project.clone())
+    }
 }
 
 impl Inner {
@@ -157,9 +170,11 @@ impl Playback {
     ) -> Self {
         let inner = Arc::new(Inner {
             pool,
+            samples: SampleSource::new(),
             audio,
             ctl: Mutex::new(Ctl {
                 project: Arc::new(project),
+                preview: None,
                 revision: 0,
                 playing: false,
                 rate: 1.0,
@@ -206,9 +221,28 @@ impl Playback {
         self.inner.wake.notify_all();
     }
 
+    /// Shows `preview` (a library item's preview project, see
+    /// `jb_render::preview`) instead of the timeline, paused at its start;
+    /// `None` goes back to the timeline, paused at `at`. Transport commands
+    /// apply to whichever is shown.
+    pub fn set_preview(&self, preview: Option<Project>, at: Ticks) {
+        let mut c = lock(&self.inner.ctl);
+        c.preview = preview.map(Arc::new);
+        c.revision += 1;
+        c.playing = false;
+        c.target = if c.preview.is_some() { 0 } else { at.max(0) };
+        c.generation += 1;
+        c.scrub = None;
+        drop(c);
+        if let Some(a) = &self.inner.audio {
+            a.clear();
+        }
+        self.inner.wake.notify_all();
+    }
+
     pub fn play(&self, time: Ticks, rate: f64) {
         let mut c = lock(&self.inner.ctl);
-        let duration = c.project.main().duration();
+        let duration = c.shown().main().duration();
         c.playing = true;
         c.rate = if rate == 0.0 { 1.0 } else { rate };
         c.anchor_time = time.clamp(0, duration.max(0));
@@ -303,7 +337,9 @@ fn prefetch(layers: &[Layer], pool: &MediaPool, max: Option<(u32, u32)>) {
     for l in layers {
         match &l.content {
             LayerContent::Media { media_id, source_time } => {
-                let _ = pool.video_frame(media_id, *source_time, max);
+                if !is_sample(media_id) {
+                    let _ = pool.video_frame(media_id, *source_time, max);
+                }
             }
             LayerContent::Nested(p) => prefetch(&p.layers, pool, max),
             _ => {}
@@ -344,7 +380,7 @@ fn video_thread(inner: Arc<Inner>) {
         if c.quit {
             return;
         }
-        let project = c.project.clone();
+        let project = c.shown();
         let fr = frame_rate(&project);
         let size = fit_size(&project, c.size);
         let duration = project.main().duration();
@@ -401,7 +437,7 @@ fn video_thread(inner: Arc<Inner>) {
         r.options.source_max_size = Some(size);
         let started = Instant::now();
         let plan = evaluate(&project, project.main(), time);
-        let frame = r.render(&project, &plan, inner.pool.as_ref());
+        let frame = r.render(&project, &plan, &WithSamples { base: inner.pool.as_ref(), samples: &inner.samples });
         let ms = started.elapsed().as_secs_f64() * 1000.0;
         render_ms = render_ms * 0.85 + ms * 0.15;
 
@@ -456,7 +492,7 @@ fn prefetch_thread(inner: Arc<Inner>) {
             let _ = inner.wake.wait_timeout(c, Duration::from_millis(200));
             continue;
         }
-        let project = c.project.clone();
+        let project = c.shown();
         let fr = frame_rate(&project);
         let size = fit_size(&project, c.size);
         let base = fr.frame_at(inner.clock(&c));
@@ -503,7 +539,7 @@ fn audio_thread(inner: Arc<Inner>) {
             played = 0;
             shuttle = None;
         }
-        let project = c.project.clone();
+        let project = c.shown();
         if c.playing && c.audio_clock {
             if audio.queued() >= ahead {
                 let _ = inner.wake.wait_timeout(c, Duration::from_millis(4));
@@ -556,5 +592,73 @@ fn audio_thread(inner: Arc<Inner>) {
         } else {
             let _ = inner.wake.wait_timeout(c, Duration::from_millis(100));
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use jb_render::preview::{sample_preview, PreviewItem};
+    use jb_render::Registry;
+
+    fn next(p: &Playback, after: u64) -> Arc<LiveFrame> {
+        p.wait_frame(after, Duration::from_secs(20)).expect("a frame")
+    }
+
+    /// Waits for the paused frame at `t` rendered after `after`.
+    fn frame_at(p: &Playback, mut after: u64, t: Ticks) -> Arc<LiveFrame> {
+        loop {
+            let f = next(p, after);
+            if !f.playing && f.time == t {
+                return f;
+            }
+            after = f.seq;
+        }
+    }
+
+    fn diff(a: &[u8], b: &[u8]) -> f64 {
+        a.iter().zip(b).map(|(x, y)| (*x as i32 - *y as i32).unsigned_abs() as f64).sum::<f64>() / a.len() as f64
+    }
+
+    /// Library previews play in the engine on the sample footage, the
+    /// timeline comes back afterwards, and edits (live slider previews
+    /// included) re-render the paused frame right away.
+    #[test]
+    fn previews_items_and_follows_edits_while_paused() {
+        if jb_render::Renderer::new(64, 36).is_err() {
+            eprintln!("skipping: no GPU");
+            return;
+        }
+        let reg = Registry::builtin();
+        // The "timeline": scene A with a blur we will edit.
+        let mut timeline = sample_preview(&reg, &PreviewItem::Fx("jb.gaussian_blur".into()), 320, 180).unwrap().project;
+        let pool = Arc::new(MediaPool::new(Default::default()));
+        let p = Playback::new(pool, None, timeline.clone(), |_| {});
+        p.set_size(320, 180);
+        let t0 = frame_at(&p, 0, 0);
+        assert_eq!((t0.width, t0.height), (320, 180));
+
+        // A transition preview: A at the start, B at the end.
+        let tr = sample_preview(&reg, &PreviewItem::Fx("jb.dissolve".into()), 1920, 1080).unwrap();
+        p.set_preview(Some(tr.project), 0);
+        let a = frame_at(&p, t0.seq, 0);
+        p.seek(tr.duration - TICKS_PER_SECOND / 30, false);
+        let b = next(&p, a.seq);
+        assert!(diff(&a.rgba, &b.rgba) > 20.0, "the preview goes from A to B");
+
+        // Back to the timeline at 0.5 s.
+        let half = TICKS_PER_SECOND / 2;
+        p.set_preview(None, half);
+        let back = frame_at(&p, b.seq, Rational::new(30, 1).frame_start(15));
+        assert!(diff(&back.rgba, &b.rgba) > 20.0);
+
+        // Editing the effect re-renders the paused frame immediately.
+        let main = timeline.main_sequence.clone();
+        let clip = &mut timeline.sequence_mut(&main).unwrap().tracks[0].clips[0];
+        clip.effects.clear();
+        p.set_project(timeline);
+        let sharp = next(&p, back.seq);
+        assert_eq!(sharp.time, back.time);
+        assert!(diff(&sharp.rgba, &back.rgba) > 0.5, "the edit shows without seeking");
     }
 }

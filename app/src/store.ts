@@ -4,7 +4,7 @@
 // sends one `Command` to the backend: the same API agents and the CLI use.
 
 import { useSyncExternalStore } from 'react'
-import { backend, type ExportDone, type ExportProgress, type FxEntry, type ProxyStatus } from './backend'
+import { backend, type ExportDone, type ExportProgress, type FxEntry, type PreviewInfo, type PreviewRef, type ProxyStatus } from './backend'
 import {
   clipFromMedia,
   findClip,
@@ -21,7 +21,16 @@ import type { Clip, Command, MediaAsset, Project, Snapshot, Ticks, Track } from 
 import type { MenuItem } from './ui/ContextMenu'
 import { removeTransitionCmds } from './timeline/transitions'
 
-export type LibraryTab = 'media' | 'stock' | 'audio' | 'titles' | 'transitions' | 'effects' | 'filters' | 'stickers' | 'templates'
+/** A library item previewed in the player. */
+export interface PreviewTarget {
+  /** `type:id` of the library card. */
+  key: string
+  label: string
+  kind: 'title' | 'transition' | 'effect' | 'filter' | 'animation'
+  ref: PreviewRef
+}
+
+export type LibraryTab ='media' | 'stock' | 'audio' | 'titles' | 'transitions' | 'effects' | 'filters' | 'stickers' | 'templates'
 export type PropsTab = 'video' | 'audio' | 'speed' | 'animation' | 'color'
 
 export interface EditorState {
@@ -34,7 +43,13 @@ export interface EditorState {
   playing: boolean
   /** Playback rate; negative plays backwards (J/K/L shuttle). */
   rate: number
-  playerMode: 'timeline' | 'source'
+  /** `preview`: a library item plays in the player (Filmora shows it under the Source tab). */
+  playerMode: 'timeline' | 'source' | 'preview'
+  /** Library item shown in the player, and selected in the library. */
+  previewItem: PreviewTarget | null
+  /** Selected library card (`type:id`), kept after the player returns to the timeline. */
+  librarySel: string | null
+  previewInfo: PreviewInfo | null
   sourceMedia: string | null
   sourceTime: Ticks
   libraryTab: LibraryTab
@@ -83,6 +98,9 @@ let state: EditorState = {
   playing: false,
   rate: 1,
   playerMode: 'timeline',
+  previewItem: null,
+  librarySel: null,
+  previewInfo: null,
   sourceMedia: null,
   sourceTime: 0,
   libraryTab: 'media',
@@ -199,6 +217,7 @@ export async function load() {
   applySnapshot(await backend.snapshot())
   backend.onExternalChange(applySnapshot)
   backend.fxCatalog().then(fx => setState({ fx }), () => {})
+  backend.previewInfo().then(previewInfo => setState({ previewInfo }), () => {})
   const eng = backend.engine
   if (!eng) return
   eng.proxyStatuses().then(list => setState(s => ({ proxies: { ...s.proxies, ...Object.fromEntries(list.map(p => [p.media_id, p])) } })), () => {})
@@ -380,17 +399,39 @@ export function seek(t: Ticks) {
 export function stepFrames(n: number) {
   const p = project()
   if (!p) return
+  if (state.playerMode === 'preview' && previewTransport) return previewTransport.step(n)
   setState({ playing: false })
   seek(state.playhead + n * frameTicks(p.settings.frame_rate) + 1)
 }
 
+/** Transport of the library item preview, registered by the player while it shows one. */
+export interface PreviewTransport {
+  toggle(): void
+  stop(): void
+  step(frames: number): void
+}
+let previewTransport: PreviewTransport | null = null
+export function registerPreviewTransport(t: PreviewTransport) {
+  previewTransport = t
+  return () => {
+    if (previewTransport === t) previewTransport = null
+  }
+}
+
+/** Plays a library item in the player, like clicking its card in Filmora. */
+export function previewInPlayer(item: PreviewTarget) {
+  setState({ previewItem: item, librarySel: item.key, playerMode: 'preview', playing: false })
+}
+
 export function togglePlay() {
+  if (state.playerMode === 'preview' && previewTransport) return previewTransport.toggle()
   if (state.playing) return setState({ playing: false })
   if (state.playhead >= duration() - 1) seek(0)
   setState({ playing: true, rate: 1 })
 }
 
 export function stop() {
+  if (state.playerMode === 'preview' && previewTransport) return previewTransport.stop()
   setState({ playing: false })
   seek(0)
 }

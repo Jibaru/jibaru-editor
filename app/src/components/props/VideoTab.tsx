@@ -19,6 +19,7 @@ import {
   setParam,
   setParamCommands,
   switchEffect,
+  liveEffectParam,
   valueAt,
 } from '../../edit'
 import { catalogLabel } from '../../library'
@@ -395,7 +396,7 @@ function EffectSliderById(props: { clip: Clip; e: EffectInstance; name: string; 
       digits={props.digits ?? 0}
       unit={props.unit}
       disabled={props.disabled}
-      onInput={setDraft}
+      onInput={v => (setDraft(v), animated || liveEffectParam(clip, e, e.kind, name, v))}
       onCommit={v => (animated ? setParam(clip, path, v) : exec({ op: 'set_effect_params', clip_id: clip.id, effect_id: e.id, params: { [name]: float(v) } }))}
       keyframe={kfFor(clip, [path], [value])}
     />

@@ -190,7 +190,10 @@ shadow, corner radius, chroma key, 1:1 ratio) with no unknown effects.
 | Audio: Project Audio / Music / Sound Effects | partial | Project Audio works (import here too); Music and Sound Effects unavailable empty states | — | library › empty states |
 | Titles, Transitions, Effects, Filters: categories, drag to timeline | works | works | `add_clip`, `set_transition`, `add_effect` | library › titles, effects |
 | Catalog "+" button, double-click, card menu Apply | missing | works: title at the playhead, effect/filter on the selected clips, transition on the nearest cut | same | library › titles, effects |
-| Favorites (heart, sidebar Favorites, card menu) | missing | works, per user | localStorage | library › titles, effects |
+| Favorites (star, sidebar Favorites, card menu) | missing | works, per user | localStorage | library › titles, effects |
+| Card previews: still, looping preview on hover, overlay buttons (Preview, menu, favorite, add) | generic icon | works: rendered by jb-render on our procedural sample footage, cached per renderer version, loaded as cards scroll into view; also on Animation presets | `jb://fxpreview`, `jb fx previews` | previews › cards |
+| Click a card: plays it in the player (Source tab), once, then rests on frame 0; Timeline goes back | missing | works: transitions/animations/titles on the sample footage (2 s), effects/filters on the timeline at the playhead (5 s), like Filmora | `preview_start` / `preview_stop` | previews › clicking a card |
+| Effect sliders update the paused frame while dragging | on release only | works (live, no undo step until release) | `preview_command` | — |
 | Catalog filter / more menu | no-op | Sort by name; Clear Favorites | view | library › titles, effects |
 | Stickers, Templates | placeholder | unavailable: empty state | — | library › empty states |
 

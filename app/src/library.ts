@@ -1,11 +1,11 @@
 // Library content. Transitions, effects, filters and animations come from the
 // renderer's registry (`jb-render`), so every item shown is one it can draw.
 
-import type { FxEntry } from './backend'
+import type { FxEntry, PreviewRef } from './backend'
 import { fits, frameTicks, mainSequence, newId } from './core/model'
 import { TICKS_PER_SECOND, type Clip, type Command, type TitleData } from './core/types'
 import { targetClips } from './edit'
-import { exec, getState, project, select, toast, type LibraryTab } from './store'
+import { exec, getState, project, select, toast, type LibraryTab, type PreviewTarget } from './store'
 
 export interface LibraryItem {
   type: 'media' | 'title' | 'transition' | 'effect'
@@ -50,6 +50,18 @@ export function animationsFor(fx: FxEntry[], dir: 'in' | 'out'): FxEntry[] {
 
 export function catalogLabel(kind: string): string {
   return getState().fx.find(f => f.id === kind)?.name ?? kind.replace(/^(jb|filmora)[.:]/, '').replace(/[._]/g, ' ')
+}
+
+// ---------- Previews (card thumbnails, hover animations, player) ----------
+
+export function previewRef(item: LibraryItem): PreviewRef {
+  return item.type === 'title' ? { title: titleData(item.id, item.label) } : { fx: item.id }
+}
+
+export function previewTarget(item: LibraryItem): PreviewTarget {
+  const kind: PreviewTarget['kind'] =
+    item.type === 'title' ? 'title' : item.type === 'transition' ? 'transition' : item.sample === 'filter' ? 'filter' : item.sample === 'animation' ? 'animation' : 'effect'
+  return { key: favKey(item), label: item.label, kind, ref: previewRef(item) }
 }
 
 // ---------- Favorites (per user) ----------

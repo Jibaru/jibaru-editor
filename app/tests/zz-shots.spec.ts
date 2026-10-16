@@ -41,3 +41,23 @@ test('screenshots', async ({ page }) => {
   await page.locator('.library').screenshot({ path: `${dir}/lib-effects.png` })
   await page.locator('.player').screenshot({ path: `${dir}/player.png` })
 })
+
+// Library previews; with JB_FX_PREVIEWS=<jb fx previews dir> the cards show the real renders.
+test('library previews', async ({ page }) => {
+  await boot(page)
+  for (const t of ['Transitions', 'Effects', 'Filters', 'Titles']) {
+    await page.locator('.lib-tabs button', { hasText: new RegExp(`^${t}$`) }).click()
+    await page.waitForTimeout(600)
+    await page.locator('.library').screenshot({ path: `${dir}/prev-lib-${t}.png` })
+  }
+  await page.locator('.lib-tabs button', { hasText: /^Transitions$/ }).click()
+  const card = page.locator('.catalog-card[data-item="jb.dissolve"]')
+  await card.hover()
+  for (let i = 0; i < 6; i++) {
+    await page.waitForTimeout(330)
+    await card.screenshot({ path: `${dir}/prev-hover-${i}.png` })
+  }
+  await card.click()
+  await page.waitForTimeout(900)
+  await page.screenshot({ path: `${dir}/prev-click.png` })
+})

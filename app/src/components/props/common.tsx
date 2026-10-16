@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from 'react'
 import type { Clip, EffectInstance, Value } from '../../core/types'
-import { effectValue, fv, jumpKeyframe, keyframeHere, keyframeTimes, setEffectParams, setParam, toggleKeyframe } from '../../edit'
+import { effectValue, fv, jumpKeyframe, keyframeHere, keyframeTimes, liveEffectParam, setEffectParams, setParam, toggleKeyframe } from '../../edit'
 import { exec, openMenu, useEditor } from '../../store'
 import type { MenuItem } from '../../ui/ContextMenu'
 import type { Kf } from '../../ui/controls'
@@ -131,7 +131,7 @@ export function EffectSlider({
       disabled={disabled}
       gradient={gradient}
       centered={centered}
-      onInput={setDraft}
+      onInput={v => (setDraft(v), animated || liveEffectParam(clip, effect, kind, name, v))}
       onCommit={commit}
       keyframe={path ? kfFor(clip, [path], [value]) : false}
     />

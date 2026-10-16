@@ -2,8 +2,9 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { backend } from '../backend'
 import { mediaInUse, seconds, shortDuration } from '../core/model'
 import type { MediaAsset, MediaKind } from '../core/types'
-import { applyLibraryItem, favKey, favorites, tabCategories, tabItems, toggleFavorite, type LibraryItem } from '../library'
-import { appendMedia, deleteSelection, exec, importMedia, openMenu, setState, toast, useEditor, type LibraryTab } from '../store'
+import { applyLibraryItem, favKey, favorites, previewRef, previewTarget, tabCategories, tabItems, toggleFavorite, type LibraryItem } from '../library'
+import { FxThumb } from './FxPreview'
+import { appendMedia, deleteSelection, exec, importMedia, openMenu, previewInPlayer, setState, toast, useEditor, type LibraryTab } from '../store'
 import { sep, type MenuItem } from '../ui/ContextMenu'
 import { startLibraryDrag } from '../drag'
 import {
@@ -14,8 +15,10 @@ import {
   IcFilm,
   IcFilter,
   IcFilters,
-  IcHeart,
-  IcHeartFill,
+  IcMenuLines,
+  IcPreviewLens,
+  IcStar,
+  IcStarFill,
   IcImage,
   IcMedia,
   IcMic,
@@ -453,71 +456,89 @@ function CatalogGrid({ tab, view, size, setSize }: { tab: LibraryTab; view: stri
       />
       <Search value={query} onChange={setQuery} placeholder={`Search ${TABS.find(t => t.id === tab)?.label.toLowerCase()}`} />
       {shown.length === 0 ? (
-        <div className="lib-empty">{view === 'favorites' ? 'Click the heart on an item to add it to your favorites.' : 'Nothing matches your search.'}</div>
+        <div className="lib-empty">{view === 'favorites' ? 'Click the star on an item to add it to your favorites.' : 'Nothing matches your search.'}</div>
       ) : (
         <div className="lib-grid">
-          {shown.map(item => {
-            const fav = favs.has(favKey(item))
-            return (
-              <div
-                key={item.id}
-                className="card catalog-card"
-                data-item={item.id}
-                title={`${item.label}: drag to the timeline or double-click to ${verb.toLowerCase()}`}
-                onPointerDown={e => e.button === 0 && startLibraryDrag(e, item)}
-                onDoubleClick={() => applyLibraryItem(item)}
-                onContextMenu={e => {
-                  e.preventDefault()
-                  openMenu(e.clientX, e.clientY, [
-                    { label: verb, action: () => applyLibraryItem(item) },
-                    { label: fav ? 'Remove from Favorites' : 'Add to Favorites', action: () => toggleFavorite(item) },
-                  ])
-                }}
-              >
-                <div className={`thumb sample-${item.sample ?? tab}`}>
-                  <CatalogSample item={item} />
-                  <button
-                    className={`fav ${fav ? 'on' : ''}`}
-                    title={fav ? 'Remove from favorites' : 'Add to favorites'}
-                    onPointerDown={e => e.stopPropagation()}
-                    onClick={e => {
-                      e.stopPropagation()
-                      toggleFavorite(item)
-                    }}
-                  >
-                    {fav ? <IcHeartFill size={13} /> : <IcHeart size={13} />}
-                  </button>
-                  <button
-                    className="add"
-                    title={verb}
-                    onPointerDown={e => e.stopPropagation()}
-                    onClick={e => {
-                      e.stopPropagation()
-                      applyLibraryItem(item)
-                    }}
-                  >
-                    <IcPlus size={13} strokeWidth={2} />
-                  </button>
-                </div>
-                <div className="name">{item.label}</div>
-              </div>
-            )
-          })}
+          {shown.map(item => (
+            <CatalogCard key={item.id} item={item} fav={favs.has(favKey(item))} verb={verb} />
+          ))}
         </div>
       )}
     </>
   )
 }
 
-function CatalogSample({ item }: { item: LibraryItem }) {
-  if (item.type === 'title') return <span className="title-sample">{item.label === 'Default Title' ? 'Title' : item.label}</span>
-  if (item.type === 'transition')
-    return (
-      <span className={`transition-sample tr-${item.id}`}>
-        <i className="a" />
-        <i className="b" />
-      </span>
-    )
-  return <span className={`fx-sample fx-${item.id.replace(/\./g, '-')}`} />
+/**
+ * A Transitions/Effects/Filters/Titles card, as in Filmora: the item's
+ * still; on hover its looping preview with Preview, menu, favorite and add
+ * buttons; a click selects it and plays it in the player.
+ */
+function CatalogCard({ item, fav, verb }: { item: LibraryItem; fav: boolean; verb: string }) {
+  const [hover, setHover] = useState(false)
+  const selected = useEditor(s => s.librarySel === favKey(item))
+  const menu = (x: number, y: number) =>
+    openMenu(x, y, [
+      { label: verb, action: () => applyLibraryItem(item) },
+      { label: 'Preview', action: () => previewInPlayer(previewTarget(item)) },
+      { label: fav ? 'Remove from Favorites' : 'Add to Favorites', action: () => toggleFavorite(item) },
+    ])
+  const stop = (e: React.SyntheticEvent) => e.stopPropagation()
+  return (
+    <div
+      className={`card catalog-card ${selected ? 'on' : ''} ${hover ? 'hover' : ''}`}
+      data-item={item.id}
+      title={`${item.label}: click to preview, drag to the timeline or double-click to ${verb.toLowerCase()}`}
+      onPointerEnter={() => setHover(true)}
+      onPointerLeave={() => setHover(false)}
+      onPointerDown={e => e.button === 0 && startLibraryDrag(e, item)}
+      onClick={() => previewInPlayer(previewTarget(item))}
+      onDoubleClick={() => applyLibraryItem(item)}
+      onContextMenu={e => {
+        e.preventDefault()
+        menu(e.clientX, e.clientY)
+      }}
+    >
+      <div className="thumb">
+        <FxThumb item={previewRef(item)} hover={hover} />
+        <button className="ov preview" title="Preview" onPointerDown={stop} onClick={e => (stop(e), previewInPlayer(previewTarget(item)))}>
+          <IcPreviewLens size={14} />
+        </button>
+        <button
+          className="ov more"
+          title="More"
+          onPointerDown={stop}
+          onClick={e => {
+            stop(e)
+            const r = e.currentTarget.getBoundingClientRect()
+            menu(r.left, r.bottom + 2)
+          }}
+        >
+          <IcMenuLines size={14} />
+        </button>
+        <button
+          className={`ov fav ${fav ? 'on' : ''}`}
+          title={fav ? 'Remove from favorites' : 'Add to favorites'}
+          onPointerDown={stop}
+          onClick={e => {
+            stop(e)
+            toggleFavorite(item)
+          }}
+        >
+          {fav ? <IcStarFill size={14} /> : <IcStar size={14} />}
+        </button>
+        <button
+          className="ov add"
+          title={verb}
+          onPointerDown={stop}
+          onClick={e => {
+            stop(e)
+            applyLibraryItem(item)
+          }}
+        >
+          <IcPlus size={13} strokeWidth={2} />
+        </button>
+      </div>
+      <div className="name">{item.label}</div>
+    </div>
+  )
 }
-

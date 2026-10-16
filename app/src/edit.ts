@@ -107,6 +107,37 @@ export function addEffectCommand(clip: Clip, kind: string, params: Record<string
   return { cmd: { op: 'add_effect', clip_id: clip.id, effect }, id: effect.id }
 }
 
+// ---------- Live preview while dragging ----------
+
+let liveBusy = false
+let livePending: Command | null | undefined
+
+/**
+ * Shows `cmd`'s result in the player right away without an undo step, so
+ * the frame follows a slider while it is dragged (Filmora); the release
+ * commits with `exec`. Calls are coalesced: only the latest waits.
+ */
+export function livePreview(cmd: Command | null) {
+  const eng = backend.engine
+  if (!eng) return
+  if (liveBusy) {
+    livePending = cmd
+    return
+  }
+  liveBusy = true
+  eng.previewCommand(cmd).finally(() => {
+    liveBusy = false
+    const next = livePending
+    livePending = undefined
+    if (next !== undefined) livePreview(next)
+  })
+}
+
+/** Live preview of an effect param value (see `livePreview`). */
+export function liveEffectParam(clip: Clip, effect: EffectInstance | undefined, kind: string, name: string, v: number) {
+  livePreview(effect ? { op: 'set_effect_params', clip_id: clip.id, effect_id: effect.id, params: toParams({ [name]: v }) } : addEffectCommand(clip, kind, { [name]: v }).cmd)
+}
+
 /** Sets effect params, adding the effect first when the clip has none of that kind. */
 export function setEffectParams(clip: Clip, kind: string, params: Record<string, number | Value>) {
   const e = findEffect(clip, kind)

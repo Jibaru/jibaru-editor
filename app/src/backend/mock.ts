@@ -6,6 +6,7 @@ import { newId } from '../core/model'
 import type { Command, MediaAsset, Project, ProjectSettings, Snapshot } from '../core/types'
 import { apply } from './applyCommand'
 import catalog from '../fx-catalog.json'
+import { mockPreviewInfo, mockPreviewUrl } from './mockPreviews'
 import type { Backend, FxEntry, MediaUrls } from './types'
 
 const defaultSettings: ProjectSettings = {
@@ -96,6 +97,7 @@ const media: MediaUrls = {
   wave: (path, pps) => `/__jb/wave?${q({ path, pps })}`,
   file: path => `/__jb/file?${q({ path })}`,
   frame: () => '',
+  fxPreview: (item, part) => mockPreviewUrl(item, part),
 }
 
 export function createMockBackend(): Backend {
@@ -155,6 +157,7 @@ export function createMockBackend(): Backend {
     probeMedia: probe,
     // Snapshot of `jibaru-editor --fx-catalog`; the app asks jb-render directly.
     fxCatalog: async () => catalog as FxEntry[],
+    previewInfo: mockPreviewInfo,
     async importMedia(input) {
       // Folders expand to the media files inside them (dev server listing).
       const lists = await Promise.all(input.map(async p => {

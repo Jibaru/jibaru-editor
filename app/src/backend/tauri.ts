@@ -2,7 +2,7 @@ import { convertFileSrc, invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { message, open, save } from '@tauri-apps/plugin-dialog'
 import type { Command, MediaAsset, ProjectSettings, Snapshot, Ticks } from '../core/types'
-import type { Backend, ExportDone, ExportProgress, FxEntry, LiveFrame, MediaUrls, NativeEngine, PlaybackStats, ProxyStatus } from './types'
+import type { Backend, ExportDone, ExportProgress, FxEntry, LiveFrame, MediaUrls, NativeEngine, PlaybackStats, PreviewInfo, ProxyStatus } from './types'
 
 const isWindows = navigator.userAgent.includes('Windows')
 
@@ -17,6 +17,7 @@ const media: MediaUrls = {
   wave: (path, pps) => jb('wave', { path, pps }),
   file: path => convertFileSrc(path),
   frame: (t, h, revision) => jb('frame', { t: t.toFixed(4), h, r: revision }),
+  fxPreview: (item, part, v) => jb('fxpreview', 'fx' in item ? { fx: item.fx, part, v } : { title: JSON.stringify(item.title), part, v }),
 }
 
 /** Subscribes to a backend event; returns a synchronous unsubscribe. */
@@ -58,6 +59,9 @@ const engine: NativeEngine = {
     return parseLive(await r.arrayBuffer())
   },
   onEnded: cb => on<Ticks>('playback-ended', cb),
+  previewStart: (item, at) => invoke<Ticks>('preview_start', { item, at: Math.round(at) }),
+  previewStop: at => invoke('preview_stop', { at: Math.round(at) }),
+  previewCommand: command => invoke('preview_command', { command }),
   exportCheck: () => invoke<string[]>('export_check'),
   exportStart: request => invoke('export_start', { request }),
   exportCancel: () => invoke('export_cancel'),
@@ -95,6 +99,7 @@ export const tauriBackend: Backend = {
   probeMedia: (paths: string[]) => invoke<MediaAsset[]>('probe_media', { paths }),
   importMedia: (paths: string[]) => invoke<Snapshot>('import_media', { paths }),
   fxCatalog: () => invoke<FxEntry[]>('fx_catalog'),
+  previewInfo: () => invoke<PreviewInfo>('preview_info'),
   async pickFiles({ title, filters, multiple = true, directory = false }) {
     const r = await open({ title, filters, multiple, directory })
     if (r == null) return null

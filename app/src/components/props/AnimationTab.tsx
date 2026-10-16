@@ -10,6 +10,7 @@ import { animationsFor } from '../../library'
 import { exec, openMenu, useEditor } from '../../store'
 import { Pills, SliderRow } from '../../ui/controls'
 import { IcFilter, IcImage, IcNone } from '../../ui/icons'
+import { FxThumb } from '../FxPreview'
 import { SubTabs, useDraft } from './common'
 
 const GROUPS = ['All', 'Fade', 'Zoom', 'Slide', 'Spin', 'Bounce', 'Other']
@@ -71,10 +72,7 @@ function MotionPresets({ clip, media }: { clip: Clip; media: MediaAsset | null }
           <span>No Motion</span>
         </button>
         {anims.map(a => (
-          <button key={a.id} className={`preset ${current?.kind === a.id ? 'on' : ''}`} onClick={() => pick(a.id)} title={a.description} data-anim={a.id}>
-            <div className="preset-thumb">{thumb ? <img src={thumb} alt="" className={`anim-${a.id.split('.').pop()}`} /> : <IcImage size={28} />}</div>
-            <span>{a.name}</span>
-          </button>
+          <AnimPreset key={a.id} id={a.id} name={a.name} title={a.description} on={current?.kind === a.id} thumb={thumb} onPick={() => pick(a.id)} />
         ))}
       </div>
       {current && (clip.animations ?? []).some(a => a.id === current.id) && (
@@ -94,7 +92,21 @@ function MotionPresets({ clip, media }: { clip: Clip; media: MediaAsset | null }
   )
 }
 
-type KfPreset = { id: string; label: string; keys: (len: number) => { param: string; values: [number, number] }[] }
+/** A motion preset: the clip's thumbnail, and the animation's preview on hover (Filmora). */
+function AnimPreset({ id, name, title, on, thumb, onPick }: { id: string; name: string; title: string; on: boolean; thumb: string | null; onPick: () => void }) {
+  const [hover, setHover] = useState(false)
+  return (
+    <button className={`preset ${on ? 'on' : ''}`} onClick={onPick} title={title} data-anim={id} onPointerEnter={() => setHover(true)} onPointerLeave={() => setHover(false)}>
+      <div className="preset-thumb">
+        {thumb ? <img src={thumb} alt="" /> : <IcImage size={28} />}
+        <FxThumb item={{ fx: id }} hover={hover} still={false} />
+      </div>
+      <span>{name}</span>
+    </button>
+  )
+}
+
+type KfPreset ={ id: string; label: string; keys: (len: number) => { param: string; values: [number, number] }[] }
 
 /** Keyframe animations written over the whole clip (start and end keys). */
 const KF_PRESETS: KfPreset[] = [

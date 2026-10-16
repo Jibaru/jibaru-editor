@@ -1,4 +1,4 @@
-import type { Command, MediaAsset, ProjectSettings, Rational, Snapshot, Ticks } from '../core/types'
+import type { Command, MediaAsset, ProjectSettings, Rational, Snapshot, Ticks, TitleData } from '../core/types'
 
 /** An effect, filter, transition or animation implemented by jb-render. */
 export interface FxEntry {
@@ -8,6 +8,24 @@ export interface FxEntry {
   kind: 'transition' | 'effect' | 'filter' | 'animation'
   description: string
   params: { name: string; label: string; ty: 'float' | 'int' | 'bool' | 'color' | 'vec2' | 'text'; min: number; max: number; default: [number, number, number, number]; unit: string }[]
+}
+
+/** A library item to preview: a registry id or a title template. */
+export type PreviewRef = { fx: string } | { title: TitleData }
+
+/** Sprite sheet layout of the card hover previews (jb_render::preview::SpriteLayout). */
+export interface SpriteLayout {
+  frame_w: number
+  frame_h: number
+  frames: number
+  cols: number
+  fps: number
+}
+
+export interface PreviewInfo {
+  /** Renderer version: changes invalidate cached previews. */
+  version: string
+  layout: SpriteLayout
 }
 
 export interface FileFilter {
@@ -39,6 +57,8 @@ export interface Backend {
   pickSavePath(opts: { title: string; defaultPath?: string; filters?: FileFilter[] }): Promise<string | null>
   /** The renderer's effect registry (drives the Transitions/Effects/Filters tabs). */
   fxCatalog(): Promise<FxEntry[]>
+  /** Card preview version and sprite layout. */
+  previewInfo(): Promise<PreviewInfo>
   /** Measures the clip's loudness and sets Auto Normalization; `null` turns it off. */
   normalizeClip(clipId: string, targetLufs: number | null): Promise<Snapshot>
   /** Runs the motion analysis of a `jb.stabilize` effect and stores its `data`. */
@@ -137,6 +157,15 @@ export interface NativeEngine {
   /** Waits (long poll) for a frame newer than `after`; null on timeout. */
   nextFrame(after: number, signal?: AbortSignal): Promise<LiveFrame | null>
   onEnded(cb: (t: Ticks) => void): () => void
+  /** Shows a library item in the player instead of the timeline (paused at
+   *  its start); resolves with its duration. `at`: timeline time whose footage
+   *  effects and filters are previewed on. */
+  previewStart(item: PreviewRef, at: Ticks): Promise<Ticks>
+  /** Back to the timeline, paused at `at`. */
+  previewStop(at: Ticks): Promise<void>
+  /** Shows the result of `cmd` in the player without editing the project
+   *  (live slider drags); `null` shows the project as it is. */
+  previewCommand(cmd: Command | null): Promise<void>
   exportCheck(): Promise<string[]>
   exportStart(req: ExportRequest): Promise<void>
   exportCancel(): Promise<void>
@@ -165,4 +194,6 @@ export interface MediaUrls {
   file(path: string): string
   /** A rendered frame of the main sequence at `t` seconds, `h` pixels tall. */
   frame(t: number, h: number, revision: number): string
+  /** A library card preview: the still, or the hover sprite sheet. */
+  fxPreview(item: PreviewRef, part: 'still' | 'sprite', version: string): string
 }
