@@ -26,6 +26,12 @@ pub enum DecodeMode {
 /// the container index cannot tell where the next keyframe is.
 const MAX_DECODE_AHEAD: Ticks = 2 * TICKS_PER_SECOND;
 
+/// Source times within this of a frame start select that frame. Project
+/// files store in points truncated to whole ticks (Filmora writes frame 223
+/// at 29.97 fps as 74407666, 0.67 tick before the frame), and Filmora shows
+/// the frame that starts there, so tick rounding must not fall back one frame.
+pub(crate) const FRAME_SNAP: Ticks = TICKS_PER_SECOND / 1000;
+
 #[derive(Debug, Default, Clone, Copy)]
 pub struct DecodeStats {
     pub frames_decoded: u64,
@@ -157,7 +163,7 @@ impl VideoDecoder {
     }
 
     fn frame_at_inner(&mut self, t: Ticks, max_size: Option<(u32, u32)>, mode: DecodeMode) -> Result<Option<VideoFrame>> {
-        let t = t.max(0);
+        let t = t.max(0) + FRAME_SNAP;
         if let Some(last) = &self.last_output {
             let same_size = self.last_output_size == max_size;
             if same_size && t >= last.pts && (t < last.pts + self.last_duration || self.eof) {

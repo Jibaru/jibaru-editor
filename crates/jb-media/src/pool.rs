@@ -246,6 +246,8 @@ impl MediaPool {
             (Some(p), Some(_)) if self.config.use_proxies => (proxy_key(media_id), p.clone()),
             _ => (media_id.to_string(), asset.path.clone()),
         };
+        // Same frame selection as the decoder (see `video::FRAME_SNAP`).
+        let t = t + crate::video::FRAME_SNAP;
         let (dec, ring) = self.checkout_video(&key, &path, t, max_size)?;
         if let Some(f) = ring.lock().unwrap().find(t, max_size) {
             self.ring_hits.fetch_add(1, Ordering::Relaxed);

@@ -166,6 +166,10 @@ pub fn export(
     let seq = project.sequence(sequence_id).with_context(|| format!("unknown sequence {sequence_id}"))?;
     let rate = settings.frame_rate.unwrap_or(project.settings.frame_rate);
     let (start, end) = settings.range.unwrap_or((0, seq.duration()));
+    // Ranges start on the sequence's frame grid (the frame containing
+    // `start`), so a range export shows exactly the frames of a full export.
+    let first_frame = rate.frame_at(start);
+    let start = rate.frame_start(first_frame);
     let total = frame_count(rate, start, end);
     anyhow::ensure!(total > 0, "nothing to export: the range is empty");
     let width = if settings.width == 0 { project.settings.width } else { settings.width } & !1;
@@ -231,7 +235,7 @@ pub fn export(
                 if cancel.load(Ordering::Relaxed) {
                     break;
                 }
-                let t = start + rate.frame_start(i as i64);
+                let t = rate.frame_start(first_frame + i as i64);
                 let plan = evaluate(project, seq, t);
                 if settings.prefetch {
                     prefetch(&plan.layers, media, settings.prefetch_max_size);
