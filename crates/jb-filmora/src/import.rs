@@ -71,6 +71,8 @@ struct Ctx<'a> {
     used_ids: HashSet<String>,
     used_tracks: HashSet<String>,
     warnings: Vec<String>,
+    /// Main timeline frame rate (retimed in-points snap to its grid).
+    frame_rate: Rational,
 }
 
 impl<'a> Ctx<'a> {
@@ -85,6 +87,7 @@ impl<'a> Ctx<'a> {
             used_ids: HashSet::new(),
             used_tracks: HashSet::new(),
             warnings: Vec::new(),
+            frame_rate: Rational::new(30, 1),
         };
         for tl in timelines(doc) {
             if let Some(id) = i64_of(tl, "timelineId") {
@@ -136,6 +139,7 @@ impl<'a> Ctx<'a> {
             sample_rate: i64_of(info, "project_sample_rate").unwrap_or(48_000) as u32,
             background: [0.0, 0.0, 0.0, 1.0],
         };
+        self.frame_rate = settings.frame_rate;
         let mut sequences = Vec::new();
         for tl in timelines(self.doc) {
             let main = std::ptr::eq(tl, main_tl);
@@ -271,7 +275,20 @@ impl<'a> Ctx<'a> {
             markers: Vec::new(),
             extra: marker(json!({ "uid": uid, "type": ty })),
         };
-        let (source_in, speed) = speed_of(c, end - start);
+        let (mut source_in, speed) = speed_of(c, end - start);
+        // Filmora plays a retimed clip from its in-point in the retimed
+        // timebase (`inPoint = offset / rate`) rounded to a timeline frame:
+        // measured on five 10x clips, the frames shown are exactly
+        // rate * round(inPoint frames) source frames in (up to 4 source
+        // frames earlier than `offset`), starting on the clip's first frame
+        // even when the clip starts between frames (after another retimed clip).
+        if speed.rate != 1.0 && speed.ramp.is_none() && !speed.freeze {
+            let frame = TICKS_PER_SECOND as f64 * self.frame_rate.den as f64 / self.frame_rate.num as f64;
+            let retimed = (source_in as f64 / speed.rate / frame).round();
+            let at = start as f64 / frame;
+            let lead = ((at - 1e-3).ceil() - at).max(0.0);
+            source_in = ((retimed - lead) * frame * speed.rate).round() as Ticks;
+        }
         clip.source_in = source_in;
         clip.speed = speed;
         if ty != CLIP_TEXT {
