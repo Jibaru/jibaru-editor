@@ -176,6 +176,12 @@ export interface AudioSettings {
   denoise_db?: number
   /** Channel routing (Filmora's Audio Channels). */
   channels?: AudioChannels
+  /** Voice filter preset (`telephone`, `echo`, `big_room`, ...). */
+  voice_filter?: string
+  /** Mains hum removal at 50 or 60 Hz. */
+  hum_removal?: number
+  /** Hiss removal strength 0..100. */
+  hiss_removal?: number
 }
 
 export type AudioChannels = 'stereo' | 'left' | 'right' | 'mono' | 'swap'
@@ -308,6 +314,8 @@ export type Command =
   | { op: 'set_pitch'; clip_id: Id; semitones: number }
   | { op: 'set_mute'; clip_id: Id; muted: boolean }
   | { op: 'set_audio_channels'; clip_id: Id; channels: AudioChannels }
+  | { op: 'set_voice_filter'; clip_id: Id; filter: string | null }
+  | { op: 'set_audio_cleanup'; clip_id: Id; hum_removal?: number | null; hiss_removal?: number | null }
   | { op: 'set_maintain_pitch'; clip_id: Id; maintain_pitch: boolean }
   | { op: 'set_audio_fades'; clip_id: Id; fade_in: Ticks | null; fade_out: Ticks | null }
   | { op: 'set_normalization'; clip_id: Id; target_lufs: number | null; measured_lufs?: number | null }

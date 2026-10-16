@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from 'react'
 import { backend } from '../../backend'
 import { seconds } from '../../core/model'
 import type { Clip, Command, EffectInstance, MediaAsset, Param } from '../../core/types'
-import { addEffectCommand, effectOn, effectValue, findEffect, fv, setEffectParams, switchEffect } from '../../edit'
+import { addEffectCommand, effectOn, effectValue, findEffect, fv, moduleIsOff, moduleOff, moduleOn, setEffectParams, switchEffect } from '../../edit'
 import { exec, getState, setState, toast, useEditor } from '../../store'
 import { Module, Pills, Slider } from '../../ui/controls'
 import { IcChevronDown, IcEyedropper, IcNone, IcReset } from '../../ui/icons'
@@ -31,6 +31,8 @@ const PRESETS: { name: string; filter: string; params: Record<string, number> }[
   { name: 'Bright', filter: 'brightness(1.2)', params: { exposure: 15, shadows: 20 } },
 ]
 
+const COLOR_KEYS = ['temperature', 'tint', 'vibrance', 'saturation']
+const LIGHT_KEYS = ['exposure', 'brightness', 'contrast', 'highlights', 'shadows', 'whites', 'blacks']
 const ADJUST_KEYS = ['exposure', 'brightness', 'contrast', 'saturation', 'vibrance', 'temperature', 'tint', 'highlights', 'shadows', 'whites', 'blacks', 'vignette']
 
 // ---------- Custom presets (per user, kept in local storage) ----------
@@ -118,7 +120,6 @@ function ColorBasic({ clip, media }: { clip: Clip; media: MediaAsset | null }) {
   const custom = useCustomPresets()
   const picking = useEditor(s => !!s.eyedropper)
   const fx = colorEffect(clip)
-  const on = effectOn(fx)
   const value = (k: string) => effectValue(clip, fx, k, 0)
   const setParams = (params: Record<string, number>) => setEffectParams(clip, COLOR_KIND, params)
   const row = (key: string, label: string, gradient?: string) => (
@@ -129,6 +130,13 @@ function ColorBasic({ clip, media }: { clip: Clip; media: MediaAsset | null }) {
     if (!Object.keys(params).length) return fx && exec({ op: 'remove_effect', clip_id: clip.id, effect_id: fx.id })
     // A preset replaces the basic adjustments.
     setParams(Object.fromEntries(ADJUST_KEYS.map(k => [k, params[k] ?? 0])))
+  }
+  // Filmora's Color and Light switches turn their section off and back on.
+  const section = (key: string, keys: string[], on: boolean) => {
+    if (on) return moduleOn(key, clip)
+    if (!fx) return
+    const params = (values: (k: string) => number) => Object.fromEntries(keys.map(k => [k, { value: fv(values(k)) }]))
+    moduleOff(key, clip, [{ op: 'set_effect_params', clip_id: clip.id, effect_id: fx.id, params: params(() => 0) }], [{ op: 'set_effect_params', clip_id: clip.id, effect_id: fx.id, params: params(k => value(k)) }])
   }
   const whiteBalance = (rgb: [number, number, number]) => {
     const wb = neutralize(rgb)
@@ -171,7 +179,7 @@ function ColorBasic({ clip, media }: { clip: Clip; media: MediaAsset | null }) {
         )}
       </Module>
       <LutModule clip={clip} />
-      <Module title="Color" toggle={on || !fx} onToggle={v => (fx ? switchEffect(clip, COLOR_KIND, v) : undefined)}>
+      <Module title="Color" toggle={!moduleIsOff('color', clip)} onToggle={v => section('color', COLOR_KEYS, v)}>
         <div className="prow">
           <span className="plabel wide">Auto White Balance</span>
           <span className="spacer" />
@@ -205,6 +213,8 @@ function ColorBasic({ clip, media }: { clip: Clip; media: MediaAsset | null }) {
       </Module>
       <Module
         title="Light"
+        toggle={!moduleIsOff('light', clip)}
+        onToggle={v => section('light', LIGHT_KEYS, v)}
         extra={
           <button className="kf" title="Reset light" onClick={e => (e.stopPropagation(), setParams({ exposure: 0, brightness: 0, contrast: 0, highlights: 0, shadows: 0, whites: 0, blacks: 0 }))}>
             <IcReset size={16} />

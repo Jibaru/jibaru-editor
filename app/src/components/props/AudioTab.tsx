@@ -10,8 +10,8 @@ import type { AudioChannels, AudioSettings, Clip, MediaAsset } from '../../core/
 import { audioTarget, setParam, valueAt } from '../../edit'
 import { applyBackend, exec } from '../../store'
 import { loadWave } from '../../timeline/waves'
-import { KfControl, Module, NumberField, Select, Slider, SliderRow, Toggle } from '../../ui/controls'
-import { IcHelp, IcNote } from '../../ui/icons'
+import { KfControl, Module, NumberField, Pills, Select, Slider, SliderRow, Toggle } from '../../ui/controls'
+import { IcHelp, IcMic, IcNone, IcNote } from '../../ui/icons'
 import { CLOUD_NOTE, kfFor, SubTabs, useDraft, usePlayheadTick } from './common'
 
 export function AudioTab({ clip: selected, media }: { clip: Clip; media: MediaAsset | null }) {
@@ -35,7 +35,7 @@ export function AudioTab({ clip: selected, media }: { clip: Clip; media: MediaAs
         ) : sub === 'Denoise' ? (
           <Denoise clip={clip} />
         ) : sub === 'Voice Filters' ? (
-          <div className="lib-empty small">Voice filters (echo, telephone, robot…) are not available yet.</div>
+          <VoiceFilters clip={clip} />
         ) : (
           <Module title="Voice Changer" toggle={false} toggleDisabled note={CLOUD_NOTE} badge="AI" />
         )}
@@ -188,9 +188,69 @@ function Denoise({ clip }: { clip: Clip }) {
       <Module title="AI Speech Enhancement" toggle={false} toggleDisabled note={CLOUD_NOTE} badge="AI" defaultOpen={false} />
       <Module title="Wind Removal" toggle={false} toggleDisabled note={CLOUD_NOTE} badge="AI" defaultOpen={false} />
       <Module title="DeReverb" toggle={false} toggleDisabled note="Not available yet." defaultOpen={false} />
-      <Module title="Hum Removal" toggle={false} toggleDisabled note="Not available yet." defaultOpen={false} />
-      <Module title="Hiss Removal" toggle={false} toggleDisabled note="Not available yet." defaultOpen={false} />
+      <Module
+        title="Hum Removal"
+        toggle={audio.hum_removal != null}
+        onToggle={v => exec({ op: 'set_audio_cleanup', clip_id: clip.id, hum_removal: v ? 50 : null })}
+        help="Removes mains hum (50 or 60 Hz and its harmonics)"
+        defaultOpen={audio.hum_removal != null}
+      >
+        <div className="prow">
+          <span className="plabel">Frequency</span>
+          <Pills
+            value={String(audio.hum_removal ?? 50)}
+            onChange={v => exec({ op: 'set_audio_cleanup', clip_id: clip.id, hum_removal: Number(v) })}
+            options={[
+              { value: '50', label: '50 Hz' },
+              { value: '60', label: '60 Hz' },
+            ]}
+          />
+        </div>
+      </Module>
+      <Module
+        title="Hiss Removal"
+        toggle={audio.hiss_removal != null}
+        onToggle={v => exec({ op: 'set_audio_cleanup', clip_id: clip.id, hiss_removal: v ? 50 : null })}
+        help="Reduces high-frequency hiss"
+        defaultOpen={audio.hiss_removal != null}
+      >
+        <SliderRow label="Strength" value={audio.hiss_removal ?? 50} min={0} max={100} digits={0} disabled={audio.hiss_removal == null} onCommit={v => exec({ op: 'set_audio_cleanup', clip_id: clip.id, hiss_removal: v })} />
+      </Module>
     </>
+  )
+}
+
+const VOICE_FILTERS: { id: string; label: string }[] = [
+  { id: 'telephone', label: 'Telephone' },
+  { id: 'radio', label: 'Radio' },
+  { id: 'megaphone', label: 'Megaphone' },
+  { id: 'echo', label: 'Echo' },
+  { id: 'small_room', label: 'Small Room' },
+  { id: 'big_room', label: 'Big Room' },
+  { id: 'robot', label: 'Robot' },
+  { id: 'lofi', label: 'Lo-Fi' },
+  { id: 'underwater', label: 'Underwater' },
+]
+
+function VoiceFilters({ clip }: { clip: Clip }) {
+  const current = clip.audio?.voice_filter ?? null
+  return (
+    <div className="preset-grid">
+      <button className={`preset ${!current ? 'on' : ''}`} onClick={() => current && exec({ op: 'set_voice_filter', clip_id: clip.id, filter: null })}>
+        <div className="preset-thumb">
+          <IcNone size={34} strokeWidth={1} />
+        </div>
+        <span>None</span>
+      </button>
+      {VOICE_FILTERS.map(f => (
+        <button key={f.id} className={`preset ${current === f.id ? 'on' : ''}`} data-voice={f.id} onClick={() => exec({ op: 'set_voice_filter', clip_id: clip.id, filter: f.id })}>
+          <div className="preset-thumb">
+            <IcMic size={26} />
+          </div>
+          <span>{f.label}</span>
+        </button>
+      ))}
+    </div>
   )
 }
 

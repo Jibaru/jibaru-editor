@@ -78,6 +78,28 @@ test('denoise sets the noise reduction; AI modules are unavailable', async ({ pa
   expect((await clipOf(page, b.clips.audio)).audio.denoise_db ?? null).toBeNull()
 })
 
+test('voice filters, hum and hiss removal', async ({ page }) => {
+  const b = await boot(page)
+  await selectClip(page, b.clips.audio, 'Audio')
+  await page.locator('.sub-tabs button', { hasText: 'Voice Filters' }).click()
+  await page.locator('[data-voice="telephone"]').click()
+  expect((await clipOf(page, b.clips.audio)).audio.voice_filter).toBe('telephone')
+  await expect(page.locator('[data-voice="telephone"]')).toHaveClass(/on/)
+  await page.locator('.preset', { hasText: 'None' }).click()
+  expect((await clipOf(page, b.clips.audio)).audio.voice_filter).toBeUndefined()
+  await page.locator('.sub-tabs button', { hasText: 'Denoise' }).click()
+  await setModule(page, 'Hum Removal', true)
+  await openModule(page, 'Hum Removal')
+  await module(page, 'Hum Removal').locator('.pills button', { hasText: '60 Hz' }).click()
+  await setModule(page, 'Hiss Removal', true)
+  await openModule(page, 'Hiss Removal')
+  await setRow(page, module(page, 'Hiss Removal'), 'Strength', 70)
+  const a = (await clipOf(page, b.clips.audio)).audio
+  expect([a.hum_removal, a.hiss_removal]).toEqual([60, 70])
+  await setModule(page, 'Hum Removal', false)
+  expect((await clipOf(page, b.clips.audio)).audio.hum_removal).toBeUndefined()
+})
+
 test('uniform speed: rate with ripple, duration, reverse, maintain pitch', async ({ page }) => {
   const b = await boot(page)
   await selectClip(page, b.clips.video, 'Speed')

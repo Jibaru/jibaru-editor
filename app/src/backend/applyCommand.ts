@@ -255,6 +255,8 @@ export function apply(p: Project, cmd: Command): void {
 
 // ---------- Property-panel commands (ops.rs) ----------
 
+const VOICE_FILTERS = ['telephone', 'radio', 'megaphone', 'echo', 'small_room', 'big_room', 'robot', 'lofi', 'underwater']
+
 const defaultAudio = (): AudioSettings => ({ gain_db: fl(0), pan: fl(0), fade_in: 0, fade_out: 0, pitch: 0, muted: false })
 const defaultTransform = (): Transform => ({ position_x: fl(0), position_y: fl(0), scale_x: fl(1), scale_y: fl(1), rotation: fl(0), flip_h: false, flip_v: false, crop: [0, 0, 0, 0], fit: 'fit' })
 function fl(v: number): Param {
@@ -416,6 +418,16 @@ function applyPanel(p: Project, cmd: Command) {
       break
     case 'set_mute':
       withAudio(p, cmd.clip_id, a => void (a.muted = cmd.muted))
+      break
+    case 'set_voice_filter':
+      if (cmd.filter != null && !VOICE_FILTERS.includes(cmd.filter)) throw err(`invalid: unknown voice filter ${cmd.filter}`)
+      withAudio(p, cmd.clip_id, a => (cmd.filter == null ? delete a.voice_filter : (a.voice_filter = cmd.filter)))
+      break
+    case 'set_audio_cleanup':
+      withAudio(p, cmd.clip_id, a => {
+        if (cmd.hum_removal !== undefined) cmd.hum_removal == null ? delete a.hum_removal : (a.hum_removal = cmd.hum_removal)
+        if (cmd.hiss_removal !== undefined) cmd.hiss_removal == null ? delete a.hiss_removal : (a.hiss_removal = cmd.hiss_removal)
+      })
       break
     case 'set_audio_channels':
       withAudio(p, cmd.clip_id, a => (cmd.channels === 'stereo' ? delete a.channels : (a.channels = cmd.channels)))

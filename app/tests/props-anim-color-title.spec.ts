@@ -55,6 +55,10 @@ test('color basic: presets, sliders, auto white balance, save and apply custom p
   await setRow(page, module(page, 'Light'), 'Exposure', 20)
   e = effect(await clipOf(page, b.clips.video), 'jb.color.adjust')
   expect(pval(e, 'exposure')).toBe(20)
+  await setModule(page, 'Light', false)
+  expect(pval(effect(await clipOf(page, b.clips.video), 'jb.color.adjust'), 'exposure')).toBe(0)
+  await setModule(page, 'Light', true)
+  expect(pval(effect(await clipOf(page, b.clips.video), 'jb.color.adjust'), 'exposure')).toBe(20)
   await row(page, module(page, 'Color'), 'Auto White Balance').locator('button', { hasText: 'Auto' }).click()
   await expect.poll(async () => typeof pval(effect(await clipOf(page, b.clips.video), 'jb.color.adjust'), 'temperature')).toBe('number')
   // Save as Custom, then apply it to another clip.
