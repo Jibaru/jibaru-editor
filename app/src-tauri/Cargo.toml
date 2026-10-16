@@ -14,9 +14,11 @@ jb-core.workspace = true
 jb-filmora.workspace = true
 jb-media.workspace = true
 jb-render.workspace = true
+jb-export.workspace = true
 image = { version = "0.25", default-features = false, features = ["jpeg"] }
 serde.workspace = true
 serde_json.workspace = true
 anyhow.workspace = true
 tauri = { version = "2", features = ["protocol-asset"] }
 tauri-plugin-dialog = "2"
+cpal = "0.18.2"

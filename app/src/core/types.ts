@@ -231,4 +231,8 @@ export interface Snapshot {
   dirty: boolean
   /** Monotonic counter, bumped on every change. */
   revision: number
+  /** True when the project came from a Filmora `.wfp` and can be saved back to one. */
+  wfp?: boolean
+  /** Warnings from the last save (edits the target format cannot express). */
+  save_warnings?: string[]
 }

@@ -163,6 +163,7 @@ function MediaGrid() {
 
 function MediaCard({ media, used, selected }: { media: MediaAsset; used: boolean; selected: boolean }) {
   const [broken, setBroken] = useState(false)
+  const proxy = useEditor(s => s.proxies[media.id])
   const at = media.kind === 'video' ? Math.min(seconds(media.duration) * 0.1, 3) : 0
   return (
     <div
@@ -185,7 +186,7 @@ function MediaCard({ media, used, selected }: { media: MediaAsset; used: boolean
           { label: 'Open in Source Monitor', action: () => setState({ playerMode: 'source', sourceMedia: media.id, sourceTime: 0, playing: false }) },
           sep,
           { label: 'Rename', disabled: true },
-          { label: 'Reveal in Finder', disabled: true },
+          { label: 'Reveal in Finder', disabled: !backend.engine, action: () => backend.engine?.reveal(media.path) },
           sep,
           { label: 'Delete', shortcut: '⌫', disabled: used, action: () => deleteSelection() },
         ])
@@ -200,6 +201,11 @@ function MediaCard({ media, used, selected }: { media: MediaAsset; used: boolean
           <img src={backend.media.thumb(media.path, at, 136)} alt="" draggable={false} onError={() => setBroken(true)} loading="lazy" />
         )}
         {media.kind !== 'image' && <span className="dur">{shortDuration(media.duration)}</span>}
+        {proxy && proxy.state !== 'failed' && (
+          <span className={`proxy-badge ${proxy.state === 'ready' ? '' : 'busy'}`} title={proxy.state === 'ready' ? `Preview proxy: ${proxy.source === 'camera' ? 'camera LRV' : 'generated'}` : 'Generating preview proxy'}>
+            {proxy.state === 'ready' ? 'PROXY' : proxy.state === 'generating' ? `PROXY ${Math.round(proxy.progress * 100)}%` : 'PROXY …'}
+          </span>
+        )}
         <span className="kind">{media.kind === 'audio' ? <IcNote size={15} /> : media.kind === 'image' ? <IcImage size={15} /> : <IcFilm size={15} />}</span>
         {used ? (
           <span className="used"><IcCheck size={11} /></span>

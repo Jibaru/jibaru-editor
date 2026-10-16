@@ -4,16 +4,23 @@
 //! - `jb://localhost/wave?path=&pps=`    JSON `{ pps, peaks }` (jb-media waveform)
 //! - `jb://localhost/frame?t=&h=`        JPEG of the main sequence at `t` seconds,
 //!   composited by `jb-render` from frames decoded by `jb-media`.
+//! - `jb://localhost/live?after=`        the latest preview frame (see `playback.rs`):
+//!   a 32-byte header (`JBLF`, width, height, flags, seq, time) then raw RGBA.
 
 use jb_core::eval::evaluate;
 use jb_core::{MediaAsset, Project, TICKS_PER_SECOND};
-use jb_media::{MediaCache, MediaPool, PoolConfig};
+use jb_media::{MediaCache, MediaPool};
 use jb_render::{FxKind, Registry, Renderer};
 use serde::Serialize;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::path::Path;
-use std::sync::Mutex;
+use std::sync::{Arc, Condvar, Mutex};
+
+fn is_image_path(p: &Path) -> bool {
+    let ext = p.extension().and_then(|e| e.to_str()).unwrap_or("").to_ascii_lowercase();
+    matches!(ext.as_str(), "jpg" | "jpeg" | "png" | "heic" | "webp" | "gif" | "bmp" | "tif" | "tiff")
+}
 
 /// Stable media id derived from the path, so re-importing a file is a no-op.
 pub fn media_id(path: &Path) -> String {
@@ -27,28 +34,47 @@ pub fn probe(path: &Path) -> anyhow::Result<MediaAsset> {
 }
 
 pub struct Engine {
-    cache: MediaCache,
-    pool: MediaPool,
+    pub cache: Arc<MediaCache>,
+    pub pool: Arc<MediaPool>,
     /// Created lazily: GPU initialization is slow and may fail (no adapter).
     renderer: Mutex<Option<Renderer>>,
+    /// Bounds concurrent thumbnail decodes (a filmstrip requests dozens at
+    /// once and each 4K decoder holds hundreds of megabytes).
+    thumb_slots: (Mutex<usize>, Condvar),
 }
+
+const THUMB_SLOTS: usize = 3;
 
 fn secs_to_ticks(s: f64) -> i64 {
     (s * TICKS_PER_SECOND as f64).round() as i64
 }
 
 impl Engine {
-    pub fn new(cache_dir: &Path) -> anyhow::Result<Self> {
-        Ok(Self {
-            cache: MediaCache::new(cache_dir)?,
-            pool: MediaPool::new(PoolConfig::default()),
-            renderer: Mutex::new(None),
-        })
+    pub fn new(cache: Arc<MediaCache>, pool: Arc<MediaPool>) -> Self {
+        Self { cache, pool, renderer: Mutex::new(None), thumb_slots: (Mutex::new(0), Condvar::new()) }
     }
 
     pub fn thumb(&self, path: &Path, t: f64, h: u32) -> anyhow::Result<Vec<u8>> {
-        let thumb = self.cache.thumbnail(path, secs_to_ticks(t.max(0.0)), h)?;
-        Ok(std::fs::read(thumb.path)?)
+        // Thumbnails come from the preview proxy when there is one: same
+        // picture, a fraction of the decode cost.
+        let src = if is_image_path(path) {
+            None
+        } else {
+            jb_media::cache::camera_proxy(path).or_else(|| self.cache.existing_proxy(path))
+        };
+        let src = src.as_deref().unwrap_or(path);
+        let (lock, cv) = &self.thumb_slots;
+        {
+            let mut n = lock.lock().map_err(|e| anyhow::anyhow!("{e}"))?;
+            while *n >= THUMB_SLOTS {
+                n = cv.wait(n).map_err(|e| anyhow::anyhow!("{e}"))?;
+            }
+            *n += 1;
+        }
+        let thumb = self.cache.thumbnail(src, secs_to_ticks(t.max(0.0)), h);
+        *lock.lock().map_err(|e| anyhow::anyhow!("{e}"))? -= 1;
+        cv.notify_one();
+        Ok(std::fs::read(thumb?.path)?)
     }
 
     /// Peak envelope as `pps` absolute values per second, normalized 0..1.
@@ -80,7 +106,7 @@ impl Engine {
         r.options.source_max_size = Some((w, h));
         self.pool.sync(project);
         let plan = evaluate(project, project.main(), secs_to_ticks(t));
-        let frame = r.render(project, &plan, &self.pool);
+        let frame = r.render(project, &plan, self.pool.as_ref());
         let row = frame.width as usize * 4;
         let data: Vec<u8> = if frame.stride == row {
             frame.data[..row * frame.height as usize].to_vec()

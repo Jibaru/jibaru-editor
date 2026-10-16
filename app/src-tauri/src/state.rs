@@ -15,6 +15,9 @@ pub struct Session {
     pub wfp: Option<jb_filmora::WfpProject>,
     revision: u64,
     saved_revision: u64,
+    autosaved_revision: u64,
+    /// Files already backed up this session before being overwritten.
+    backed_up: Vec<PathBuf>,
 }
 
 /// What the frontend receives after every change (see app/src/core/types.ts).
@@ -26,6 +29,8 @@ pub struct Snapshot {
     pub can_redo: bool,
     pub dirty: bool,
     pub revision: u64,
+    /// True when the project came from a `.wfp` and can be saved back to one.
+    pub wfp: bool,
 }
 
 pub fn default_settings() -> ProjectSettings {
@@ -49,7 +54,15 @@ pub fn empty_project(name: &str, settings: ProjectSettings) -> Project {
 
 impl Session {
     pub fn new(project: Project, path: Option<PathBuf>) -> Self {
-        Self { history: History::new(project), path, wfp: None, revision: 0, saved_revision: 0 }
+        Self {
+            history: History::new(project),
+            path,
+            wfp: None,
+            revision: 0,
+            saved_revision: 0,
+            autosaved_revision: 0,
+            backed_up: Vec::new(),
+        }
     }
 
     pub fn from_loaded(loaded: Loaded, path: PathBuf) -> Self {
@@ -64,9 +77,14 @@ impl Session {
             path: self.path.as_ref().map(|p| p.to_string_lossy().into_owned()),
             can_undo: self.history.can_undo(),
             can_redo: self.history.can_redo(),
-            dirty: self.revision != self.saved_revision,
+            dirty: self.dirty(),
             revision: self.revision,
+            wfp: self.wfp.is_some(),
         }
+    }
+
+    pub fn dirty(&self) -> bool {
+        self.revision != self.saved_revision
     }
 
     pub fn execute(&mut self, cmd: &Command) -> Result<(), String> {
@@ -91,24 +109,57 @@ impl Session {
         done
     }
 
-    pub fn save(&mut self, path: Option<&Path>) -> anyhow::Result<()> {
-        let target = path.map(Path::to_path_buf).or_else(|| self.path.clone()).ok_or_else(|| anyhow::anyhow!("no path"))?;
+    /// The project to autosave, when it changed since the last save/autosave.
+    pub fn autosave_due(&self) -> Option<(Project, u64)> {
+        (self.dirty() && self.revision != self.autosaved_revision)
+            .then(|| (self.history.project.clone(), self.revision))
+    }
+
+    pub fn mark_autosaved(&mut self, revision: u64) {
+        self.autosaved_revision = revision;
+    }
+
+    /// Saves to `path` (or the current path). An existing file is copied to
+    /// `backup_dir` the first time it is overwritten in this session, and
+    /// writes go through a temporary file so a failure never truncates the
+    /// original. Returns the writer's warnings.
+    pub fn save(&mut self, path: Option<&Path>, backup_dir: Option<&Path>) -> anyhow::Result<Vec<String>> {
+        let target =
+            path.map(Path::to_path_buf).or_else(|| self.path.clone()).ok_or_else(|| anyhow::anyhow!("no path"))?;
         let ext = target.extension().and_then(|e| e.to_str()).unwrap_or("").to_ascii_lowercase();
-        match ext.as_str() {
-            "jbp" => std::fs::write(&target, jb_core::to_native(&self.history.project)?)?,
+        let tmp = target.with_extension(format!("{ext}.saving"));
+        let warnings = match ext.as_str() {
+            "jbp" => {
+                std::fs::write(&tmp, jb_core::to_native(&self.history.project)?)?;
+                Vec::new()
+            }
             "wfp" => {
                 let Some(wfp) = &self.wfp else {
                     anyhow::bail!("only projects opened from a .wfp can be saved as .wfp");
                 };
                 let mut out = wfp.clone();
                 out.project = self.history.project.clone();
-                jb_filmora::write(&out, &target)?;
+                jb_filmora::write(&out, &tmp)?.warnings
             }
-            _ => anyhow::bail!("cannot save as {}; use .jbp", target.display()),
+            _ => anyhow::bail!("cannot save as {}; use .jbp or .wfp", target.display()),
+        };
+        if target.exists() && !self.backed_up.contains(&target) {
+            if let Some(dir) = backup_dir {
+                std::fs::create_dir_all(dir)?;
+                let stamp =
+                    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs());
+                let stem = target.file_stem().and_then(|s| s.to_str()).unwrap_or("project");
+                std::fs::copy(&target, dir.join(format!("{stem}-{stamp}.{ext}")))?;
+            }
+            self.backed_up.push(target.clone());
+        }
+        if let Err(e) = std::fs::rename(&tmp, &target) {
+            let _ = std::fs::remove_file(&tmp);
+            return Err(e.into());
         }
         self.path = Some(target);
         self.saved_revision = self.revision;
-        Ok(())
+        Ok(warnings)
     }
 }
 

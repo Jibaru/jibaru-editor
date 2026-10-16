@@ -8,6 +8,8 @@ import {
   duplicateSelection,
   getState,
   importMedia,
+  mark,
+  requestQuit,
   newProject,
   openProject,
   paste,
@@ -102,6 +104,7 @@ export function menuBar(): { name: string; items: () => MenuItem[] }[] {
 
 /** Actions behind the native macOS menu items (src-tauri/src/menu.rs). */
 const MENU_ACTIONS: Record<string, () => unknown> = {
+  'app.quit': requestQuit,
   'file.new': newProject,
   'file.open': () => openProject(),
   'file.save': () => saveProject(),
@@ -180,6 +183,8 @@ export function installShortcuts() {
     if (k === 'end') return run(() => seek(duration()))
     if (k === 'j' || k === 'k' || k === 'l') return run(() => shuttle(k))
     if (k === 'n') return run(() => setState(s => ({ snapping: !s.snapping })))
+    if (k === 'i') return run(() => mark('in'))
+    if (k === 'o') return run(() => mark('out'))
     if (k === 'z' && e.shiftKey) return run(zoomToFit)
     if (k === 'escape') return run(() => setState({ selection: [], selectedMedia: [] }))
   }

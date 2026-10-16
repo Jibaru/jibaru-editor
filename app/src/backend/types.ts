@@ -1,4 +1,4 @@
-import type { Command, MediaAsset, ProjectSettings, Snapshot } from '../core/types'
+import type { Command, MediaAsset, ProjectSettings, Rational, Snapshot, Ticks } from '../core/types'
 
 /** An effect, filter, transition or animation implemented by jb-render. */
 export interface FxEntry {
@@ -42,6 +42,105 @@ export interface Backend {
   /** Called when the project changes from outside this window (agents, CLI). */
   onExternalChange(cb: (s: Snapshot) => void): () => void
   media: MediaUrls
+  /** The native engine (real-time preview, export, proxies); Tauri only. */
+  engine?: NativeEngine
+}
+
+export interface PlaybackStats {
+  rendered: number
+  dropped: number
+  fps: number
+  render_ms: number
+  audio_underruns: number
+  audio_clock: boolean
+  width: number
+  height: number
+}
+
+export interface ExportRequest {
+  path: string
+  codec: 'h264' | 'hevc'
+  width: number
+  height: number
+  frame_rate: Rational | null
+  quality: 'low' | 'medium' | 'high'
+  bit_rate?: number | null
+  range: [Ticks, Ticks] | null
+  audio: boolean
+}
+
+export interface ExportProgress {
+  frame: number
+  total: number
+  fps: number
+  elapsed: number
+  eta: number
+}
+
+export interface ExportDone {
+  ok: boolean
+  cancelled: boolean
+  error: string | null
+  path: string
+  encoder: string
+  hardware_encoder: boolean
+  width: number
+  height: number
+  frames: number
+  fps: number
+  elapsed: number
+  unknown_effects: string[]
+  warnings: string[]
+}
+
+export interface ProxyStatus {
+  media_id: string
+  path: string
+  state: 'queued' | 'generating' | 'ready' | 'failed'
+  progress: number
+  proxy: string | null
+  source: 'camera' | 'generated' | null
+  error: string | null
+}
+
+/** A decoded preview frame from the `live` route. */
+export interface LiveFrame {
+  seq: number
+  time: Ticks
+  width: number
+  height: number
+  playing: boolean
+  pixels: Uint8ClampedArray
+}
+
+export interface NativeEngine {
+  play(time: Ticks, rate: number): Promise<void>
+  /** Pauses and resolves with the time playback stopped at. */
+  pause(): Promise<Ticks>
+  seek(time: Ticks, scrub: boolean): Promise<void>
+  setSize(width: number, height: number): Promise<void>
+  setVolume(volume: number): Promise<void>
+  stats(): Promise<PlaybackStats>
+  report(displayedFps: number, frames: number): Promise<void>
+  /** Waits (long poll) for a frame newer than `after`; null on timeout. */
+  nextFrame(after: number, signal?: AbortSignal): Promise<LiveFrame | null>
+  onEnded(cb: (t: Ticks) => void): () => void
+  exportCheck(): Promise<string[]>
+  exportStart(req: ExportRequest): Promise<void>
+  exportCancel(): Promise<void>
+  onExportProgress(cb: (p: ExportProgress) => void): () => void
+  onExportDone(cb: (d: ExportDone) => void): () => void
+  reveal(path: string): Promise<void>
+  defaultExportDir(): Promise<string>
+  proxyStatuses(): Promise<ProxyStatus[]>
+  onProxyStatus(cb: (s: ProxyStatus) => void): () => void
+  onAutosaved(cb: (path: string) => void): () => void
+  /** The window or app is closing with unsaved changes. */
+  onCloseRequested(cb: () => void): () => void
+  /** Exits without asking again. */
+  quit(): Promise<void>
+  /** Save / Don't Save / Cancel. */
+  askUnsaved(name: string): Promise<'save' | 'discard' | 'cancel'>
 }
 
 /** URLs for media served by the app (`jb://` protocol) or the dev server. */

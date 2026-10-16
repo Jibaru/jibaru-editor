@@ -1,16 +1,25 @@
 // Hide the console window on Windows release builds.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod audio_out;
+mod export;
 mod media;
 #[cfg(target_os = "macos")]
 mod menu;
+mod playback;
+mod proxies;
 mod state;
 
-use jb_core::{Command, MediaAsset, ProjectSettings};
+use jb_core::{Command, MediaAsset, ProjectSettings, Ticks};
 use media::Engine;
+use playback::Playback;
+use proxies::Proxies;
+use serde::Serialize;
 use state::{AppState, Session, Snapshot};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 use tauri::http::{header, Response, StatusCode};
 use tauri::{AppHandle, Emitter, Manager, State};
 
@@ -20,9 +29,37 @@ fn err(e: impl std::fmt::Display) -> String {
     e.to_string()
 }
 
+/// Engine services shared by commands, the `jb://` protocol and background threads.
+struct Services {
+    engine: Arc<Engine>,
+    playback: Playback,
+    proxies: Proxies,
+    exporter: export::Exporter,
+    /// Set once the user confirmed closing with unsaved changes.
+    force_close: AtomicBool,
+    backup_dir: PathBuf,
+    autosave_dir: PathBuf,
+}
+
 fn with_session<T>(state: &State<AppState>, f: impl FnOnce(&mut Session) -> Res<T>) -> Res<T> {
     let mut s = state.0.lock().map_err(err)?;
     f(&mut s)
+}
+
+/// Hands the current project to the preview engine and proxy manager.
+fn engine_sync(app: &AppHandle, s: &Session) {
+    let svc = app.state::<Services>();
+    svc.playback.set_project(s.history.project.clone());
+    svc.proxies.register(&s.history.project);
+}
+
+/// Runs `f` on the session and then syncs the engine with the result.
+fn edit<T>(app: &AppHandle, f: impl FnOnce(&mut Session) -> Res<T>) -> Res<T> {
+    let state = app.state::<AppState>();
+    let mut s = state.0.lock().map_err(err)?;
+    let out = f(&mut s)?;
+    engine_sync(app, &s);
+    Ok(out)
 }
 
 /// Notifies every window (and future agent bridges) about a new state.
@@ -36,54 +73,64 @@ fn get_project(state: State<AppState>) -> Res<Snapshot> {
 }
 
 #[tauri::command]
-fn new_project(state: State<AppState>, name: String, settings: Option<serde_json::Value>) -> Res<Snapshot> {
+fn new_project(app: AppHandle, name: String, settings: Option<serde_json::Value>) -> Res<Snapshot> {
     let mut base = serde_json::to_value(state::default_settings()).map_err(err)?;
     if let (Some(serde_json::Value::Object(over)), serde_json::Value::Object(b)) = (settings, &mut base) {
         b.extend(over);
     }
     let settings: ProjectSettings = serde_json::from_value(base).map_err(err)?;
-    with_session(&state, |s| {
+    edit(&app, |s| {
         *s = Session::new(state::empty_project(&name, settings), None);
         Ok(s.snapshot())
     })
 }
 
 #[tauri::command]
-fn open_project(state: State<AppState>, path: String) -> Res<Snapshot> {
-    let loaded = state::load(Path::new(&path)).map_err(err)?;
-    with_session(&state, |s| {
+async fn open_project(app: AppHandle, path: String) -> Res<Snapshot> {
+    let p = path.clone();
+    let loaded =
+        tauri::async_runtime::spawn_blocking(move || state::load(Path::new(&p))).await.map_err(err)?.map_err(err)?;
+    edit(&app, |s| {
         *s = Session::from_loaded(loaded, PathBuf::from(&path));
         Ok(s.snapshot())
     })
 }
 
+#[derive(Serialize)]
+struct Saved {
+    snapshot: Snapshot,
+    warnings: Vec<String>,
+}
+
 #[tauri::command]
-fn save_project(state: State<AppState>, path: Option<String>) -> Res<Snapshot> {
+fn save_project(app: AppHandle, path: Option<String>) -> Res<Saved> {
+    let svc = app.state::<Services>();
+    let state = app.state::<AppState>();
     with_session(&state, |s| {
-        s.save(path.as_deref().map(Path::new)).map_err(err)?;
-        Ok(s.snapshot())
+        let warnings = s.save(path.as_deref().map(Path::new), Some(&svc.backup_dir)).map_err(err)?;
+        Ok(Saved { snapshot: s.snapshot(), warnings })
     })
 }
 
 #[tauri::command]
-fn execute(state: State<AppState>, command: Command) -> Res<Snapshot> {
-    with_session(&state, |s| {
+fn execute(app: AppHandle, command: Command) -> Res<Snapshot> {
+    edit(&app, |s| {
         s.execute(&command)?;
         Ok(s.snapshot())
     })
 }
 
 #[tauri::command]
-fn undo(state: State<AppState>) -> Res<Snapshot> {
-    with_session(&state, |s| {
+fn undo(app: AppHandle) -> Res<Snapshot> {
+    edit(&app, |s| {
         s.undo();
         Ok(s.snapshot())
     })
 }
 
 #[tauri::command]
-fn redo(state: State<AppState>) -> Res<Snapshot> {
-    with_session(&state, |s| {
+fn redo(app: AppHandle) -> Res<Snapshot> {
+    edit(&app, |s| {
         s.redo();
         Ok(s.snapshot())
     })
@@ -91,9 +138,11 @@ fn redo(state: State<AppState>) -> Res<Snapshot> {
 
 #[tauri::command]
 async fn probe_media(paths: Vec<String>) -> Res<Vec<MediaAsset>> {
-    tauri::async_runtime::spawn_blocking(move || paths.iter().map(|p| media::probe(Path::new(p)).map_err(err)).collect())
-        .await
-        .map_err(err)?
+    tauri::async_runtime::spawn_blocking(move || {
+        paths.iter().map(|p| media::probe(Path::new(p)).map_err(err)).collect()
+    })
+    .await
+    .map_err(err)?
 }
 
 #[tauri::command]
@@ -109,19 +158,231 @@ async fn import_media(app: AppHandle, paths: Vec<String>) -> Res<Snapshot> {
         s.history.project.media.iter().map(|m| m.path.clone()).collect()
     };
     let fresh: Vec<String> = paths.into_iter().filter(|p| !known.contains(p)).collect();
-    let assets = probe_media(fresh).await?;
-    let state = app.state::<AppState>();
-    let snap = with_session(&state, |s| {
-        let new: Vec<MediaAsset> =
-            assets.into_iter().filter(|a| s.history.project.media(&a.id).is_none()).collect();
+    // Probe what we can; one unreadable file should not block the rest.
+    let probed = tauri::async_runtime::spawn_blocking(move || {
+        fresh.iter().map(|p| (p.clone(), media::probe(Path::new(p)))).collect::<Vec<_>>()
+    })
+    .await
+    .map_err(err)?;
+    let mut failed = Vec::new();
+    let mut assets = Vec::new();
+    for (p, r) in probed {
+        match r {
+            Ok(a) => assets.push(a),
+            Err(e) => failed
+                .push(format!("{}: {e}", Path::new(&p).file_name().map_or(p.clone(), |n| n.to_string_lossy().into()))),
+        }
+    }
+    let snap = edit(&app, |s| {
+        let new: Vec<MediaAsset> = assets.into_iter().filter(|a| s.history.project.media(&a.id).is_none()).collect();
         if !new.is_empty() {
             s.execute(&state::add_media_command(new))?;
         }
         Ok(s.snapshot())
     })?;
     changed(&app, &snap);
+    if !failed.is_empty() {
+        return Err(format!("Could not import {}", failed.join(", ")));
+    }
     Ok(snap)
 }
+
+// ---------- Playback ----------
+
+#[tauri::command]
+fn playback_play(app: AppHandle, time: Ticks, rate: Option<f64>) {
+    app.state::<Services>().playback.play(time, rate.unwrap_or(1.0));
+}
+
+#[tauri::command]
+fn playback_pause(app: AppHandle) -> Ticks {
+    app.state::<Services>().playback.pause()
+}
+
+#[tauri::command]
+fn playback_seek(app: AppHandle, time: Ticks, scrub: Option<bool>) {
+    app.state::<Services>().playback.seek(time, scrub.unwrap_or(false));
+}
+
+#[tauri::command]
+fn playback_size(app: AppHandle, width: u32, height: u32) {
+    app.state::<Services>().playback.set_size(width, height);
+}
+
+#[tauri::command]
+fn playback_volume(app: AppHandle, volume: f32) {
+    app.state::<Services>().playback.set_volume(volume);
+}
+
+#[tauri::command]
+fn playback_stats(app: AppHandle) -> playback::Stats {
+    app.state::<Services>().playback.stats()
+}
+
+/// Display-side statistics from the webview, logged with `JB_PLAYBACK_LOG=1`.
+#[tauri::command]
+fn playback_report(app: AppHandle, displayed_fps: f64, frames: u64) {
+    if std::env::var_os("JB_PLAYBACK_LOG").is_some() {
+        let s = app.state::<Services>().playback.stats();
+        eprintln!(
+            "playback: displayed {displayed_fps:.1} fps ({frames} frames), rendered {:.1} fps, dropped {}, render {:.1} ms, {}x{}, audio clock {}, underruns {}",
+            s.fps, s.dropped, s.render_ms, s.width, s.height, s.audio_clock, s.audio_underruns
+        );
+    }
+}
+
+// ---------- Proxies ----------
+
+#[tauri::command]
+fn proxy_statuses(app: AppHandle) -> Vec<proxies::ProxyStatus> {
+    app.state::<Services>().proxies.statuses()
+}
+
+// ---------- Export ----------
+
+#[tauri::command]
+fn export_check(state: State<AppState>) -> Res<Vec<String>> {
+    with_session(&state, |s| Ok(export::unknown_effects(&s.history.project)))
+}
+
+#[tauri::command]
+fn export_start(app: AppHandle, request: export::ExportRequest) -> Res<()> {
+    let project = {
+        let state = app.state::<AppState>();
+        let s = state.0.lock().map_err(err)?;
+        s.history.project.clone()
+    };
+    if let Some(dir) = Path::new(&request.path).parent() {
+        std::fs::create_dir_all(dir).map_err(err)?;
+    }
+    let (a, b) = (app.clone(), app.clone());
+    app.state::<Services>().exporter.start(
+        project,
+        request,
+        move |p| {
+            let _ = a.emit("export-progress", p);
+        },
+        move |d| {
+            let _ = b.emit("export-done", d);
+        },
+    )
+}
+
+#[tauri::command]
+fn export_cancel(app: AppHandle) {
+    app.state::<Services>().exporter.cancel();
+}
+
+#[tauri::command]
+fn export_status(app: AppHandle) -> serde_json::Value {
+    let ex = &app.state::<Services>().exporter;
+    serde_json::json!({ "running": ex.running(), "last": ex.last() })
+}
+
+#[tauri::command]
+fn reveal_path(path: String) -> Res<()> {
+    export::reveal(&path).map_err(err)
+}
+
+#[tauri::command]
+fn default_export_dir() -> String {
+    let home = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE")).map(PathBuf::from);
+    home.map(|h| h.join(if cfg!(target_os = "windows") { "Videos" } else { "Movies" }))
+        .unwrap_or_else(std::env::temp_dir)
+        .to_string_lossy()
+        .into_owned()
+}
+
+// ---------- App lifecycle ----------
+
+#[tauri::command]
+fn quit_app(app: AppHandle) {
+    app.state::<Services>().force_close.store(true, Ordering::SeqCst);
+    app.exit(0);
+}
+
+#[tauri::command]
+fn autosave_dir(app: AppHandle) -> String {
+    app.state::<Services>().autosave_dir.to_string_lossy().into_owned()
+}
+
+fn sanitize(name: &str) -> String {
+    let s: String = name.chars().map(|c| if c.is_alphanumeric() || " -_.".contains(c) { c } else { '_' }).collect();
+    let s = s.trim().to_string();
+    if s.is_empty() {
+        "Untitled".into()
+    } else {
+        s
+    }
+}
+
+/// Every 30 s, writes unsaved changes to `<app data>/autosave/<name>.autosave.jbp`
+/// (never to the user's project file).
+fn autosave_loop(app: AppHandle) {
+    loop {
+        std::thread::sleep(Duration::from_secs(30));
+        let due = {
+            let state = app.state::<AppState>();
+            let s = match state.0.lock() {
+                Ok(s) => s,
+                Err(_) => continue,
+            };
+            s.autosave_due()
+        };
+        let Some((project, revision)) = due else { continue };
+        let dir = app.state::<Services>().autosave_dir.clone();
+        let file = dir.join(format!("{}.autosave.jbp", sanitize(&project.name)));
+        let tmp = file.with_extension("jbp.saving");
+        let result = std::fs::create_dir_all(&dir)
+            .map_err(anyhow::Error::from)
+            .and_then(|_| Ok(jb_core::to_native(&project)?))
+            .and_then(|json| Ok(std::fs::write(&tmp, json)?))
+            .and_then(|_| Ok(std::fs::rename(&tmp, &file)?));
+        match result {
+            Ok(()) => {
+                if let Ok(mut s) = app.state::<AppState>().0.lock() {
+                    s.mark_autosaved(revision);
+                }
+                let _ = app.emit("autosaved", file.to_string_lossy());
+            }
+            Err(e) => eprintln!("autosave failed: {e:#}"),
+        }
+    }
+}
+
+/// Test automation (development only): with `JB_AUTOMATION_DIR` set, every
+/// `*.js` file that appears in that directory is evaluated in the main
+/// webview and then deleted. The frontend exposes its store as `window.__jb`;
+/// scripts report back with `__jb.log(...)`, which prints to stderr.
+fn automation_loop(app: AppHandle, dir: PathBuf) {
+    let _ = std::fs::create_dir_all(&dir);
+    loop {
+        std::thread::sleep(Duration::from_millis(200));
+        let Ok(entries) = std::fs::read_dir(&dir) else { continue };
+        let mut files: Vec<PathBuf> =
+            entries.flatten().map(|e| e.path()).filter(|p| p.extension().is_some_and(|e| e == "js")).collect();
+        files.sort();
+        for f in files {
+            let Ok(js) = std::fs::read_to_string(&f) else { continue };
+            let _ = std::fs::remove_file(&f);
+            if let Some(w) = app.get_webview_window("main") {
+                let _ =
+                    w.eval(format!("(async () => {{ try {{ {js}\n }} catch (e) {{ __jb.log('error: ' + e) }} }})()"));
+            }
+        }
+    }
+}
+
+#[tauri::command]
+fn automation_log(text: String) {
+    eprintln!("automation: {text}");
+}
+
+fn session_dirty(app: &AppHandle) -> bool {
+    app.state::<AppState>().0.lock().map(|s| s.dirty()).unwrap_or(false)
+}
+
+// ---------- jb:// protocol ----------
 
 fn query(uri: &tauri::http::Uri) -> std::collections::HashMap<String, String> {
     uri.query()
@@ -153,37 +414,59 @@ fn decode(s: &str) -> String {
     String::from_utf8_lossy(&out).into_owned()
 }
 
-fn media_response(app: &AppHandle, engine: &Engine, request: &tauri::http::Request<Vec<u8>>) -> Response<Vec<u8>> {
+/// `JBLF` header (32 bytes, little endian) followed by RGBA pixels.
+fn live_body(f: &playback::LiveFrame) -> Vec<u8> {
+    let mut out = Vec::with_capacity(32 + f.rgba.len());
+    out.extend_from_slice(b"JBLF");
+    out.extend_from_slice(&f.width.to_le_bytes());
+    out.extend_from_slice(&f.height.to_le_bytes());
+    out.extend_from_slice(&(f.playing as u32).to_le_bytes());
+    out.extend_from_slice(&f.seq.to_le_bytes());
+    out.extend_from_slice(&f.time.to_le_bytes());
+    out.extend_from_slice(&f.rgba[..(f.width * f.height * 4) as usize]);
+    out
+}
+
+fn media_response(app: &AppHandle, svc: &Services, request: &tauri::http::Request<Vec<u8>>) -> Response<Vec<u8>> {
     let q = query(request.uri());
     let num = |k: &str, d: f64| q.get(k).and_then(|v| v.parse::<f64>().ok()).unwrap_or(d);
     let path = q.get("path").map(PathBuf::from);
-    let result: anyhow::Result<Option<(Vec<u8>, &str)>> = match request.uri().path().trim_start_matches('/') {
+    let engine = &svc.engine;
+    // (body, mime, cacheable)
+    let result: anyhow::Result<Option<(Vec<u8>, &str, bool)>> = match request.uri().path().trim_start_matches('/') {
         "thumb" => path
             .ok_or_else(|| anyhow::anyhow!("missing path"))
             .and_then(|p| engine.thumb(&p, num("t", 0.0), num("h", 90.0) as u32))
-            .map(|b| Some((b, "image/jpeg"))),
+            .map(|b| Some((b, "image/jpeg", true))),
         "wave" => path
             .ok_or_else(|| anyhow::anyhow!("missing path"))
             .and_then(|p| engine.wave(&p, num("pps", 20.0) as u32))
-            .map(|b| Some((b, "application/json"))),
+            .map(|b| Some((b, "application/json", true))),
         "frame" => {
             let state = app.state::<AppState>();
             let project = state.0.lock().map(|s| s.history.project.clone());
             match project {
-                Ok(p) => engine.frame(&p, num("t", 0.0), num("h", 360.0) as u32).map(|b| Some((b, "image/jpeg"))),
+                Ok(p) => engine.frame(&p, num("t", 0.0), num("h", 360.0) as u32).map(|b| Some((b, "image/jpeg", true))),
                 Err(e) => Err(anyhow::anyhow!("{e}")),
             }
+        }
+        "live" => {
+            let after = num("after", 0.0) as u64;
+            Ok(svc
+                .playback
+                .wait_frame(after, Duration::from_millis(250))
+                .map(|f| (live_body(&f), "application/octet-stream", false)))
         }
         other => Err(anyhow::anyhow!("unknown route {other}")),
     };
     let builder = Response::builder().header(header::ACCESS_CONTROL_ALLOW_ORIGIN, "*");
     match result {
-        Ok(Some((body, mime))) => builder
+        Ok(Some((body, mime, cacheable))) => builder
             .status(StatusCode::OK)
             .header(header::CONTENT_TYPE, mime)
-            .header(header::CACHE_CONTROL, "max-age=31536000")
+            .header(header::CACHE_CONTROL, if cacheable { "max-age=31536000" } else { "no-store" })
             .body(body),
-        Ok(None) => builder.status(StatusCode::NO_CONTENT).body(Vec::new()),
+        Ok(None) => builder.status(StatusCode::NO_CONTENT).header(header::CACHE_CONTROL, "no-store").body(Vec::new()),
         Err(e) => builder.status(StatusCode::INTERNAL_SERVER_ERROR).body(e.to_string().into_bytes()),
     }
     .expect("valid response")
@@ -195,7 +478,7 @@ fn main() {
         return;
     }
     let session = Session::new(state::empty_project("Untitled", state::default_settings()), None);
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(AppState(Mutex::new(session)))
         .setup(|app| {
@@ -205,22 +488,78 @@ fn main() {
                 app.set_menu(menu::build(&handle)?)?;
                 app.on_menu_event(move |app, e| menu::forward(app, e.id().as_ref()));
             }
-            let dir = jb_media::MediaCache::default_dir();
-            app.manage(Arc::new(Engine::new(&dir)?));
+            let audio = audio_out::open();
+            let config = jb_media::PoolConfig {
+                sample_rate: audio.as_ref().map_or(48_000, |a| a.sample_rate),
+                ..Default::default()
+            };
+            let pool = Arc::new(jb_media::MediaPool::new(config));
+            let cache = Arc::new(jb_media::MediaCache::new(jb_media::MediaCache::default_dir())?);
+            let engine = Arc::new(Engine::new(cache.clone(), pool.clone()));
             // Optional project to open at startup: `jibaru-editor path/to/project.jbp`.
             if let Some(p) = std::env::args().nth(1).filter(|a| !a.starts_with('-')) {
-                if let Ok(loaded) = state::load(Path::new(&p)) {
-                    let state = app.state::<AppState>();
-                    *state.0.lock().expect("session lock") = Session::from_loaded(loaded, PathBuf::from(p));
+                match state::load(Path::new(&p)) {
+                    Ok(loaded) => {
+                        let state = app.state::<AppState>();
+                        *state.0.lock().expect("session lock") = Session::from_loaded(loaded, PathBuf::from(p));
+                    }
+                    Err(e) => eprintln!("cannot open {p}: {e:#}"),
                 }
             }
+            let project = app.state::<AppState>().0.lock().expect("session lock").history.project.clone();
+            let h = app.handle().clone();
+            let playback = Playback::new(pool.clone(), audio, project, move |t| {
+                let _ = h.emit("playback-ended", t);
+            });
+            let busy = playback.clone();
+            let h = app.handle().clone();
+            let proxies = Proxies::new(
+                cache,
+                pool,
+                move || busy.is_playing(),
+                move |s| {
+                    let _ = h.emit("proxy-status", s);
+                },
+            );
+            let data = app.path().app_data_dir().unwrap_or_else(|_| std::env::temp_dir().join("jibaru-editor"));
+            app.manage(Services {
+                engine,
+                playback,
+                proxies,
+                exporter: export::Exporter::default(),
+                force_close: AtomicBool::new(false),
+                backup_dir: data.join("backups"),
+                autosave_dir: data.join("autosave"),
+            });
+            {
+                let state = app.state::<AppState>();
+                let s = state.0.lock().expect("session lock");
+                engine_sync(app.handle(), &s);
+            }
+            let h = app.handle().clone();
+            std::thread::Builder::new().name("jb-autosave".into()).spawn(move || autosave_loop(h))?;
+            if let Some(dir) = std::env::var_os("JB_AUTOMATION_DIR") {
+                let h = app.handle().clone();
+                std::thread::Builder::new()
+                    .name("jb-automation".into())
+                    .spawn(move || automation_loop(h, dir.into()))?;
+            }
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                let app = window.app_handle();
+                if session_dirty(app) && !app.state::<Services>().force_close.load(Ordering::SeqCst) {
+                    api.prevent_close();
+                    let _ = app.emit("close-requested", ());
+                }
+            }
         })
         .register_asynchronous_uri_scheme_protocol("jb", |ctx, request, responder| {
             let app = ctx.app_handle().clone();
             std::thread::spawn(move || {
-                let engine = app.state::<Arc<Engine>>().inner().clone();
-                responder.respond(media_response(&app, &engine, &request));
+                let svc = app.state::<Services>();
+                responder.respond(media_response(&app, &svc, &request));
             });
         })
         .invoke_handler(tauri::generate_handler![
@@ -233,8 +572,35 @@ fn main() {
             redo,
             probe_media,
             import_media,
-            fx_catalog
+            fx_catalog,
+            playback_play,
+            playback_pause,
+            playback_seek,
+            playback_size,
+            playback_volume,
+            playback_stats,
+            playback_report,
+            proxy_statuses,
+            export_check,
+            export_start,
+            export_cancel,
+            export_status,
+            reveal_path,
+            default_export_dir,
+            quit_app,
+            autosave_dir,
+            automation_log
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running Jibaru Editor");
+        .build(tauri::generate_context!())
+        .expect("error while building Jibaru Editor");
+    app.run(|app, event| {
+        // Quitting from the Dock or the system asks the frontend first when
+        // there are unsaved changes; `quit_app` exits for real.
+        if let tauri::RunEvent::ExitRequested { api, code: None, .. } = event {
+            if session_dirty(app) && !app.state::<Services>().force_close.load(Ordering::SeqCst) {
+                api.prevent_exit();
+                let _ = app.emit("close-requested", ());
+            }
+        }
+    });
 }

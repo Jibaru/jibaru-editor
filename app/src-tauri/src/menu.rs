@@ -18,7 +18,7 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
             &PredefinedMenuItem::hide(app, None)?,
             &PredefinedMenuItem::hide_others(app, None)?,
             &PredefinedMenuItem::separator(app)?,
-            &PredefinedMenuItem::quit(app, None)?,
+            &item("app.quit", "Quit Jibaru Editor", Some("CmdOrCtrl+Q"))?,
         ],
     )?;
     let file = Submenu::with_items(

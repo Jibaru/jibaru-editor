@@ -80,6 +80,22 @@ CI builds and smoke tests these packages on every push; pushing a `v*` tag
 Release, signed when signing secrets are configured. See
 [docs/packaging.md](docs/packaging.md) for Windows, signing and details.
 
+### Running the desktop app
+
+The preview, audio, export and proxies run in the native
+engine (see `app/src-tauri/src/playback.rs`):
+
+```sh
+cd app && pnpm install && pnpm build && cd ..
+cargo build --release -p jibaru-editor --features tauri/custom-protocol
+./target/release/jibaru-editor path/to/project.wfp   # or `cd app && pnpm tauri dev`
+```
+
+`JB_PLAYBACK_LOG=1` logs displayed/rendered fps and dropped frames while
+playing. `JB_AUTOMATION_DIR=<dir>` (development only) evaluates every `*.js`
+file dropped into `<dir>` in the webview, with the editor store exposed as
+`window.__jb`, for scripted UI tests.
+
 ### FFmpeg licensing
 
 FFmpeg is always linked dynamically and the editor only uses LGPL

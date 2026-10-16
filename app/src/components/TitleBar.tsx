@@ -14,6 +14,28 @@ import {
 
 const isMac = navigator.userAgent.includes('Mac')
 
+/** Export progress and background proxy generation, like Filmora's task chip. */
+function BackgroundStatus() {
+  const job = useEditor(s => s.exportJob)
+  const proxies = useEditor(s => s.proxies)
+  const open = useEditor(s => s.exportOpen)
+  const list = Object.values(proxies)
+  const pending = list.filter(p => p.state === 'queued' || p.state === 'generating')
+  const current = list.find(p => p.state === 'generating')
+  const parts: string[] = []
+  if (job?.state === 'running' && !open) {
+    const p = job.progress
+    parts.push(`Exporting ${p ? Math.floor((p.frame / Math.max(1, p.total)) * 100) : 0}%`)
+  }
+  if (pending.length) parts.push(`Generating proxies: ${pending.length} left${current ? ` (${Math.round(current.progress * 100)}%)` : ''}`)
+  if (!parts.length) return null
+  return (
+    <span className="bg-status" title={pending.map(p => p.path.split(/[/\\]/).pop()).join('\n')} onClick={() => job && setState({ exportOpen: true })}>
+      {parts.join(' · ')}
+    </span>
+  )
+}
+
 export function TitleBar() {
   const name = useEditor(s => s.snap?.project.name ?? '')
   const dirty = useEditor(s => s.snap?.dirty ?? false)
@@ -43,6 +65,7 @@ export function TitleBar() {
         {dirty && <span className="dirty-dot" title="Unsaved changes" />}
       </div>
       <div className="title-actions">
+        <BackgroundStatus />
         <button className="ticon" title="What's new"><IcGift size={18} /></button>
         <button className="ticon" title="Share"><IcSend size={18} /></button>
         <button className="ticon" title="Feedback"><IcFeedback size={18} /></button>

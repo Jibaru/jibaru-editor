@@ -4,7 +4,7 @@
 // sends one `Command` to the backend: the same API agents and the CLI use.
 
 import { useSyncExternalStore } from 'react'
-import { backend, type FxEntry } from './backend'
+import { backend, type ExportDone, type ExportProgress, type FxEntry, type ProxyStatus } from './backend'
 import {
   clipFromMedia,
   findClip,
@@ -45,7 +45,21 @@ export interface EditorState {
   exportOpen: boolean
   volume: number
   fx: FxEntry[]
+  /** Preview render size: fit the screen (up to 1080p), 540p or 360p. */
+  previewQuality: 'full' | 'half' | 'quarter'
+  showStats: boolean
+  /** In/out marks on the timeline (export range). */
+  markIn: Ticks | null
+  markOut: Ticks | null
+  /** Preview proxy status per media id. */
+  proxies: Record<string, ProxyStatus>
+  exportJob: ExportJob | null
+  autosavedAt: number | null
 }
+
+export type ExportJob =
+  | { state: 'running'; path: string; progress: ExportProgress | null; started: number }
+  | { state: 'done'; path: string; done: ExportDone }
 
 type Listener = () => void
 
@@ -69,6 +83,23 @@ let state: EditorState = {
   exportOpen: false,
   volume: 1,
   fx: [],
+  previewQuality: storedQuality(),
+  showStats: false,
+  markIn: null,
+  markOut: null,
+  proxies: {},
+  exportJob: null,
+  autosavedAt: null,
+}
+
+function storedQuality(): EditorState['previewQuality'] {
+  try {
+    const q = localStorage.getItem('jb.previewQuality')
+    if (q === 'full' || q === 'half' || q === 'quarter') return q
+  } catch {
+    /* storage unavailable */
+  }
+  return 'half'
 }
 const listeners = new Set<Listener>()
 
@@ -129,6 +160,41 @@ export async function load() {
   applySnapshot(await backend.snapshot())
   backend.onExternalChange(applySnapshot)
   backend.fxCatalog().then(fx => setState({ fx }), () => {})
+  const eng = backend.engine
+  if (!eng) return
+  eng.proxyStatuses().then(list => setState(s => ({ proxies: { ...s.proxies, ...Object.fromEntries(list.map(p => [p.media_id, p])) } })), () => {})
+  eng.onProxyStatus(p => setState(s => ({ proxies: { ...s.proxies, [p.media_id]: p } })))
+  eng.onExportProgress(progress =>
+    setState(s => (s.exportJob?.state === 'running' ? { exportJob: { ...s.exportJob, progress } } : {})),
+  )
+  eng.onExportDone(done => {
+    setState(s => ({ exportJob: { state: 'done', path: s.exportJob?.path ?? done.path, done } }))
+    if (!state.exportOpen) toast(done.ok ? `Exported ${done.path.split(/[/\\]/).pop()}` : (done.error ?? 'Export failed'), done.ok ? 'info' : 'error')
+  })
+  eng.onAutosaved(() => setState({ autosavedAt: Date.now() }))
+  eng.onCloseRequested(() => requestQuit())
+}
+
+/** Save / Don't Save / Cancel before discarding unsaved changes. False means cancel. */
+async function confirmDiscard(): Promise<boolean> {
+  const snap = state.snap
+  if (!snap?.dirty || !backend.engine) return true
+  const r = await backend.engine.askUnsaved(snap.project.name)
+  if (r === 'cancel') return false
+  if (r === 'save') return saveProject()
+  return true
+}
+
+let quitting = false
+/** Quits the app, asking about unsaved changes first. */
+export async function requestQuit() {
+  if (quitting || !backend.engine) return
+  quitting = true
+  try {
+    if (await confirmDiscard()) await backend.engine.quit()
+  } finally {
+    quitting = false
+  }
 }
 
 export async function undo() {
@@ -148,34 +214,62 @@ const projectFilters = [
 ]
 
 export async function newProject() {
+  if (!(await confirmDiscard())) return
+  setState({ playing: false })
   applySnapshot(await backend.newProject('Untitled'))
-  setState({ selection: [], playhead: 0, playing: false })
+  setState({ selection: [], playhead: 0, playing: false, markIn: null, markOut: null })
 }
 
 export async function openProject(path?: string) {
+  if (!(await confirmDiscard())) return
   const p = path ?? (await backend.pickFiles({ title: 'Open Project', filters: projectFilters, multiple: false }))?.[0]
   if (!p) return
+  setState({ playing: false })
   try {
     applySnapshot(await backend.openProject(p))
-    setState({ selection: [], playhead: 0, playing: false })
+    setState({ selection: [], playhead: 0, playing: false, markIn: null, markOut: null })
   } catch (e) {
     toast(String(e), 'error')
   }
 }
 
-export async function saveProject(as = false) {
+const ext = (p: string) => p.slice(p.lastIndexOf('.') + 1).toLowerCase()
+
+/**
+ * Save (⌘S) writes back to the file the project came from: a `.jbp`, or the
+ * original Filmora `.wfp` (patched losslessly by jb-filmora). Save As offers
+ * `.wfp` too when the project came from one. Resolves false when cancelled
+ * or failed.
+ */
+export async function saveProject(as = false): Promise<boolean> {
   const snap = state.snap
-  if (!snap) return
-  let path = snap.path && !as && snap.path.endsWith('.jbp') ? snap.path : null
+  if (!snap) return false
+  const canWfp = !!snap.wfp
+  const current = snap.path && (ext(snap.path) === 'jbp' || (ext(snap.path) === 'wfp' && canWfp)) ? snap.path : null
+  let path = as ? null : current
   if (!path) {
-    path = await backend.pickSavePath({ title: 'Save Project', defaultPath: `${snap.project.name}.jbp`, filters: [{ name: 'Jibaru project', extensions: ['jbp'] }] })
-    if (!path) return
+    const filters = canWfp
+      ? [
+          { name: 'Filmora project', extensions: ['wfp'] },
+          { name: 'Jibaru project', extensions: ['jbp'] },
+        ]
+      : [{ name: 'Jibaru project', extensions: ['jbp'] }]
+    const base = snap.path ? snap.path.replace(/\.[^./\\]+$/, '') : snap.project.name
+    const defaultPath = canWfp ? `${base}${as && current ? ' copy' : ''}.wfp` : `${base}.jbp`
+    path = await backend.pickSavePath({ title: as ? 'Save Project As' : 'Save Project', defaultPath, filters })
+    if (!path) return false
+    if (!['jbp', 'wfp'].includes(ext(path))) path += canWfp ? '.wfp' : '.jbp'
   }
   try {
-    applySnapshot(await backend.saveProject(path))
-    toast('Project saved')
+    const saved = await backend.saveProject(path)
+    applySnapshot(saved)
+    const warn = saved.save_warnings ?? []
+    if (warn.length) toast(`Saved with ${warn.length} warning${warn.length > 1 ? 's' : ''}: ${warn.slice(0, 2).join('; ')}`, 'error')
+    else toast(`Saved ${path.split(/[/\\]/).pop()}`)
+    return true
   } catch (e) {
     toast(String(e), 'error')
+    return false
   }
 }
 
@@ -256,9 +350,34 @@ export function shuttle(key: 'j' | 'k' | 'l') {
   setState({ playing: true, rate: r })
 }
 
+/**
+ * While the native engine plays, it owns the clock (audio is the master)
+ * and moves the playhead from the frames it shows; see preview/native.ts.
+ */
+let nativeClock = false
+export function setNativeClock(on: boolean) {
+  nativeClock = on
+}
+
+/** Marks the playhead as the start or end of the in/out range. */
+export function mark(which: 'in' | 'out') {
+  const t = state.playhead
+  if (which === 'in') setState(s => ({ markIn: t, markOut: s.markOut != null && s.markOut <= t ? null : s.markOut }))
+  else setState(s => ({ markOut: t, markIn: s.markIn != null && s.markIn >= t ? null : s.markIn }))
+}
+
+export function setPreviewQuality(q: EditorState['previewQuality']) {
+  setState({ previewQuality: q })
+  try {
+    localStorage.setItem('jb.previewQuality', q)
+  } catch {
+    /* storage unavailable */
+  }
+}
+
 let lastFrame = 0
 function tick(now: number) {
-  if (state.playing) {
+  if (state.playing && !nativeClock) {
     const dt = lastFrame ? now - lastFrame : 0
     const next = state.playhead + ticks((dt / 1000) * state.rate)
     const end = duration()

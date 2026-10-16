@@ -125,7 +125,7 @@ function ClipProperties({ project, clip, track, tab }: { project: Project; clip:
     reset = () => exec({ op: 'batch', commands: [{ op: 'set_transform', clip_id: clip.id, transform: defaultTransform() }, { op: 'set_opacity', clip_id: clip.id, opacity: float(1) }] })
   } else if (active === 'audio') {
     body = <AudioTab clip={clip} media={media} />
-    reset = () => exec({ op: 'set_audio', clip_id: clip.id, audio: defaultAudio() })
+    reset = () => exec({ op: 'set_audio', clip_id: audioTarget(clip).id, audio: defaultAudio() })
   } else if (active === 'speed') {
     body = <SpeedTab clip={clip} track={track} project={project} />
     reset = () => exec({ op: 'set_speed', clip_id: clip.id, rate: 1, reverse: false })
@@ -492,7 +492,24 @@ function TitleTab({ clip }: { clip: Clip }) {
 
 // ---------- Audio ----------
 
-function AudioTab({ clip, media }: { clip: Clip; media: MediaAsset | null }) {
+/**
+ * The clip whose audio settings a selection edits: a camera clip's sound
+ * lives on its linked audio clip (that is what plays, and what Filmora
+ * stores), so the Audio tab of a linked video clip edits that one.
+ */
+function audioTarget(clip: Clip): Clip {
+  if (!clip.link_group) return clip
+  const p = getState().snap?.project
+  if (!p) return clip
+  const own = findClip(p, clip.id)
+  if (own?.track.kind === 'audio') return clip
+  for (const t of mainSequence(p).tracks)
+    if (t.kind === 'audio') for (const c of t.clips) if (c.link_group === clip.link_group) return c
+  return clip
+}
+
+function AudioTab({ clip: selected, media }: { clip: Clip; media: MediaAsset | null }) {
+  const clip = audioTarget(selected)
   const [sub, setSub] = useState('Basic')
   const audio: AudioSettings = clip.audio ?? defaultAudio()
   const [draft, setDraft] = useDraft(audio)

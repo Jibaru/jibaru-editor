@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { backend } from '../backend'
 import { mainSequence, seconds, sequenceDuration, ticks, timecode } from '../core/model'
 import { createPreview, type PreviewRenderer } from '../preview'
-import { getState, seek, setState, stepFrames, stop, subscribe, togglePlay, toast, useEditor } from '../store'
+import { getState, mark, openMenu, seek, setPreviewQuality, setState, stepFrames, stop, subscribe, togglePlay, toast, useEditor } from '../store'
 import { Select } from '../ui/controls'
 import {
   IcFullscreen,
@@ -24,7 +24,7 @@ import {
 export function Player() {
   const mode = useEditor(s => s.playerMode)
   const source = useEditor(s => s.sourceMedia)
-  const [quality, setQuality] = useState('full')
+  const quality = useEditor(s => s.previewQuality)
   const [ratio, setRatio] = useState('16:9')
   return (
     <section className="panel player">
@@ -35,11 +35,11 @@ export function Player() {
         <Select
           className="quality"
           value={quality}
-          onChange={setQuality}
+          onChange={v => setPreviewQuality(v as 'full' | 'half' | 'quarter')}
           options={[
             { value: 'full', label: 'Full Quality' },
-            { value: 'half', label: '1/2 Quality' },
-            { value: 'quarter', label: '1/4 Quality' },
+            { value: 'half', label: '1/2 Quality (540p)' },
+            { value: 'quarter', label: '1/4 Quality (360p)' },
           ]}
         />
         <button className="ticon dim" title="Split view"><IcSplitView size={20} /></button>
@@ -57,6 +57,9 @@ function TimelineMonitor({ ratio, setRatio }: { ratio: string; setRatio: (r: str
   const playhead = useEditor(s => s.playhead)
   const project = useEditor(s => s.snap?.project)
   const volume = useEditor(s => s.volume)
+  const markIn = useEditor(s => s.markIn)
+  const markOut = useEditor(s => s.markOut)
+  const showStats = useEditor(s => s.showStats)
 
   // The renderer follows the store directly (not through React) so playback
   // doesn't re-render the component tree every frame.
@@ -102,9 +105,9 @@ function TimelineMonitor({ ratio, setRatio }: { ratio: string; setRatio: (r: str
             onChange={setRatio}
             options={['16:9', '9:16', '1:1', '4:3', '21:9'].map(v => ({ value: v, label: v }))}
           />
-          <button className="ticon" title="Mark in"><IcMarkIn size={20} /></button>
-          <button className="ticon" title="Mark out"><IcMarkOut size={20} /></button>
-          <button className="ticon corner" title="Settings"><IcGear size={19} /></button>
+          <button className={`ticon ${markIn != null ? "on" : ""}`} title="Mark in (I)" onClick={() => mark("in")}><IcMarkIn size={20} /></button>
+          <button className={`ticon ${markOut != null ? "on" : ""}`} title="Mark out (O)" onClick={() => mark("out")}><IcMarkOut size={20} /></button>
+          <button className="ticon corner" title="Settings" onClick={e => { const r = e.currentTarget.getBoundingClientRect(); openMenu(r.left, r.top - 70, [{ label: "Show Playback Statistics", checked: showStats, action: () => setState({ showStats: !showStats }) }, { label: "Clear In/Out Marks", disabled: markIn == null && markOut == null, action: () => setState({ markIn: null, markOut: null }) }]) }}><IcGear size={19} /></button>
           <button
             className="ticon"
             title="Snapshot"
@@ -113,7 +116,7 @@ function TimelineMonitor({ ratio, setRatio }: { ratio: string; setRatio: (r: str
               if (!blob) return toast('Snapshot is not available for this frame')
               const a = document.createElement('a')
               a.href = URL.createObjectURL(blob)
-              a.download = `${project.name} ${timecode(playhead, fr).replace(/:/g, '-')}.png`
+              a.download = `${project.name} ${timecode(playhead, fr).replace(/:/g, "-")}.${blob.type.includes("png") ? "png" : "jpg"}`
               a.click()
             }}
           >
