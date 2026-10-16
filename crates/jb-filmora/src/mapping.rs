@@ -40,8 +40,14 @@ pub mod ud {
     pub const MEDIA_ITEM: i64 = 10;
     /// Clip/transition: JSON with the store resource (id, slug, res_type).
     pub const RESOURCE: i64 = 12;
-    /// Clip: display name.
+    /// Clip: display name. Track: name given in the timeline header.
     pub const NAME: i64 = 50;
+    /// Clip: GUID of the clip group (on the video clips of a group).
+    pub const GROUP: i64 = 53;
+    /// Track: height in timeline pixels (i32; 70 video, 45 audio, 160 "Big").
+    pub const TRACK_HEIGHT: i64 = 12000;
+    /// Audio track: `trackTag` of the video track whose clips' sound it holds.
+    pub const CAMERA_AUDIO_OF: i64 = 20;
     /// Clip: JSON with the nested timeline template info.
     pub const TIMELINE_INFO: i64 = 55;
 }

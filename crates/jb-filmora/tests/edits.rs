@@ -123,7 +123,17 @@ fn visual_properties_round_trip() {
     assert_eq!(i.blend_mode, BlendMode::Screen);
     // The interpolation of a last keyframe shapes nothing and is not stored.
     let mut et = e.transform.clone();
-    et.position_x.keyframes.last_mut().unwrap().interpolation = Interpolation::Linear;
+    for p in [&mut et.position_x, &mut et.rotation] {
+        p.keyframes.last_mut().unwrap().interpolation = Interpolation::Linear;
+    }
+    // "Fill" is Filmora's Crop to Fit: the crop narrowed to the canvas
+    // aspect, which renders the same when fitted.
+    assert_eq!(i.transform.fit, FitMode::Fit);
+    let (c, ec) = (i.transform.crop, et.crop);
+    assert!((c[0] - ec[0]).abs() < 1e-9 && (c[2] - ec[2]).abs() < 1e-9, "{c:?}");
+    assert!(c[1] > ec[1] && c[3] > ec[3], "{c:?}");
+    et.crop = c;
+    et.fit = FitMode::Fit;
     assert_eq!(i.transform, et);
     assert_eq!(i.opacity.keyframes, e.opacity.keyframes);
     assert_eq!(i.animations.len(), 2);
@@ -169,7 +179,17 @@ fn speed_audio_flags_and_markers_round_trip() {
     let rp = &r.project;
 
     let (rb, eb) = (rp.clip(&b.id).unwrap(), h.project.clip(&b.id).unwrap());
-    assert!(rb.disabled && !rb.speed.maintain_pitch);
+    assert!(rb.disabled);
+    // Maintain pitch lives on the linked audio clip (`speedWithPitch`).
+    let rba = rp
+        .sequences
+        .iter()
+        .flat_map(|s| &s.tracks)
+        .filter(|t| t.kind == TrackKind::Audio)
+        .flat_map(|t| &t.clips)
+        .find(|c| c.link_group.is_some() && c.link_group == rb.link_group)
+        .unwrap();
+    assert!(!rba.speed.maintain_pitch);
     assert_eq!(rb.speed.curve.as_ref().unwrap().preset, "flash_in");
     assert_eq!(rb.duration(), eb.duration());
     for t in [0, S, 2 * S, rb.duration() - 1] {
@@ -206,4 +226,61 @@ fn timeline_edits_round_trip() {
         .expect("freeze frame survives");
     assert_eq!((frozen.start, frozen.end, frozen.source_in), (2 * S, 3 * S, 4 * S));
     assert!(find(&r.project, TrackKind::Video, 30 * S, "logo").duration() > 0);
+}
+
+/// The JSON written for each property has the shape Filmora 15.7.3 writes
+/// (docs/filmora-format.md §13).
+#[test]
+fn written_shapes_match_filmora() {
+    let mut w = load();
+    let a = find(&w.project, TrackKind::Video, 0, "CAM_0001").clone();
+    let b = find(&w.project, TrackKind::Video, 5 * S, "CAM_0002").clone();
+    let music = find(&w.project, TrackKind::Audio, 0, "theme").clone();
+    let video_track = w.project.main().tracks.iter().find(|t| t.kind == TrackKind::Video).unwrap().id.clone();
+    let mut h = History::new(w.project.clone());
+    run(&mut h, json!({"op": "set_flip", "clip_id": a.id, "horizontal": true}));
+    run(&mut h, json!({"op": "set_blend_mode", "clip_id": a.id, "blend_mode": "add"}));
+    run(&mut h, json!({"op": "set_crop", "clip_id": a.id, "crop": [0.1, 0.1, 0.1, 0.1]}));
+    run(&mut h, json!({"op": "set_clip_enabled", "clip_id": b.id, "enabled": false}));
+    run(&mut h, json!({"op": "set_speed", "clip_id": b.id, "rate": 2.0}));
+    run(&mut h, json!({"op": "set_maintain_pitch", "clip_id": b.id, "maintain_pitch": false}));
+    run(&mut h, json!({"op": "set_mute", "clip_id": music.id, "muted": true}));
+    run(&mut h, json!({"op": "set_equalizer", "clip_id": music.id, "preset": "low_bass"}));
+    run(&mut h, json!({"op": "set_pitch", "clip_id": music.id, "semitones": 3.0}));
+    run(&mut h, json!({"op": "rename_track", "track_id": video_track, "name": "Main Cam"}));
+    run(&mut h, json!({"op": "set_track_height", "track_id": video_track, "height": 160}));
+    run(
+        &mut h,
+        json!({"op": "add_animation", "clip_id": a.id, "kind": "jb.anim.fade_in", "placement": "in", "duration": S}),
+    );
+    w.project = h.project.clone();
+    let r = write_read(&w);
+    let tl = serde_json::to_string(&r.raw.timeline).unwrap();
+    for needle in [
+        "\"id\":\"video/effect/horizontal_filp\"",
+        "\\\"BlendMode\\\":\\\"Linear Dodge\\\"",
+        "\"name\":\"SettingScript\"",
+        "\"enable\":false",
+        "\"speedWithPitch\":true",
+        "\"name\":\"Mute\"",
+        "\"name\":\"63Hz\"",
+        "\"id\":\"audio/effect/pitchshifter\"",
+        "\"name\":\"Semitone\"",
+        "\"inAnimation\":",
+        "\"id\":\"video/effect/motion\"",
+    ] {
+        assert!(tl.contains(needle), "missing {needle}");
+    }
+    for gone in ["keepPitch", "rampPreset", "freezeFrame", "CropLeft", "FlipX", "\"Preset\""] {
+        assert!(!tl.contains(gone), "unexpected {gone}");
+    }
+    let rp = &r.project;
+    let ra = rp.clip(&a.id).unwrap();
+    assert!(ra.transform.flip_h);
+    assert_eq!(ra.blend_mode, BlendMode::Add);
+    assert!(ra.animations.iter().any(|x| x.kind == "jb.anim.fade_in" && x.range == Some((0, S))));
+    let eq = rp.clip(&music.id).unwrap().audio.equalizer.clone().unwrap();
+    assert_eq!(eq.preset, "low_bass");
+    let vt = rp.main().tracks.iter().find(|t| t.id == video_track).unwrap();
+    assert_eq!((vt.name.as_str(), vt.height), ("Main Cam", Some(160)));
 }

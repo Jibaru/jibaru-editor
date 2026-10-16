@@ -148,7 +148,7 @@ camelCase with slightly different names. Not needed for mapping; preserved.
 | `trackTag` | Ordering tag (missing on the first audio tracks). |
 | `busUuids` | Audio tracks: the bus they feed. |
 | `clipList[]` | Clips, sorted by `tlBegin` (verified). |
-| `userData` | key 20 on an audio track = index of the video track whose clips' audio it holds (camera audio track); key 21 = `1` on video tracks; key 12000 a one-byte code (`'-'` audio, `'F'`/`' '` video); key 14. Track lock/mute/hide flags were not observed. |
+| `userData` | key 20 on an audio track = `trackTag` of the video track whose clips' audio it holds (camera audio track); key 21 = `1` on video tracks; key 12000 = track height in pixels (i32: 70 video, 45 audio, 160 "Big"); key 50 = track name; key 14. Lock/mute/hide flags: §13. |
 
 ## 7. Clips
 
@@ -208,7 +208,7 @@ Type-specific fields (preserved as-is unless noted):
   constant `r` (verified on 16 retimed clips: the measured ratio equals the
   first key exactly). Normal clips store `[(0, 1), (_totalTime, 1)]`;
   Version 2 strings with a single key also occur. Real speed ramps (more
-  keys) were not observed: **unverified**; they are imported as a
+  keys, code 9; §13) are imported as a
   `jb_core::Speed::ramp` by mapping key times (source seconds) to clip-local
   time through the average rate.
 
@@ -220,8 +220,8 @@ Type-specific fields (preserved as-is unless noted):
 ```
 
 `Opacity` is 0–100. `OpacityKeyFrame` is present on nested/text clips (empty
-in the corpus). `BlendMode` is always `0` (normal); other values were not
-observed (**unverified**, not written).
+in the corpus). `BlendMode` is `0` until a mode is picked, then the menu
+name (`"Screen"`); see §13.
 
 ## 8. Encodings
 
@@ -249,7 +249,9 @@ Used by `speed.speedParam`, `volumeKeyframe.parameter`,
 ```
 
 - Times in seconds printed with 8 decimals (`0.0` for zero).
-- `Interpolation`: always `6` in the corpus (curve with optional derivatives).
+- `Interpolation`: always `6` in the corpus. 6 is Filmora's "Freeze"
+  (hold), which is why a uniform speed `[(0, r), (_totalTime, 1)]` plays
+  at a constant `r`; see §13 for the other codes.
 - **`MD5` = MD5 of the concatenated little-endian f64 triples
   `(_time, Interpolation, _value)` of every key, in order**; derivatives are
   not hashed (verified on all 1,925 keyframe strings of the corpus). An empty
@@ -306,7 +308,7 @@ audio clips; also holds `AutoEnhance` on video clips), `Color`, `Effect`
 | `type` | Always `3` (transitions use `5`). |
 | `thisUId` | UUID. |
 | `enable` | Optional; `false` disables the effect. |
-| `paramList[]` | `{"name", "fxParam": {"paramType", "unValue"}}`; paramType 2 float, 3 double, 5 integer/flag, 6 string. Parameter keyframes were not observed (**unverified**). |
+| `paramList[]` | `{"name", "fxParam": {"paramType", "unValue"}}`; paramType 2 float, 3 double, 5 integer/flag, 6 string. Parameter keyframes: `paramMapList`, §13. |
 | `effectMask` | Optional (graphics). |
 | `placeholder`, `placeholderStatus`, `userData` | See above. |
 
@@ -314,7 +316,7 @@ Built-ins and their parameters:
 
 | Effect | Parameters |
 |---|---|
-| `video/effect/transform` | `Position_x`, `Position_y`: clip center in normalized frame coordinates, `0.5` = centered, y grows downwards (default `0.5` when absent). `Scale_x`, `Scale_y`: percent of the fitted size (`100` when absent; when only `Scale_x` is present the scale is uniform). `EnableTransform` (1), `dwValue` (bit mask `1186339`). Rotation was not observed (**unverified**: `Rotation`). |
+| `video/effect/transform` | `Position_x`, `Position_y`: clip center in normalized frame coordinates, `0.5` = centered, y grows downwards (default `0.5` when absent). `Scale_x`, `Scale_y`: percent of the fitted size (`100` when absent; when only `Scale_x` is present the scale is uniform). `EnableTransform` (1), `dwValue` (bit mask `1186339`). `Rotation`: degrees clockwise (§13). |
 | `video/effect/crop-pan-zoom` | No parameters in the corpus (crop not used). |
 | `audio/effect/volume` | `VolumeGain`: dB (−24 … +15 observed). |
 | `audio/effect/fade` | `FadeInTime`, `FadeOutTime`: seconds. |
@@ -413,35 +415,49 @@ groups, beat detection, AI/stabilization/denoise state.
 
 ## 13. Property-panel edits
 
-`crates/jb-filmora/src/props.rs` and `markers.rs` implement these. Sources:
-the corpus, the timeline of a store template (`resThumbnailTemplate`,
-serialization 17) and the data files of Filmora's presets
-(`configs/AnimationKeyFrame`, `configs/AnimationNew`, `configs/Speed`),
-which contain clip effect objects. Fields are only written when the
+`crates/jb-filmora/src/props.rs` and `markers.rs` implement these. Every
+row was established by black-box analysis in **Filmora 15.7.3** (Mac): on a
+scratch project, one edit was made in the GUI, the project saved and the
+documents diffed against the previous save; then the same edit was written
+by Jibaru's writer (`jb exec`) and the file opened in Filmora to check that
+it loads and that the panel shows the edit. Fields are only written when the
 corresponding property was edited, so unedited files stay byte-identical.
+"Evidence" is *verified in Filmora 15.7.3* for every row unless it says
+otherwise.
 
-| Property | Written as | Status |
+Keyframe times of a clip are in its **`inPoint` timebase**
+(`inPoint + clip-local time`; trimming the clip's start does not move them):
+seconds in `paramMapList`, **ticks** in `pipBuf.OpacityKeyFrame`. Parameter
+keyframe strings write `"MD5":"…"` without the space; numbers that fit one
+decimal are written short (`0.5`), others with eight decimals.
+
+| Property | Written as | Evidence |
 |---|---|---|
-| Sequence markers | `extra.json` `allMarkersInfo["<timeline userData 3 GUID>"] = [{"name", "position" (ticks), "comments", "color" (0xRRGGBB)}]`. `extra.json` is created next to the timeline if missing. | verified (one sample) |
-| Clip markers | Same, keyed by the clip's userData 3 GUID (shared by linked clips), `position` clip-local. | inferred |
-| Parameter keyframes (transform, effect params, balance) | `paramMapList: [{"key": 3, "keyFrame": {"parameter": "<keyframe string>"}, "name": "<param>"}]` on the effect, values in the effect's own units, times in clip-local seconds. | shape from presets; time base inferred |
-| Keyframe interpolation | `Interpolation` 1 = linear with slope derivatives, 7 = hold, 6 = curve: a flat `_rightDerivative` at the segment start eases in, a flat `_leftDerivative` at its end eases out, both = ease in-out. The last key's interpolation is not stored. | codes from presets; ease encoding ours |
-| Opacity keyframes | `pipBuf.OpacityKeyFrame` (0–100). | shape verified, keys inferred |
-| Volume keyframes | `volumeKeyframe.parameter` (dB). | shape verified, keys inferred |
-| Rotation | transform `Rotation`, degrees. | name from presets |
-| Flip | transform `FlipX`, `FlipY` (paramType 5). | unverified |
-| Fit mode | transform `FitMode` (5): 0 fit, 1 fill, 2 stretch, 3 none. | unverified |
-| Crop | `video/effect/crop-pan-zoom` `CropLeft/Top/Right/Bottom` (3, fractions of the source). Pan & Zoom presets use a different keyframed rect, not mapped. | unverified |
-| Blend mode | `pipBuf.BlendMode` in the order of Filmora's menu: 0 normal, 1 darken, 2 multiply, 3 color burn, 4 linear burn, 5 darker color, 6 lighten, 7 screen, 8 color dodge, 9 linear dodge (add), 10 lighter color, 11 overlay, 12 soft light, 13 hard light, 14 vivid light, 15 linear light, 16 pin light, 17 hard mix, 18 difference, 19 exclusion, 20 subtract, 21 divide (22 modes, matching the 0–21 range of the store "Allpurpose BlendMode" filter). | inferred |
-| Clip disabled | clip `"enable": false`. | unverified |
-| Track lock / hide / mute | track `locked`, `visible` (false = hidden video track or muted audio track), `mute`. | `locked`/`visible` seen in serialization 17; `mute` unverified |
-| Speed ramp | `speedParam` keys at source seconds (`offset + position × span`) with the rate; `speed.rampPreset` names the preset. Presets (rate over % of the source range): Montage, Hero moment, Bullet time, Jumper, Flash in, Flash out, from `configs/Speed`. | curve values verified; storage inferred |
-| Maintain pitch | `speed.keepPitch`; absent = pitch follows speed (how Jibaru rendered imports before). | unverified |
-| Freeze frame | clip `"freezeFrame": true`, `offsetEnd = offset`. | unverified |
-| Balance (pan) | `audio/effect/volume` `Balance`, −100 … 100. | unverified |
-| Pitch | `audio/effect/pitch` `Pitch` (semitones) in `BasicFollow`. | unverified |
-| Mute | `audio/effect/clip_volume` `Mute` = 1. | unverified |
-| Auto normalization | `audio/effect/clip_volume` `AutoNormalize` = 1, `NormalizeTarget` (LUFS), `MeasuredLoudness`. | unverified |
-| Equalizer | `audio/effect/equalizer` `Preset` (string), `Band0`…`Band9` (dB). | unverified |
-| Entry/exit animations | Effects in an `Animation` chain: `id` = preset GUID from `configs/AnimationNew` (e.g. Fade1 in `{C0BBEA86-…}`), `AnimationScene` = `animation_scene_in`/`out`/`loop`/`combo` (6), `inPoint`/`outPoint` = clip-local range. Registry animations without a preset are written under their own id, with a warning. | ids verified; placement in the clip unverified |
-| Title alignment, spacing | `scriptBuf.Layout.TextAlign` (`left`/`center`/`right`), `CharSpace`/`LineSpace` = spacing × 100. | `TextAlign` verified; spacing units inferred |
+| Sequence markers | `extra.json` `allMarkersInfo["<timeline userData 3 GUID>"] = [{"name", "position" (ticks), "comments", "color" (0xRRGGBB, default 52944)}]`. `extra.json` is created next to the timeline if missing. | verified |
+| Clip markers | Same, keyed by the clip's userData 3 GUID (shared by linked clips); `position` in the clip's `inPoint` timebase. | verified (opens, marker shown at its time) |
+| Parameter keyframes | `paramMapList: [{"key": <paramType>, "keyFrame": {"parameter": "<keyframe string>"}, "name"}]` on the effect (transform `Position_x/_y`, `Scale_x/_y`, `Rotation`; volume `VolumeGain`, `Balance`; `Semitone`), plus the base value in `paramList`. `key` repeats the paramType (3 doubles, 2 floats). Version 3. | verified |
+| Keyframe interpolation | Code of the key that starts a segment: `1` Linear (`_rightDerivative`/`_leftDerivative` = slope per second, or per tick for opacity), `6` Freeze (hold), `13` Curve, `14` Continuous Curve. Curve keys carry `_leftDerivative`/`_rightDerivative` = 0.5 (handle influence) and optional `_leftDerivativeY`/`_rightDerivativeY` (handle heights; absent = flat). Filmora's "Ease In"/"Ease Out" are 13 keys with one non-flat handle. The last key keeps its own code (1 by default). Jibaru writes ease-in as a flat right handle on the segment's first key, ease-out as a flat left handle on its last key, ease-in-out both (= Filmora "Curve"). | codes verified; handle heights Jibaru writes for the non-flat side are approximate |
+| Opacity keyframes | `pipBuf.OpacityKeyFrame` (0–100), times in ticks. | verified (panel shows the interpolated value) |
+| Volume keyframes | `audio/effect/volume` `paramMapList` `VolumeGain` (dB). The older `volumeKeyframe.parameter` is read, and emptied when Jibaru rewrites volume keys. | verified |
+| Rotation | transform `Rotation` (paramType 3), degrees **clockwise**; "Rotate 90" button writes -90. | verified |
+| Flip | Effects `video/effect/horizontal_filp` / `video/effect/vertical_filp` (sic) in a `BasicFollow` chain right after `Basic`, userData 7 = 1, 101 = 1 (i32), 3 = GUID. Resetting keeps them with `"enable": false` and 101 = 0. | verified |
+| Crop | `video/effect/crop-pan-zoom` `SettingScript` (paramType 6): an indented JSON list `[{"OriTime": 0, "Time": 0.0, "X", "Y", "Width", "Height"}]`, the kept source rectangle normalized to the source. userData 15002/15003 hold dialog geometry (not needed). | verified (Crop dialog shows the rectangle) |
+| Fit mode | Filmora has no per-clip fit mode. "Crop to Fit" (⌘F) writes a `SettingScript` rectangle with the canvas aspect and userData 15001 = 5; Jibaru writes `fill` this way (read back as that crop with `fit`). `stretch` and `none` are not written (warning). | verified |
+| Pan & Zoom | Same `SettingScript` with two or more keys (`Time` 0..1 over the clip, `OriTime` = clip length in ticks), userData 56 = 1. Imported as the first rectangle (static crop) with a warning. | verified (shape); not mapped |
+| Blend mode | `pipBuf.BlendMode`: integer `0` until a mode is picked, then the menu name as a string: `Normal`, `Darken`, `Multiply`, `Color Burn`, `Linear Burn`, `Lighten`, `Screen`, `Color Dodge`, `Linear Dodge`, `Overlay`, `Soft Light`, `Hard Light`, `Vivid Light`, `Linear Light`, `Pin Light`, `Hard Mix`, `Difference`, `Exclusion` (18 modes). Darker/lighter color, subtract and divide do not exist (warning). | verified |
+| Clip disabled | clip `"enable": false` on the clip and its linked clips; the key is removed when re-enabled. | verified |
+| Track lock / hide / mute | track `"locked": true`; hidden video track `"visible": false`; audio track `"mute": true`. Keys are absent when off. Hiding or muting a video track sets `"mute": true` on its camera-audio track (track userData 20 = the video track's `trackTag`). | verified |
+| Track name | track userData 50 (UTF-8, no NUL). | verified |
+| Track height | track userData 12000 (i32 pixels): 70 video / 45 audio by default, 160 "Big" (the menu sets all tracks). | verified |
+| Clip groups | userData 53 = group GUID (NUL-padded to 64) on the video clips of the group. userData 13000 changes too but is not needed. | verified (selecting a clip selects the group) |
+| Speed ramp | `speedParam` keys at source seconds with **code 9** and equal `_leftDerivative`/`_rightDerivative`; no preset field — Filmora recognizes its presets (Montage, Hero, Bullet Time, Jumper, Flash in, Flash out) from the keys. Clip length is the writer's; Filmora keeps it. | verified (panel shows "Flash in") |
+| Reverse | `speed.reverse: true` and `"reverse": 1` after `_totalTime` in `speedParam`; offsets unchanged. | verified |
+| Maintain pitch | Default **on**. Turning it off writes `"speedWithPitch": true` on the audio clip; absent = pitch kept. Jibaru's import default follows. | verified |
+| Freeze frame | Inside a clip: an extra key at the frozen source second, `"_freeze": ["<s> <duration s>"]` (8 decimals) in `speedParam`; `offset`/`offsetEnd` count the frozen time as source time and the clip grows. Jibaru's freeze clip: `offset` = s, `offsetEnd` = s + duration, `inPoint` = s. A freeze strictly inside an imported clip is not modeled (warning). | verified (Filmora labels it "Freeze Frame" and holds the frame) |
+| Balance (pan) | volume `Balance` (paramType 2): 0 left … 0.5 center … 1 right (UI −100…100). | verified |
+| Pitch | `audio/effect/pitchshifter` (display `pitch shifter`) `Semitone` (paramType 2) in `BasicFollow`. | verified |
+| Mute | volume `Mute` (paramType 1, `true`). | verified |
+| Auto normalization | volume `LoudnessGainEnable` (paramType 1, `true`) and `LoudnessGain` (paramType 3) = linear gain `10^((target − measured)/20)`; clip userData 30307 = target LUFS (i32). Turning it off removes `LoudnessGainEnable`. | verified |
+| Equalizer | `audio/effect/equalizer` bands `31Hz` `63Hz` `125Hz` `250Hz` `500Hz` `1kHz` `2kHz` `4kHz` `8kHz` `16kHz` (paramType 2, dB); 0 dB bands are left out; no preset name — Filmora recognizes its 15 presets by their bands (`jb_core::Equalizer::PRESETS` holds them). | verified (panel shows "Low Bass") |
+| Entry/exit animations | Filmora 15 Motion presets: clip `inAnimation` / `outAnimation` = `{"duration", "effectChain": {"effectList": [video/effect/motion], "name"}, "name", "originLength", "type": 6, "userData"}`; the motion effect keys `Position_x/_y` (0.5 = in place), `Scale_x/_y` (%), `Rotation`, `Opacity` (%) at seconds over `originLength` (Version 2 strings), `duration` stretches them. userData 12 is the store record (`res_type` 28, `res_sub_type` 2801 in / 2802 out); Jibaru writes one with `is_custom: 1` — **without it Filmora's animation panel crashes**. Clip userData 13011 = last preset name. Loop/combo slots do not exist in 15.7 (warning). The pre-15 "Animation" chain (`AnimationScene`) is still read. | verified |
+| Title alignment, spacing | `scriptBuf.Layout.TextAlign` (`left`/`center`/`right`), `CharSpace`/`LineSpace` = spacing × 100. | `TextAlign` verified on the corpus; spacing units inferred |

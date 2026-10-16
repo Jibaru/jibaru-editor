@@ -6,7 +6,7 @@
 //! shaped like what Filmora writes.
 
 use crate::archive::Entry;
-use crate::import::{self, all_effects, is_surfaced, timelines, ROTATION_PARAMS};
+use crate::import::{self, all_effects, is_surfaced, timelines};
 use crate::json::*;
 use crate::mapping::*;
 use crate::props;
@@ -370,6 +370,7 @@ impl<'a> Exporter<'a> {
             put(&mut t, "clipList", Value::Array(clips));
             tracks.push(t);
         }
+        self.patch_camera_audio(seq, &mut tracks);
         put(&mut tl, "trackInfos", Value::Array(tracks));
         if !seq.markers.is_empty() && user_data(&tl, ud::GUID).is_none() {
             // Markers are keyed by the timeline GUID.
@@ -378,28 +379,62 @@ impl<'a> Exporter<'a> {
         tl
     }
 
+    /// Track flags as Filmora writes them: `locked: true`, `visible: false`
+    /// (hidden video track) and `mute: true` are present only while set.
+    /// A video track's sound lives on its camera-audio tracks (userData 20 =
+    /// its `trackTag`), so hiding or muting it mutes those (verified in
+    /// Filmora 15.7.3). Names are userData 50, heights userData 12000.
     fn patch_track_flags(&mut self, t: &mut Value, track: &Track) {
-        let base = self.base.sequences.iter().flat_map(|s| s.tracks.iter()).find(|b| b.id == track.id);
+        let base = self.base_track(&track.id);
         let flags = |x: &Track| (x.locked, x.muted, x.hidden);
         let unchanged = base.map_or(flags(track) == (false, false, false), |b| flags(b) == flags(track));
         if !unchanged {
-            let visible = match track.kind {
-                TrackKind::Video => !track.hidden,
-                TrackKind::Audio => !track.muted,
-            };
-            put(t, "locked", json!(track.locked));
-            put(t, "visible", json!(visible));
-            if track.muted || t.get("mute").is_some() {
-                put(t, "mute", json!(track.muted));
-            }
-            if track.kind == TrackKind::Audio && track.hidden {
-                self.warnings.push(format!("track {}: audio tracks cannot be hidden in Filmora", track.id));
+            set_flag(t, "locked", track.locked);
+            match track.kind {
+                TrackKind::Video => {
+                    if track.hidden {
+                        put(t, "visible", json!(false));
+                    } else {
+                        remove_key(t, "visible");
+                    }
+                }
+                TrackKind::Audio => {
+                    if track.hidden {
+                        self.warnings.push(format!("track {}: audio tracks cannot be hidden in Filmora", track.id));
+                    }
+                    remove_key(t, "visible");
+                    set_flag(t, "mute", track.muted);
+                }
             }
         }
-        if let Some(b) = base {
-            if b.name != track.name || b.height != track.height {
-                self.warnings
-                    .push(format!("track {}: track names and heights are not stored in Filmora projects", track.id));
+        if base.is_some_and(|b| b.name != track.name) {
+            set_user_data(t, ud::NAME, track.name.as_bytes());
+        }
+        if base.map_or(track.height.is_some(), |b| b.height != track.height) {
+            let h = track.height.map_or(import::default_track_height(track.kind), |h| h as i32);
+            set_user_data(t, ud::TRACK_HEIGHT, &h.to_le_bytes());
+        }
+    }
+
+    fn base_track(&self, id: &str) -> Option<&'a Track> {
+        self.base.sequences.iter().flat_map(|s| s.tracks.iter()).find(|b| b.id == id)
+    }
+
+    /// Mutes the camera-audio tracks of hidden or muted video tracks.
+    fn patch_camera_audio(&mut self, seq: &Sequence, tracks: &mut [Value]) {
+        for (i, vt) in seq.tracks.iter().enumerate() {
+            if vt.kind != TrackKind::Video {
+                continue;
+            }
+            let base = self.base_track(&vt.id);
+            if base.map_or(!vt.hidden && !vt.muted, |b| (b.hidden, b.muted) == (vt.hidden, vt.muted)) {
+                continue;
+            }
+            let Some(tag) = i64_of(&tracks[i], "trackTag") else { continue };
+            for (j, at) in seq.tracks.iter().enumerate() {
+                if at.kind == TrackKind::Audio && user_data_i32(&tracks[j], ud::CAMERA_AUDIO_OF) == Some(tag as i32) {
+                    set_flag(&mut tracks[j], "mute", at.muted || vt.hidden || vt.muted);
+                }
             }
         }
     }
@@ -409,6 +444,7 @@ impl<'a> Exporter<'a> {
         let raw = &self.wfp.raw;
         let mut tl_guid = HashMap::new();
         let mut clip_guid = HashMap::new();
+        let mut clip_in = HashMap::new();
         let mut known = HashSet::new();
         let by_uid: HashMap<&str, &str> = self.clip_uid.iter().map(|(k, v)| (v.as_str(), k.as_str())).collect();
         for doc in [timeline, &raw.timeline] {
@@ -425,6 +461,7 @@ impl<'a> Exporter<'a> {
                         known.insert(g.clone());
                         if let Some(cid) = by_uid.get(u) {
                             clip_guid.entry(cid.to_string()).or_insert(g);
+                            clip_in.entry(cid.to_string()).or_insert(i64_of(c, "inPoint").unwrap_or(0));
                         }
                     }
                 }
@@ -440,6 +477,7 @@ impl<'a> Exporter<'a> {
             raw.extra.as_ref().unwrap_or(&empty),
             &tl_guid,
             &clip_guid,
+            &clip_in,
             &known,
         )
     }
@@ -546,10 +584,9 @@ impl<'a> Exporter<'a> {
                 } else {
                     let total = ticks_to_secs(m.duration);
                     let kf = KfParam {
-                        version: 3,
-                        parameter_type: 0,
                         keys: vec![Kf::new(0.0, 1.0), Kf::new(total, 1.0)],
                         total_time: Some(total),
+                        ..KfParam::empty()
                     };
                     put(&mut v["speed"], "speedParam", json!(kf.to_text()));
                 }
@@ -670,8 +707,10 @@ impl<'a> Exporter<'a> {
             if has_speed {
                 let rate = if new.speed.freeze { 1.0 } else { new.speed.rate.max(1e-6) };
                 let offset = ticks_to_secs(new.source_in);
+                // A freeze frame counts its frozen duration as source time.
+                let span = if new.speed.freeze { dur } else { jb_core::speed::source_span(new) };
                 put(&mut v["speed"], "offset", json!(offset));
-                put(&mut v["speed"], "offsetEnd", json!(offset + ticks_to_secs(jb_core::speed::source_span(new))));
+                put(&mut v["speed"], "offsetEnd", json!(offset + ticks_to_secs(span)));
                 let in_point = (new.source_in as f64 / rate).round() as i64;
                 put(v, "inPoint", json!(in_point));
                 put(v, "outPoint", json!(in_point + dur));
@@ -682,26 +721,28 @@ impl<'a> Exporter<'a> {
         }
         if has_speed && changed(old, new, |c| c.speed.clone()) {
             put(&mut v["speed"], "reverse", json!(new.speed.reverse));
-            if changed(old, new, |c| (c.speed.rate, c.speed.ramp.clone(), c.speed.curve.clone())) {
+            if changed(old, new, |c| {
+                (c.speed.rate, c.speed.ramp.clone(), c.speed.curve.clone(), c.speed.freeze, c.speed.reverse)
+            }) || retimed
+            {
                 let text = self.speed_param(v, new);
                 put(&mut v["speed"], "speedParam", json!(text));
             }
-            let preset = new.speed.curve.as_ref().map(|c| c.preset.clone()).filter(|p| p != "custom");
-            if preset.is_some() || v["speed"].get("rampPreset").is_some() {
-                put(&mut v["speed"], "rampPreset", json!(preset.unwrap_or_default()));
-            }
-            if new.speed.maintain_pitch || v["speed"].get("keepPitch").is_some() {
-                put(&mut v["speed"], "keepPitch", json!(new.speed.maintain_pitch));
-            }
-            if new.speed.freeze || v.get("freezeFrame").is_some() {
-                put(v, "freezeFrame", json!(new.speed.freeze));
-            }
+            // Fields of earlier Jibaru versions that Filmora does not have.
+            remove_key(&mut v["speed"], "rampPreset");
+            remove_key(&mut v["speed"], "keepPitch");
+            remove_key(v, "freezeFrame");
         } else if !has_speed
             && (new.speed.rate != 1.0 || new.speed.ramp.is_some())
             && changed(old, new, |c| c.speed.clone())
         {
             self.warnings.push(format!("clip {}: clip type {ty} has no speed settings in Filmora", new.id));
         }
+        // Maintain pitch is the default; audio clips flag the opposite.
+        if ty == CLIP_AUDIO && changed(old, new, |c| c.speed.maintain_pitch) {
+            set_flag(v, "speedWithPitch", !new.speed.maintain_pitch);
+        }
+        let in_point = i64_of(v, "inPoint").unwrap_or(0);
 
         // Source.
         match &new.source {
@@ -747,7 +788,11 @@ impl<'a> Exporter<'a> {
 
         // Visual properties.
         if ty != CLIP_TEXT && ty != CLIP_AUDIO && changed(old, new, |c| c.transform.clone()) {
-            self.patch_transform(v, old.map(|o| &o.transform), &new.transform, &new.id);
+            let media = match &new.source {
+                ClipSource::Media { media_id } => self.p.media(media_id).map(|m| (m.width, m.height)),
+                _ => None,
+            };
+            self.patch_transform(v, old.map(|o| &o.transform), &new.transform, &new.id, in_point, media);
         } else if ty == CLIP_TEXT && new.transform != Transform::default() && changed(old, new, |c| c.transform.clone())
         {
             // The text clip's transform mirrors the text box; position and
@@ -758,7 +803,8 @@ impl<'a> Exporter<'a> {
             let mut pip = nested(v, "pipBuf").unwrap_or_else(|| serde_json::from_str(DEFAULT_PIP).unwrap_or_default());
             put(&mut pip, "Opacity", json!(new.opacity.value.as_f64().unwrap_or(1.0) * 100.0));
             if pip.get("OpacityKeyFrame").is_some() || !new.opacity.keyframes.is_empty() {
-                put(&mut pip, "OpacityKeyFrame", json!(props::kf_param(&new.opacity, 100.0, 0.0).to_text()));
+                let tb = props::TimeBase::ticks(in_point);
+                put(&mut pip, "OpacityKeyFrame", json!(props::kf_param(&new.opacity, 100.0, 0.0, tb).to_text()));
             }
             set_nested(v, "pipBuf", &pip);
         }
@@ -767,34 +813,57 @@ impl<'a> Exporter<'a> {
                 if new.blend_mode != BlendMode::Normal {
                     self.warnings.push(format!("clip {}: audio clips have no blend mode", new.id));
                 }
-            } else {
+            } else if let Some(name) = props::blend_name(new.blend_mode) {
                 let mut pip =
                     nested(v, "pipBuf").unwrap_or_else(|| serde_json::from_str(DEFAULT_PIP).unwrap_or_default());
-                put(&mut pip, "BlendMode", json!(props::blend_code(new.blend_mode)));
+                put(&mut pip, "BlendMode", json!(name));
                 set_nested(v, "pipBuf", &pip);
+            } else {
+                self.warnings.push(format!(
+                    "clip {}: blend mode {:?} does not exist in Filmora, not written",
+                    new.id, new.blend_mode
+                ));
             }
         }
-        if new.group.is_some() && changed(old, new, |c| c.group.clone()) {
-            self.warnings.push(format!("clip {}: clip groups are not stored in Filmora projects", new.id));
+        // Groups: userData 53 on the video clips of the group.
+        if ty != CLIP_AUDIO && changed(old, new, |c| c.group.clone()) {
+            match &new.group {
+                Some(g) => set_user_data(v, ud::GROUP, &guid_blob(&to_guid(g))),
+                None => remove_user_data(v, ud::GROUP),
+            }
         }
-        if changed(old, new, |c| c.disabled) && (new.disabled || v.get("enable").is_some()) {
-            put(v, "enable", json!(!new.disabled));
+        if changed(old, new, |c| c.disabled) {
+            if new.disabled {
+                put(v, "enable", json!(false));
+            } else {
+                remove_key(v, "enable");
+            }
         }
 
         // Audio.
         if changed(old, new, |c| c.audio.clone()) {
-            self.patch_audio(v, old.map(|o| &o.audio), &new.audio, ty, &new.id);
+            self.patch_audio(v, old.map(|o| &o.audio), &new.audio, ty, &new.id, in_point);
         }
 
         // Effects, animations and transitions.
         let pre = |c: &Clip| c.animations.iter().find(|a| is_pre_transition(a)).cloned();
         let surfaced = |c: &Clip| {
             let mut all: Vec<EffectInstance> = c.effects.clone();
-            all.extend(c.animations.iter().filter(|a| !is_pre_transition(a)).cloned());
+            all.extend(c.animations.iter().filter(|a| is_legacy_animation(a)).cloned());
             all
         };
         if changed(old, new, surfaced) {
-            self.rebuild_effects(v, old, new);
+            self.rebuild_effects(v, old, new, in_point);
+        }
+        let motions = |c: &Clip| {
+            c.animations
+                .iter()
+                .filter(|a| is_motion(a))
+                .map(|a| (a.kind.clone(), a.placement, a.range))
+                .collect::<Vec<_>>()
+        };
+        if changed(old, new, motions) {
+            self.patch_motions(v, new);
         }
         if changed(old, new, |c| (pre(c), c.start)) {
             self.patch_pre_transition(v, old, new, pre(new));
@@ -827,6 +896,42 @@ impl<'a> Exporter<'a> {
         }
     }
 
+    /// `inAnimation` / `outAnimation` Motion presets.
+    fn patch_motions(&mut self, v: &mut Value, new: &Clip) {
+        for placement in [AnimationPlacement::In, AnimationPlacement::Out] {
+            let field = props::anim_field(placement).expect("slot");
+            let want = new.animations.iter().find(|a| is_motion(a) && a.placement == Some(placement));
+            let Some(a) = want else {
+                remove_key(v, field);
+                continue;
+            };
+            let len = a.range.map_or(0, |(x, y)| (y - x).max(0));
+            let existing = v.get(field).filter(|e| e.is_object());
+            let same =
+                existing.is_some_and(|e| props::motion_kind(str_of(e, "name").unwrap_or(""), placement) == a.kind);
+            if same {
+                put(&mut v[field], "duration", json!(len));
+                continue;
+            }
+            match props::motion_json(&a.kind, len) {
+                Some(m) => {
+                    let name = str_of(&m, "name").unwrap_or_default().to_string();
+                    put(v, field, m);
+                    set_user_data(v, props::UD_ANIM_NAME, name.as_bytes());
+                }
+                None => self
+                    .warnings
+                    .push(format!("clip {}: animation {} has no Filmora Motion preset, not written", new.id, a.kind)),
+            }
+        }
+        for a in new.animations.iter().filter(|a| !is_pre_transition(a) && !is_legacy_animation(a) && !is_motion(a)) {
+            self.warnings.push(format!(
+                "clip {}: {:?} animation {} has no slot in Filmora 15 (Motion presets are in/out), not written",
+                new.id, a.placement, a.kind
+            ));
+        }
+    }
+
     fn speed_param(&self, v: &Value, new: &Clip) -> String {
         let prev = v.get("speed").and_then(|s| str_of(s, "speedParam")).and_then(KfParam::parse);
         let media_total = match &new.source {
@@ -836,19 +941,32 @@ impl<'a> Exporter<'a> {
         let total = prev.as_ref().and_then(|k| k.total_time).filter(|t| *t > 0.0).or(media_total).unwrap_or(0.0);
         let version = prev.as_ref().map_or(3, |k| k.version);
         let span = ticks_to_secs(jb_core::speed::source_span(new));
+        let mut freeze = Vec::new();
         let keys = match (&new.speed.curve, &new.speed.ramp) {
-            // Ramp keys sit at source seconds.
-            (Some(c), Some(_)) => {
-                c.points.iter().map(|p| Kf::new(ticks_to_secs(new.source_in) + p.position * span, p.speed)).collect()
+            _ if new.speed.freeze => {
+                // Filmora: an extra key at the frozen time and `_freeze`.
+                let at = ticks_to_secs(new.source_in);
+                freeze.push((at, ticks_to_secs(new.duration())));
+                let mut keys = vec![Kf::new(0.0, 1.0)];
+                if at > 0.0 && at < total {
+                    keys.push(Kf::new(at, 1.0));
+                }
+                keys.push(Kf::new(total, 1.0));
+                keys
             }
-            (None, Some(r)) if !r.keyframes.is_empty() => r
-                .keyframes
-                .iter()
-                .map(|k| {
-                    let fwd = Clip { speed: Speed { reverse: false, ..new.speed.clone() }, ..new.clone() };
-                    Kf::new(ticks_to_secs(eval::source_time(&fwd, k.time)), k.value.as_f64().unwrap_or(1.0))
-                })
-                .collect(),
+            // Ramp keys sit at source seconds (code 9, smooth tangents).
+            (Some(c), Some(_)) => ramp_keys(
+                c.points.iter().map(|p| (ticks_to_secs(new.source_in) + p.position * span, p.speed)).collect(),
+            ),
+            (None, Some(r)) if !r.keyframes.is_empty() => ramp_keys(
+                r.keyframes
+                    .iter()
+                    .map(|k| {
+                        let fwd = Clip { speed: Speed { reverse: false, ..new.speed.clone() }, ..new.clone() };
+                        (ticks_to_secs(eval::source_time(&fwd, k.time)), k.value.as_f64().unwrap_or(1.0))
+                    })
+                    .collect(),
+            ),
             _ => {
                 // Filmora's uniform-speed convention: `rate → 1.0` over the media.
                 let r = new.speed.rate;
@@ -862,11 +980,21 @@ impl<'a> Exporter<'a> {
                 vec![a, b]
             }
         };
-        KfParam { version, parameter_type: 0, keys, total_time: Some(total) }.to_text()
+        KfParam { version, keys, total_time: Some(total), reverse: new.speed.reverse, freeze, ..KfParam::empty() }
+            .to_text()
     }
 
-    fn patch_transform(&mut self, v: &mut Value, old: Option<&Transform>, new: &Transform, _clip_id: &str) {
+    fn patch_transform(
+        &mut self,
+        v: &mut Value,
+        old: Option<&Transform>,
+        new: &Transform,
+        clip_id: &str,
+        in_point: Ticks,
+        media: Option<(u32, u32)>,
+    ) {
         use props::*;
+        let tb = TimeBase::seconds(in_point);
         if transform_effect_mut(v).is_none() {
             let basic = chain_mut(v, "Basic", 0);
             if let Some(list) = basic.get_mut("effectList").and_then(Value::as_array_mut) {
@@ -874,47 +1002,98 @@ impl<'a> Exporter<'a> {
             }
         }
         let ch = |f: &dyn Fn(&Transform) -> Param| old.is_none_or(|o| f(o) != f(new));
-        let ch_b = |f: &dyn Fn(&Transform) -> f64| old.is_none_or(|o| f(o) != f(new));
         {
             let Some(e) = transform_effect_mut(v) else { return };
             if ch(&|t| t.position_x.clone()) {
-                set_effect_param_full(e, "Position_x", &new.position_x, 1.0, 0.5, 3);
+                set_effect_param_full(e, "Position_x", &new.position_x, 1.0, 0.5, 3, tb);
             }
             if ch(&|t| t.position_y.clone()) {
-                set_effect_param_full(e, "Position_y", &new.position_y, 1.0, 0.5, 3);
+                set_effect_param_full(e, "Position_y", &new.position_y, 1.0, 0.5, 3, tb);
             }
             if ch(&|t| t.scale_x.clone()) {
-                set_effect_param_full(e, "Scale_x", &new.scale_x, 100.0, 0.0, 3);
+                set_effect_param_full(e, "Scale_x", &new.scale_x, 100.0, 0.0, 3, tb);
             }
             if ch(&|t| t.scale_y.clone()) {
-                set_effect_param_full(e, "Scale_y", &new.scale_y, 100.0, 0.0, 3);
+                set_effect_param_full(e, "Scale_y", &new.scale_y, 100.0, 0.0, 3, tb);
             }
             if ch(&|t| t.rotation.clone()) {
-                let name =
-                    ROTATION_PARAMS.iter().find(|n| effect_param(e, n).is_some()).copied().unwrap_or(TF_ROTATION);
-                set_effect_param_full(e, name, &new.rotation, 1.0, 0.0, 3);
-            }
-            if ch_b(&|t| t.flip_h as i64 as f64) {
-                set_effect_param(e, TF_FLIP_X, json!(new.flip_h as i64), 5);
-            }
-            if ch_b(&|t| t.flip_v as i64 as f64) {
-                set_effect_param(e, TF_FLIP_Y, json!(new.flip_v as i64), 5);
-            }
-            if old.is_none_or(|o| o.fit != new.fit) && (new.fit != FitMode::Fit || effect_param(e, TF_FIT).is_some()) {
-                set_effect_param(e, TF_FIT, json!(fit_code(new.fit)), 5);
+                set_effect_param_full(e, TF_ROTATION, &new.rotation, 1.0, 0.0, 3, tb);
             }
         }
-        if old.is_none_or(|o| o.crop != new.crop) && (new.crop != [0.0; 4] || import::find_effect(v, FX_CROP).is_some())
-        {
-            let e = ensure_effect(v, "Basic", FX_CROP, "crop-pan-zoom");
-            for (i, n) in CROP_PARAMS.iter().enumerate() {
-                set_effect_param(e, n, json!(new.crop[i]), 3);
+        for (on, was, id, display) in [
+            (new.flip_h, old.map(|o| o.flip_h), FX_FLIP_H, "horizontal_filp"),
+            (new.flip_v, old.map(|o| o.flip_v), FX_FLIP_V, "vertical_filp"),
+        ] {
+            if was == Some(on) || (was.is_none() && !on) {
+                continue;
+            }
+            if !on && import::find_effect(v, id).is_none() {
+                continue;
+            }
+            let e = ensure_effect(v, "BasicFollow", id, display);
+            set_user_data(e, UD_FLIP_ACTIVE, &(on as i32).to_le_bytes());
+            if on {
+                remove_key(e, "enable");
+            } else {
+                put(e, "enable", json!(false));
+            }
+        }
+        if matches!(new.fit, FitMode::Stretch | FitMode::None) && old.is_none_or(|o| o.fit != new.fit) {
+            self.warnings
+                .push(format!("clip {clip_id}: fit mode {:?} does not exist in Filmora, not written", new.fit));
+        }
+        let fill = new.fit == FitMode::Fill;
+        if old.is_none_or(|o| o.crop != new.crop || (o.fit == FitMode::Fill) != fill) {
+            let mut rect = rect_of(new.crop);
+            if fill {
+                // "Crop to Fit": the centered part of the crop with the canvas aspect.
+                let s = &self.p.settings;
+                let (mw, mh) = media.filter(|(w, h)| *w > 0 && *h > 0).unwrap_or((s.width, s.height));
+                let src_aspect = rect[2] * mw as f64 / (rect[3] * mh as f64).max(1e-9);
+                let canvas = s.width as f64 / s.height.max(1) as f64;
+                if src_aspect > canvas {
+                    let w = rect[2] * canvas / src_aspect;
+                    rect[0] += (rect[2] - w) / 2.0;
+                    rect[2] = w;
+                } else {
+                    let h = rect[3] * src_aspect / canvas;
+                    rect[1] += (rect[3] - h) / 2.0;
+                    rect[3] = h;
+                }
+            }
+            let full = rect == [0.0, 0.0, 1.0, 1.0];
+            if !full || import::find_effect(v, FX_CROP).is_some() {
+                let e = ensure_effect(v, "Basic", FX_CROP, "crop-pan-zoom");
+                if full {
+                    remove_effect_param(e, CROP_SCRIPT);
+                } else {
+                    let key = CropKey { ori_time: 0, time: 0.0, rect };
+                    set_effect_param(e, CROP_SCRIPT, json!(crop_script(&[key])), 6);
+                }
+                if user_data_i32(e, UD_PAN_ZOOM) == Some(1) {
+                    set_user_data(e, UD_PAN_ZOOM, &0i32.to_le_bytes());
+                }
+                if fill {
+                    set_user_data(e, UD_CROP_MODE, &CROP_TO_FIT.to_le_bytes());
+                }
+                if e.get("paramList").and_then(Value::as_array).is_some_and(Vec::is_empty) {
+                    remove_key(e, "paramList");
+                }
             }
         }
     }
 
-    fn patch_audio(&mut self, v: &mut Value, old: Option<&AudioSettings>, new: &AudioSettings, ty: i64, clip_id: &str) {
+    fn patch_audio(
+        &mut self,
+        v: &mut Value,
+        old: Option<&AudioSettings>,
+        new: &AudioSettings,
+        ty: i64,
+        clip_id: &str,
+        in_point: Ticks,
+    ) {
         use props::*;
+        let tb = TimeBase::seconds(in_point);
         if ty != CLIP_AUDIO {
             // Video clips' sound is carried by their linked audio clips, so
             // a muted video clip is what Filmora has anyway.
@@ -927,14 +1106,16 @@ impl<'a> Exporter<'a> {
         let ch = |f: &dyn Fn(&AudioSettings) -> String| old.is_none_or(|o| f(o) != f(new));
         if ch(&|a| format!("{:?}", a.gain_db)) {
             let e = ensure_effect(v, "BasicFollow", FX_VOLUME, "volume");
-            set_effect_param(e, "VolumeGain", json!(new.gain_db.value.as_f64().unwrap_or(0.0)), 2);
-            if v.get("volumeKeyframe").is_some() || !new.gain_db.keyframes.is_empty() {
-                put(v, "volumeKeyframe", json!({ "parameter": kf_param(&new.gain_db, 1.0, 0.0).to_text() }));
+            set_effect_param_full(e, AU_GAIN, &new.gain_db, 1.0, 0.0, 2, tb);
+            // Keyframes of older projects would apply on top.
+            let legacy = v.get("volumeKeyframe").and_then(|k| str_of(k, "parameter")).and_then(KfParam::parse);
+            if legacy.is_some_and(|k| !k.keys.is_empty()) {
+                put(v, "volumeKeyframe", json!({ "parameter": KfParam::empty().to_text() }));
             }
         }
         if ch(&|a| format!("{:?}", a.pan)) {
             let e = ensure_effect(v, "BasicFollow", FX_VOLUME, "volume");
-            set_effect_param_full(e, AU_BALANCE, &new.pan, 100.0, 0.0, 2);
+            set_effect_param_full(e, AU_BALANCE, &new.pan, 0.5, 0.5, 2, tb);
         }
         if old.is_none_or(|o| (o.fade_in, o.fade_out) != (new.fade_in, new.fade_out)) {
             let e = ensure_effect(v, "BasicFollow", FX_FADE, "fade");
@@ -946,61 +1127,49 @@ impl<'a> Exporter<'a> {
             }
         }
         if ch(&|a| a.pitch.to_string()) && (new.pitch != 0.0 || import::find_effect(v, FX_PITCH).is_some()) {
-            let e = ensure_effect(v, "BasicFollow", FX_PITCH, "pitch");
+            let e = ensure_effect(v, "BasicFollow", FX_PITCH, FX_PITCH_DISPLAY);
             set_effect_param(e, AU_PITCH, json!(new.pitch), 2);
         }
-        if ch(&|a| format!("{}{:?}", a.muted, a.normalize))
-            && (new.muted || new.normalize.is_some() || import::find_effect(v, FX_CLIP_VOLUME).is_some())
-        {
-            let e = ensure_effect(v, "BasicFollow", FX_CLIP_VOLUME, "clip_volume");
-            if old.is_none_or(|o| o.muted != new.muted) {
-                set_effect_param(e, AU_MUTE, json!(new.muted as i64), 5);
+        if old.is_none_or(|o| o.muted != new.muted) {
+            let e = ensure_effect(v, "BasicFollow", FX_VOLUME, "volume");
+            if new.muted {
+                set_effect_param(e, AU_MUTE, json!(true), 1);
+            } else {
+                remove_effect_param(e, AU_MUTE);
             }
-            if old.is_none_or(|o| o.normalize != new.normalize) {
-                match new.normalize {
-                    Some(n) => {
-                        set_effect_param(e, AU_NORMALIZE, json!(1), 5);
-                        set_effect_param(e, AU_NORMALIZE_TARGET, json!(n.target_lufs), 3);
-                        match n.measured_lufs {
-                            Some(m) => set_effect_param(e, AU_LOUDNESS, json!(m), 3),
-                            None => remove_effect_param(e, AU_LOUDNESS),
-                        }
-                    }
-                    None => {
-                        set_effect_param(e, AU_NORMALIZE, json!(0), 5);
-                        remove_effect_param(e, AU_NORMALIZE_TARGET);
-                        remove_effect_param(e, AU_LOUDNESS);
-                    }
+        }
+        if old.is_none_or(|o| o.normalize != new.normalize) {
+            let e = ensure_effect(v, "BasicFollow", FX_VOLUME, "volume");
+            match new.normalize {
+                Some(n) => {
+                    let gain = n.measured_lufs.map_or(1.0, |m| 10f64.powf((n.target_lufs - m) / 20.0));
+                    set_effect_param(e, AU_LOUDNESS_GAIN, json!(gain), 3);
+                    set_effect_param(e, AU_LOUDNESS_ON, json!(true), 1);
+                    set_user_data(v, UD_LOUDNESS_TARGET, &(n.target_lufs.round() as i32).to_le_bytes());
                 }
+                None => remove_effect_param(e, AU_LOUDNESS_ON),
             }
         }
         if ch(&|a| format!("{:?}", a.equalizer)) {
             let e = ensure_effect(v, "BasicFollow", FX_EQUALIZER, "equalizer");
-            match &new.equalizer {
-                Some(eq) => {
-                    set_effect_param(e, EQ_PRESET, json!(eq.preset), 6);
-                    for (i, g) in eq.bands.iter().enumerate() {
-                        set_effect_param(e, &eq_band(i), json!(g), 2);
-                    }
+            let bands = new.equalizer.as_ref().map_or([0.0; 10], |q| q.bands);
+            for (n, g) in EQ_BANDS.iter().zip(bands) {
+                if g == 0.0 {
+                    remove_effect_param(e, n);
+                } else {
+                    set_effect_param(e, n, json!(g), 2);
                 }
-                None => {
-                    remove_effect_param(e, EQ_PRESET);
-                    for i in 0..10 {
-                        remove_effect_param(e, &eq_band(i));
-                    }
-                    if e.get("paramList").and_then(Value::as_array).is_some_and(Vec::is_empty) {
-                        if let Some(o) = e.as_object_mut() {
-                            o.remove("paramList");
-                        }
-                    }
-                }
+            }
+            if e.get("paramList").and_then(Value::as_array).is_some_and(Vec::is_empty) {
+                remove_key(e, "paramList");
             }
         }
     }
 
-    fn rebuild_effects(&mut self, v: &mut Value, old: Option<&Clip>, new: &Clip) {
+    fn rebuild_effects(&mut self, v: &mut Value, old: Option<&Clip>, new: &Clip, in_point: Ticks) {
+        let tb = props::TimeBase::seconds(in_point);
         let mut desired: Vec<(&EffectInstance, bool)> = new.effects.iter().map(|e| (e, false)).collect();
-        desired.extend(new.animations.iter().filter(|a| !is_pre_transition(a)).map(|e| (e, true)));
+        desired.extend(new.animations.iter().filter(|a| is_legacy_animation(a)).map(|e| (e, true)));
         let old_inst = |id: &str| old.and_then(|o| o.effects.iter().chain(o.animations.iter()).find(|e| e.id == id));
         let mut used = vec![false; desired.len()];
         let mut warnings = Vec::new();
@@ -1022,7 +1191,7 @@ impl<'a> Exporter<'a> {
                             used[i] = true;
                             let (inst, anim) = desired[i];
                             let mut e = e;
-                            patch_effect(&mut e, old_inst(&inst.id), inst, anim);
+                            patch_effect(&mut e, old_inst(&inst.id), inst, anim, tb);
                             out.push(e);
                         }
                     }
@@ -1034,40 +1203,20 @@ impl<'a> Exporter<'a> {
             if used[i] {
                 continue;
             }
-            let fid = if *anim {
-                match props::animation_id(&inst.kind) {
-                    Some((id, title)) => Some((id, title)),
-                    None => {
-                        warnings.push(format!(
-                            "clip {}: animation {} has no Filmora preset; written under its own id, Filmora will ignore it",
-                            new.id, inst.kind
-                        ));
-                        Some((inst.kind.clone(), inst.kind.clone()))
-                    }
-                }
-            } else {
-                inst.kind.strip_prefix("filmora:").map(|f| (f.to_string(), f.to_string()))
-            };
-            let Some((fid, title)) = fid else {
+            let Some(fid) = inst.kind.strip_prefix("filmora:").map(str::to_string) else {
                 warnings.push(format!("clip {}: effect {} has no Filmora equivalent, not written", new.id, inst.kind));
                 continue;
             };
             let src = marker_str(&inst.extra, "uid").and_then(|u| self.orig_effects.get(u).copied());
             let mut e = match src {
                 Some(s) if str_of(s, "id") == Some(fid.as_str()) => s.clone(),
-                _ => new_effect_json(&fid, marker_str(&inst.extra, "display").unwrap_or(&title), &[]),
+                _ => new_effect_json(&fid, marker_str(&inst.extra, "display").unwrap_or(&fid), &[]),
             };
             put(&mut e, "thisUId", json!(self.fresh_uid(Some(&inst.id))));
             set_user_data(&mut e, ud::GUID, &guid_blob(&new_guid()));
-            let baseline = src.map(|s| import::effect_of(marker_str(&inst.extra, "chain").unwrap_or(""), s));
-            patch_effect(&mut e, baseline.as_ref(), inst, *anim);
-            let chain = marker_str(&inst.extra, "chain").map(str::to_string).unwrap_or_else(|| {
-                if *anim {
-                    "Animation".into()
-                } else {
-                    "Effect".into()
-                }
-            });
+            let baseline = src.map(|s| import::effect_of(marker_str(&inst.extra, "chain").unwrap_or(""), s, in_point));
+            patch_effect(&mut e, baseline.as_ref(), inst, *anim, tb);
+            let chain = marker_str(&inst.extra, "chain").map(str::to_string).unwrap_or_else(|| "Effect".into());
             let ch = chain_mut(v, &chain, usize::MAX);
             if let Some(list) = ch.get_mut("effectList").and_then(Value::as_array_mut) {
                 list.push(e);
@@ -1177,25 +1326,55 @@ fn is_pre_transition(a: &EffectInstance) -> bool {
     marker_str(&a.extra, "role") == Some("preTransition")
 }
 
-/// Writes the fields of `new` that differ from `old` into an effect object,
-/// including parameter keyframes (`paramMapList`) and, for animations, the
-/// slot (`AnimationScene`) and clip-local range (`inPoint`/`outPoint`).
-fn patch_effect(e: &mut Value, old: Option<&EffectInstance>, new: &EffectInstance, anim: bool) {
-    let fid = if anim {
-        props::animation_id(&new.kind).map(|x| x.0)
+/// Animations of pre-15 projects: effects in an "Animation" chain.
+fn is_legacy_animation(a: &EffectInstance) -> bool {
+    !is_pre_transition(a) && marker_str(&a.extra, "chain").is_some()
+}
+
+/// Entry/exit animations written as Filmora 15 Motion presets.
+fn is_motion(a: &EffectInstance) -> bool {
+    !is_pre_transition(a)
+        && !is_legacy_animation(a)
+        && matches!(a.placement, Some(AnimationPlacement::In | AnimationPlacement::Out))
+}
+
+/// Speed ramp keys as Filmora writes them: code 9 with equal left and right
+/// derivatives (the curve's slope at the key).
+fn ramp_keys(points: Vec<(f64, f64)>) -> Vec<Kf> {
+    let n = points.len();
+    (0..n)
+        .map(|i| {
+            let (a, b) = (points[i.saturating_sub(1)], points[(i + 1).min(n - 1)]);
+            let d = if b.0 > a.0 { (b.1 - a.1) / (b.0 - a.0) } else { 0.0 };
+            let mut k = Kf::new(points[i].0, points[i].1);
+            k.interpolation = props::KF_RAMP;
+            k.left_derivative = Some(d);
+            k.right_derivative = Some(d);
+            k
+        })
+        .collect()
+}
+
+fn set_flag(v: &mut Value, key: &str, on: bool) {
+    if on {
+        put(v, key, json!(true));
     } else {
-        new.kind.strip_prefix("filmora:").map(str::to_string)
-    };
-    if let Some(fid) = fid {
-        if str_of(e, "id") != Some(fid.as_str()) {
+        remove_key(v, key);
+    }
+}
+
+/// Writes the fields of `new` that differ from `old` into an effect object,
+/// including parameter keyframes (`paramMapList`) and, for legacy
+/// animations, the slot (`AnimationScene`) and range (`inPoint`/`outPoint`).
+fn patch_effect(e: &mut Value, old: Option<&EffectInstance>, new: &EffectInstance, anim: bool, tb: props::TimeBase) {
+    if let Some(fid) = new.kind.strip_prefix("filmora:") {
+        if str_of(e, "id") != Some(fid) {
             put(e, "id", json!(fid));
         }
     }
     if old.is_none_or(|o| o.enabled != new.enabled) {
         if new.enabled {
-            if e.get("enable").is_some() {
-                put(e, "enable", json!(true));
-            }
+            remove_key(e, "enable");
         } else {
             put(e, "enable", json!(false));
         }
@@ -1214,7 +1393,7 @@ fn patch_effect(e: &mut Value, old: Option<&EffectInstance>, new: &EffectInstanc
         };
         set_effect_param(e, name, val, ty);
         if !p.keyframes.is_empty() || prev.is_some_and(|o| !o.keyframes.is_empty()) {
-            let text = (!p.keyframes.is_empty()).then(|| props::kf_param(p, 1.0, 0.0).to_text());
+            let text = (!p.keyframes.is_empty()).then(|| props::kf_param(p, 1.0, 0.0, tb).to_text());
             props::set_param_map(e, name, text);
         }
     }
@@ -1224,17 +1403,10 @@ fn patch_effect(e: &mut Value, old: Option<&EffectInstance>, new: &EffectInstanc
             props::set_param_map(e, name, None);
         }
     }
-    if anim {
-        if old.is_none_or(|o| o.placement != new.placement) {
-            if let Some(pl) = new.placement {
-                set_effect_param(e, "AnimationScene", json!(props::scene_name(pl)), 6);
-            }
-        }
-        if old.is_none_or(|o| o.range != new.range) {
-            if let Some((a, b)) = new.range {
-                put(e, "inPoint", json!(a));
-                put(e, "outPoint", json!(b));
-            }
+    if anim && old.is_none_or(|o| o.range != new.range) {
+        if let Some((a, b)) = new.range {
+            put(e, "inPoint", json!(a));
+            put(e, "outPoint", json!(b));
         }
     }
 }
@@ -1286,7 +1458,15 @@ fn ensure_effect<'v>(clip: &'v mut Value, chain: &str, id: &str, display: &str) 
         .flat_map(|c| c.get("effectList").and_then(Value::as_array).into_iter().flatten())
         .any(|e| str_of(e, "id") == Some(id));
     if !has {
-        let ch = chain_mut(clip, chain, 0);
+        let at = match chain {
+            "BasicFollow" => clip
+                .get("effectChainList")
+                .and_then(Value::as_array)
+                .and_then(|c| c.iter().position(|c| str_of(c, "name") == Some("Basic")))
+                .map_or(0, |i| i + 1),
+            _ => 0,
+        };
+        let ch = chain_mut(clip, chain, at);
         ch["effectList"].as_array_mut().expect("array").push(new_effect_json(id, display, &[]));
     }
     clip["effectChainList"]

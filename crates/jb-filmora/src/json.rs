@@ -39,8 +39,15 @@ pub fn put(v: &mut Value, key: &str, val: Value) {
     obj.shift_insert(pos, key.to_string(), val);
 }
 
+/// Removes `key` from an object (Filmora leaves out flags that are off).
+pub fn remove_key(v: &mut Value, key: &str) {
+    if let Some(o) = v.as_object_mut() {
+        o.shift_remove(key);
+    }
+}
+
 // ---------------------------------------------------------------------------
-// userData: `[{ "data": <base64>, "key": <int>, "size": <byte len> }, ...]`
+// userData:`[{ "data": <base64>, "key": <int>, "size": <byte len> }, ...]`
 
 pub fn user_data(v: &Value, key: i64) -> Option<Vec<u8>> {
     let list = v.get("userData")?.as_array()?;
@@ -73,6 +80,12 @@ pub fn set_user_data(v: &mut Value, key: i64, data: &[u8]) {
         item["size"] = json!(data.len());
     } else {
         list.push(json!({ "data": encoded, "key": key, "size": data.len() }));
+    }
+}
+
+pub fn remove_user_data(v: &mut Value, key: i64) {
+    if let Some(list) = v.get_mut("userData").and_then(Value::as_array_mut) {
+        list.retain(|u| u.get("key").and_then(Value::as_i64) != Some(key));
     }
 }
 
@@ -165,6 +178,13 @@ fn coerce(v: Value, ty: i64) -> Value {
 // `MD5` is the MD5 of the little-endian f64 triples (time, interpolation,
 // value) of every keyframe, in order (verified against every keyframe
 // string in the corpus). Derivatives are not part of the hash.
+//
+// Speed curves write `"MD5": "…"` with a space and end with `_totalTime`
+// (plus `"reverse": 1` for reversed clips and `_freeze` for freeze frames);
+// parameter keyframes (`paramMapList`, `OpacityKeyFrame`, animations) write
+// `"MD5":"…"` without it (verified in Filmora 15.7.3). Numbers that fit in
+// one decimal are written short (`0.5`, `100.0`), all others with eight
+// decimals (`0.57812500`, `-0.00000450`).
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Kf {
@@ -173,11 +193,23 @@ pub struct Kf {
     pub value: f64,
     pub left_derivative: Option<f64>,
     pub right_derivative: Option<f64>,
+    /// Bezier handle heights (value offsets) of curve keys (`Interpolation`
+    /// 13/14); absent = a flat handle.
+    pub left_y: Option<f64>,
+    pub right_y: Option<f64>,
 }
 
 impl Kf {
     pub fn new(time: f64, value: f64) -> Self {
-        Self { time, interpolation: 6, value, left_derivative: None, right_derivative: None }
+        Self {
+            time,
+            interpolation: 6,
+            value,
+            left_derivative: None,
+            right_derivative: None,
+            left_y: None,
+            right_y: None,
+        }
     }
 }
 
@@ -187,6 +219,12 @@ pub struct KfParam {
     pub parameter_type: i64,
     pub keys: Vec<Kf>,
     pub total_time: Option<f64>,
+    /// `"MD5":"…"` without the space (parameter keyframes).
+    pub compact: bool,
+    /// `"reverse": 1` after `_totalTime` (reversed speed curves).
+    pub reverse: bool,
+    /// Freeze frames of a speed curve: (source seconds, duration seconds).
+    pub freeze: Vec<(f64, f64)>,
 }
 
 impl KfParam {
@@ -202,6 +240,18 @@ impl KfParam {
                 value: f64_of(k, "_value").unwrap_or(0.0),
                 left_derivative: f64_of(k, "_leftDerivative"),
                 right_derivative: f64_of(k, "_rightDerivative"),
+                left_y: f64_of(k, "_leftDerivativeY"),
+                right_y: f64_of(k, "_rightDerivativeY"),
+            })
+            .collect();
+        let freeze = v
+            .get("_freeze")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+            .filter_map(|f| {
+                let mut it = f.as_str()?.split_whitespace().map(|x| x.parse::<f64>().ok());
+                Some((it.next()??, it.next()??))
             })
             .collect();
         Some(Self {
@@ -209,11 +259,27 @@ impl KfParam {
             parameter_type: i64_of(&v, "ParameterType").unwrap_or(0),
             keys,
             total_time: f64_of(&v, "_totalTime"),
+            compact: text.contains("\"MD5\":\""),
+            reverse: i64_of(&v, "reverse").is_some_and(|r| r != 0),
+            freeze,
         })
     }
 
     pub fn empty() -> Self {
-        Self { version: 3, parameter_type: 0, keys: Vec::new(), total_time: None }
+        Self {
+            version: 3,
+            parameter_type: 0,
+            keys: Vec::new(),
+            total_time: None,
+            compact: false,
+            reverse: false,
+            freeze: Vec::new(),
+        }
+    }
+
+    /// An empty parameter-keyframe list (`"MD5":"…"` style).
+    pub fn params() -> Self {
+        Self { compact: true, ..Self::empty() }
     }
 
     /// Serializes in Filmora's own spacing style.
@@ -221,7 +287,8 @@ impl KfParam {
         let mut keys: Vec<Kf> = self.keys.clone();
         // Hash what will actually be read back.
         for k in &mut keys {
-            k.time = fmt_time(k.time).parse().unwrap_or(k.time);
+            k.time = fmt_num(k.time).parse().unwrap_or(k.time);
+            k.value = fmt_num(k.value).parse().unwrap_or(k.value);
         }
         let mut hasher = Md5::new();
         for k in &keys {
@@ -234,50 +301,69 @@ impl KfParam {
             .iter()
             .map(|k| {
                 let mut s = format!(
-                    "{{\"_time\": {},\"Interpolation\": {},\"_value\": {:?}",
-                    fmt_time(k.time),
+                    "{{\"_time\": {},\"Interpolation\": {},\"_value\": {}",
+                    fmt_num(k.time),
                     k.interpolation,
-                    k.value
+                    fmt_num(k.value)
                 );
-                if let Some(d) = k.right_derivative {
-                    s += &format!(",\"_rightDerivative\": {}", fmt_deriv(d));
+                // Filmora writes the left derivative first when a key has both.
+                if let Some(d) = k.left_derivative.filter(|_| k.right_derivative.is_some()) {
+                    s += &format!(",\"_leftDerivative\": {}", fmt_num(d));
                 }
-                if let Some(d) = k.left_derivative {
-                    s += &format!(",\"_leftDerivative\": {}", fmt_deriv(d));
+                if let Some(d) = k.right_derivative {
+                    s += &format!(",\"_rightDerivative\": {}", fmt_num(d));
+                }
+                if let Some(d) = k.left_derivative.filter(|_| k.right_derivative.is_none()) {
+                    s += &format!(",\"_leftDerivative\": {}", fmt_num(d));
+                }
+                if let Some(y) = k.left_y {
+                    s += &format!(",\"_leftDerivativeY\": {}", fmt_num(y));
+                }
+                if let Some(y) = k.right_y {
+                    s += &format!(",\"_rightDerivativeY\": {}", fmt_num(y));
                 }
                 s + "}"
             })
             .collect();
+        let sep = if self.compact { "" } else { " " };
         let mut out = format!(
-            "{{\"Version\": {},\"ParameterType\": {},\"keyframeSets\": [{}],\"MD5\": \"{}\"",
+            "{{\"Version\": {},\"ParameterType\": {},\"keyframeSets\": [{}],\"MD5\":{sep}\"{}\"",
             self.version,
             self.parameter_type,
             sets.join(","),
             md5
         );
         if let Some(t) = self.total_time {
-            out += &format!(",\"_totalTime\": {}", fmt_time(t));
+            out += &format!(",\"_totalTime\": {}", fmt_num(t));
+        }
+        if self.reverse {
+            out += ",\"reverse\": 1";
+        }
+        if !self.freeze.is_empty() {
+            let list: Vec<String> =
+                self.freeze.iter().map(|(t, d)| format!("\"{} {}\"", fmt_fixed(*t), fmt_fixed(*d))).collect();
+            out += &format!(",\"_freeze\": [{}]", list.join(","));
         }
         out + "}"
     }
 }
 
-fn fmt_time(t: f64) -> String {
-    if t == 0.0 {
-        "0.0".into()
+/// Short form for numbers that fit in one decimal, eight decimals otherwise.
+fn fmt_num(x: f64) -> String {
+    let short = format!("{x:.1}");
+    if short.parse::<f64>().is_ok_and(|s| (s - x).abs() <= 1e-12 * x.abs().max(1.0)) {
+        if short == "-0.0" {
+            "0.0".into()
+        } else {
+            short
+        }
     } else {
-        format!("{t:.8}")
+        fmt_fixed(x)
     }
 }
 
-fn fmt_deriv(d: f64) -> String {
-    let s = format!("{d:.8}");
-    let s = s.trim_end_matches('0');
-    if s.ends_with('.') {
-        format!("{s}0")
-    } else {
-        s.to_string()
-    }
+fn fmt_fixed(x: f64) -> String {
+    format!("{x:.8}")
 }
 
 /// Parses a nested JSON document stored as a string field (`pipBuf`, `scriptBuf`).

@@ -2,7 +2,9 @@
 //! keyed by the userData GUID (key 3) of the timeline (sequence markers,
 //! verified) or of a clip (clip markers, inferred):
 //! `{"<GUID>": [{"name", "position", "comments", "color"}]}`. Positions are
-//! ticks: sequence time for timelines, clip-local time for clips.
+//! ticks: sequence time for timelines; for clips the clip's `inPoint`
+//! timebase (`inPoint + clip-local time`; verified in Filmora 15.7.3:
+//! trimming a clip's start leaves its markers' positions unchanged).
 
 use crate::import::{timelines, tl_clips};
 use crate::json::*;
@@ -45,6 +47,7 @@ pub fn import_markers(project: &mut Project, timeline: &Value, extra: &Value) {
         return;
     }
     let mut clip_guid: HashMap<String, String> = HashMap::new();
+    let mut clip_in: HashMap<String, i64> = HashMap::new();
     for tl in timelines(timeline) {
         let id = i64_of(tl, "timelineId").unwrap_or(0);
         if let Some(g) = user_data_str(tl, ud::GUID) {
@@ -57,6 +60,7 @@ pub fn import_markers(project: &mut Project, timeline: &Value, extra: &Value) {
         for c in tl_clips(tl) {
             if let (Some(u), Some(g)) = (str_of(c, "thisUId"), user_data_str(c, ud::GUID)) {
                 clip_guid.insert(u.to_string(), g);
+                clip_in.insert(u.to_string(), i64_of(c, "inPoint").unwrap_or(0));
             }
         }
     }
@@ -67,9 +71,14 @@ pub fn import_markers(project: &mut Project, timeline: &Value, extra: &Value) {
         for i in order {
             let t = &mut s.tracks[i];
             for c in &mut t.clips {
-                let Some(g) = marker_str(&c.extra, "uid").and_then(|u| clip_guid.get(u)) else { continue };
+                let Some(u) = marker_str(&c.extra, "uid") else { continue };
+                let Some(g) = clip_guid.get(u) else { continue };
                 // Linked clips share the GUID; the first one holds the markers.
-                if let Some(ms) = by_guid.remove(g) {
+                if let Some(mut ms) = by_guid.remove(g) {
+                    let origin = clip_in.get(u).copied().unwrap_or(0);
+                    for m in &mut ms {
+                        m.time -= origin;
+                    }
                     c.markers = ms;
                 }
             }
@@ -98,6 +107,7 @@ pub fn export_markers(
     extra: &Value,
     tl_guid: &HashMap<String, String>,
     clip_guid: &HashMap<String, String>,
+    clip_in: &HashMap<String, i64>,
     known_guids: &HashSet<String>,
 ) -> Option<Value> {
     let marked = |p: &Project| {
@@ -123,7 +133,8 @@ pub fn export_markers(
     let mut merged: Vec<(String, Vec<Value>)> = Vec::new();
     for (id, ms) in now {
         let Some(g) = tl_guid.get(&id).or_else(|| clip_guid.get(&id)) else { continue };
-        let list: Vec<Value> = ms.iter().map(marker_json).collect();
+        let origin = if tl_guid.contains_key(&id) { 0 } else { clip_in.get(&id).copied().unwrap_or(0) };
+        let list: Vec<Value> = ms.iter().map(|m| marker_json(&Marker { time: m.time + origin, ..m.clone() })).collect();
         match merged.iter_mut().find(|(k, _)| k == g) {
             Some((_, l)) => l.extend(list),
             None => merged.push((g.clone(), list)),

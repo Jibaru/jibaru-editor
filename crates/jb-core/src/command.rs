@@ -364,9 +364,10 @@ pub enum Command {
         #[serde(default)]
         measured_lufs: Option<f64>,
     },
-    /// Equalizer: a preset (`default`, `classical`, `low_bass`, `techno`,
-    /// `rock`, `pop`, `acoustic`, `country`, `dance`, `electronic`, `folk`,
-    /// `hip_hop`, `jazz`, `metal`, `rnb`, `soft`, `speech`), custom `bands`
+    /// Equalizer: a preset (Filmora's `default`, `classic`, `dance`, `low_bass`,
+    /// `sparkle`, `pop`, `rock_n_roll`, `soft`, `techno`, `hard_rock`, `ska`,
+    /// `country`, `acoustic`, `folk`, `blues`; or `electronic`, `hip_hop`,
+    /// `jazz`, `metal`, `rnb`, `speech`), custom `bands`
     /// (10 gains in dB), or neither to turn it off.
     SetEqualizer {
         clip_id: Id,
