@@ -36,6 +36,9 @@ jobs:
           "FFMPEG_DIR=$dir" | Out-File -FilePath $env:GITHUB_ENV -Append
           "LIBCLANG_PATH=C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_ENV -Append
           "$dir\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
+          # bindgen in ffmpeg-sys-next's build script can overflow the
+          # default 1 MB main-thread stack on Windows.
+          "RUSTFLAGS=-C link-arg=/STACK:16777216" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - run: cargo build --workspace --all-targets
       - run: cargo test --workspace

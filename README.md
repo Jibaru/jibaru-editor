@@ -48,6 +48,7 @@ it, then:
 $env:FFMPEG_DIR = "C:\path\to\ffmpeg-n9.0-latest-win64-lgpl-shared-9.0"
 $env:LIBCLANG_PATH = "C:\Program Files\LLVM\bin"   # winget install LLVM.LLVM
 $env:PATH = "$env:FFMPEG_DIR\bin;$env:PATH"           # DLLs at runtime
+$env:RUSTFLAGS = "-C link-arg=/STACK:16777216"        # bindgen needs a bigger stack
 cargo build --release
 cargo test --workspace
 ```
