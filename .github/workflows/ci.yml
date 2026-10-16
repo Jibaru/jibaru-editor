@@ -44,6 +44,15 @@ jobs:
       - name: Report hardware decode / encode support
         run: cargo run -p jb-media --example hwinfo
       - run: cargo test --workspace
+      # Buffers handed to FFmpeg must be large enough for its SIMD kernels:
+      # Guard Malloc with exact sizes faults on the first out-of-bounds byte
+      # instead of letting heap corruption crash a later run at exit.
+      - name: FFmpeg buffer bounds under Guard Malloc (macOS)
+        if: runner.os == 'macOS'
+        run: >
+          cargo test -p jb-media --lib
+          --config 'target.aarch64-apple-darwin.runner = ["env", "DYLD_INSERT_LIBRARIES=/usr/lib/libgmalloc.dylib", "MALLOC_STRICT_SIZE=1"]'
+          convert
       - name: Upload golden mismatches
         if: failure()
         uses: actions/upload-artifact@v4

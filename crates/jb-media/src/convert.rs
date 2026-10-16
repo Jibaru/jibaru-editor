@@ -95,8 +95,6 @@ unsafe extern "C" fn drop_arc_vec(opaque: *mut libc::c_void, _data: *mut u8) {
     drop(Box::from_raw(opaque as *mut Arc<Vec<u8>>));
 }
 
-unsafe extern "C" fn no_free(_opaque: *mut libc::c_void, _data: *mut u8) {}
-
 /// An owned `AVFrame` pointer.
 pub struct AvFrame(pub *mut ffi::AVFrame);
 
@@ -113,16 +111,6 @@ impl AvFrame {
 impl Drop for AvFrame {
     fn drop(&mut self) {
         unsafe { ffi::av_frame_free(&mut self.0) };
-    }
-}
-
-unsafe fn set_planes(f: *mut ffi::AVFrame, base: *mut u8, fmt: PixelFormat, w: u32, h: u32) {
-    let stride = w as usize * bytes_per_pixel(fmt);
-    (*f).data[0] = base;
-    (*f).linesize[0] = stride as i32;
-    if fmt != PixelFormat::Rgba8 {
-        (*f).data[1] = base.add(stride * h as usize);
-        (*f).linesize[1] = stride as i32;
     }
 }
 
@@ -180,15 +168,14 @@ unsafe fn scale_into_vec(
     cs: ColorSpace,
     full_range: bool,
 ) -> Result<Vec<u8>> {
-    let mut out = vec![0u8; frame_size(fmt, w, h)];
+    // swscale allocates the destination itself: its SIMD kernels write whole
+    // blocks past the end of each row, so they need FFmpeg's aligned,
+    // padded buffers. Scaling straight into a tight Vec overran it and
+    // corrupted the heap (crashes at a later free, often at process exit).
     let dst = AvFrame::alloc();
-    let buf = ffi::av_buffer_create(out.as_mut_ptr(), out.len(), Some(no_free), std::ptr::null_mut(), 0);
-    assert!(!buf.is_null(), "av_buffer_create failed");
-    (*dst.0).buf[0] = buf;
     (*dst.0).width = w as i32;
     (*dst.0).height = h as i32;
     (*dst.0).format = av_format(fmt) as i32;
-    set_planes(dst.0, out.as_mut_ptr(), fmt, w, h);
     apply_color(dst.0, fmt, cs, full_range);
     // Keep the source transfer/primaries so swscale never tries gamut mapping.
     if fmt != PixelFormat::Rgba8 || (*src).colorspace != ffi::AVColorSpace::AVCOL_SPC_RGB {
@@ -196,8 +183,10 @@ unsafe fn scale_into_vec(
         (*dst.0).color_trc = (*src).color_trc;
     }
     scaler.run(dst.0, src)?;
-    drop(dst);
-    Ok(out)
+    if (*dst.0).data[0].is_null() {
+        anyhow::bail!("sws_scale_frame produced no buffer");
+    }
+    Ok(copy_tight(dst.0, fmt, w, h))
 }
 
 /// Converts any [`VideoFrame`] to another size / format / color encoding.
@@ -392,5 +381,37 @@ mod tests {
             (p[0] as i32 - 200).abs() <= 3 && (p[1] as i32 - 100).abs() <= 3 && (p[2] as i32 - 50).abs() <= 3,
             "{p:?}"
         );
+    }
+
+    /// Regression: swscale's SIMD kernels write past the end of rows, which
+    /// overran tight output buffers and corrupted the heap (intermittent
+    /// SIGABRT / SIGTRAP at exit on macOS CI). Sizes that are not multiples
+    /// of the kernel block width hit it; CI also runs this test under Guard
+    /// Malloc, which faults on the first byte written out of bounds.
+    #[test]
+    fn scaling_never_writes_outside_tight_frames() {
+        crate::init();
+        let mut s = Scaler::bilinear();
+        for (w, h) in [(2u32, 2u32), (6, 4), (18, 10), (32, 16), (34, 18), (62, 36), (66, 2), (130, 6)] {
+            let px: Vec<u8> = (0..w * h * 4).map(|i| (i * 7 % 251) as u8).collect();
+            let src = VideoFrame {
+                width: w,
+                height: h,
+                format: PixelFormat::Rgba8,
+                color_space: ColorSpace::Bt709,
+                full_range: true,
+                stride: (w * 4) as usize,
+                data: Arc::new(px),
+                pts: 0,
+            };
+            for (fmt, tw, th) in
+                [(PixelFormat::Nv12, w, h), (PixelFormat::P010, w + 2, h), (PixelFormat::Rgba8, w + 2, h + 2)]
+            {
+                let out = convert_frame(&mut s, &src, tw, th, fmt, ColorSpace::Bt709, false).unwrap();
+                assert_eq!(out.data.len(), frame_size(fmt, tw, th), "{w}x{h} -> {fmt:?} {tw}x{th}");
+                let back = convert_frame(&mut s, &out, w, h, PixelFormat::Rgba8, ColorSpace::Bt709, true).unwrap();
+                assert_eq!(back.data.len(), frame_size(PixelFormat::Rgba8, w, h));
+            }
+        }
     }
 }
