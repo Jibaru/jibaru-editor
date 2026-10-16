@@ -118,6 +118,8 @@ pub const GROUPS: &[LibraryGroup] = &[
         "Speed Blur",
         &["jb.whip_right", "jb.whip_up", "jb.whip_down", "jb.radial_zoom_blur", "jb.fast_zoom", "jb.wipe_left"],
     ),
+    g(T, "Camera Moves", crate::fx::lane1_tables::LIB_CAMERA_MOVES),
+    g(T, "Soft Wipes", crate::fx::lane1_tables::LIB_SOFT_WIPES),
     g(
         T,
         "Glitch",

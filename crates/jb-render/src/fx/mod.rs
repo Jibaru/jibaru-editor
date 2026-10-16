@@ -15,6 +15,9 @@ pub mod distort;
 pub mod filmora;
 pub mod filters;
 pub mod lane4_all;
+pub mod lane1_mask;
+pub mod lane1_table;
+pub mod lane1_tables;
 pub mod motion;
 pub mod panel;
 pub mod retro;
@@ -748,6 +751,8 @@ pub fn register_builtin(r: &mut Registry) {
     panel::register(r);
     filmora::register(r);
     lane4_all::register(r);
+    lane1_table::register(r);
+    lane1_mask::register(r);
     crate::aliases::register(r);
 }
 
