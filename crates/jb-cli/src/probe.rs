@@ -41,8 +41,20 @@ pub fn probe(path: &Path) -> JbResult<MediaAsset> {
     asset_from_ffprobe(&abs, &info)
 }
 
+/// `JB_FFPROBE`, else an `ffprobe` shipped next to the executable (as in the
+/// CLI packages), else `ffprobe` from PATH.
 fn ffprobe_bin() -> String {
-    std::env::var("JB_FFPROBE").unwrap_or_else(|_| "ffprobe".into())
+    if let Ok(p) = std::env::var("JB_FFPROBE") {
+        return p;
+    }
+    let bundled = std::env::current_exe()
+        .ok()
+        .and_then(|exe| Some(exe.parent()?.join(format!("ffprobe{}", std::env::consts::EXE_SUFFIX))))
+        .filter(|p| p.is_file());
+    match bundled {
+        Some(p) => p.to_string_lossy().into_owned(),
+        None => "ffprobe".into(),
+    }
 }
 
 fn parse_rate(s: &str) -> Option<Rational> {

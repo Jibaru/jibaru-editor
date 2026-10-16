@@ -1,4 +1,4 @@
-# Packages the Windows CLI (jb.exe, jb-mcp.exe and the FFmpeg DLLs) and
+# Packages the Windows CLI (jb.exe, jb-mcp.exe, ffprobe.exe and the FFmpeg DLLs) and
 # collects the NSIS installer built by `pnpm tauri build --bundles nsis`
 # (see windows-prepare.ps1, which bundles the DLLs into the installer).
 #
@@ -39,6 +39,8 @@ New-Item -ItemType Directory $stage | Out-Null
 Copy-Item (Join-Path $release "jb.exe"), (Join-Path $release "jb-mcp.exe") $stage
 Sign-Files @((Join-Path $stage "jb.exe"), (Join-Path $stage "jb-mcp.exe"))
 Copy-Item (Join-Path $FfmpegDir "bin\*.dll") $stage
+# ffprobe (same LGPL build) is used by `jb import-media`.
+Copy-Item (Join-Path $FfmpegDir "bin\ffprobe.exe") $stage
 Copy-Item (Join-Path $root "LICENSE") (Join-Path $stage "LICENSE.txt")
 Copy-Item (Join-Path $FfmpegDir "LICENSE.txt") (Join-Path $stage "FFMPEG-LICENSE.txt")
 @"

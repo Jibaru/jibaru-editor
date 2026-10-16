@@ -8,9 +8,13 @@ Homebrew's, which enables libx264/libx265) are only for development.
 | --- | --- |
 | `Jibaru-Editor-<v>-macos-arm64.dmg` / `.app.zip` | The app; FFmpeg dylibs in `Contents/Frameworks`, licenses in `Contents/Resources/licenses` |
 | `Jibaru-Editor-<v>-windows-x64-setup.exe` | NSIS installer; FFmpeg DLLs installed next to the executable |
-| `jb-<v>-macos-arm64.zip` | `bin/jb`, `bin/jb-mcp`, `lib/*.dylib`, licenses |
-| `jb-<v>-windows-x64.zip` | `jb.exe`, `jb-mcp.exe`, FFmpeg DLLs, licenses |
+| `jb-<v>-macos-arm64.zip` | `bin/jb`, `bin/jb-mcp`, `bin/ffprobe`, `lib/*.dylib`, licenses |
+| `jb-<v>-windows-x64.zip` | `jb.exe`, `jb-mcp.exe`, `ffprobe.exe`, FFmpeg DLLs, licenses |
 | `SHA256SUMS.txt` | Checksums (release only) |
+
+`jb import-media` currently probes files with the `ffprobe` tool; the CLI
+looks for it next to its own executable first (then `JB_FFPROBE`, then
+`PATH`), so the CLI packages ship the LGPL `ffprobe` from the same build.
 
 macOS packages are arm64 only for now; `scripts/ffmpeg/build-macos.sh`
 accepts `x86_64` for an Intel build.

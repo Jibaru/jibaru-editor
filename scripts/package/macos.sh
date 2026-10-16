@@ -18,7 +18,7 @@
 # Outputs in <out-dir>:
 #   Jibaru-Editor-<version>-macos-<arch>.dmg
 #   Jibaru-Editor-<version>-macos-<arch>.app.zip
-#   jb-<version>-macos-<arch>.zip   (jb, jb-mcp, FFmpeg dylibs)
+#   jb-<version>-macos-<arch>.zip   (jb, jb-mcp, ffprobe, FFmpeg dylibs)
 set -euo pipefail
 
 ffmpeg="${1:?usage: macos.sh <ffmpeg-prefix> <out-dir>}"
@@ -121,9 +121,10 @@ EOF
 # --- CLI ------------------------------------------------------------------
 cli="$stage/jb-$version-macos-$arch"
 mkdir -p "$cli/bin" "$cli/lib"
-cp "$release/jb" "$release/jb-mcp" "$cli/bin/"
+# ffprobe (LGPL, same build) is used by `jb import-media`.
+cp "$release/jb" "$release/jb-mcp" "$ffmpeg/bin/ffprobe" "$cli/bin/"
 chmod u+w "$cli/bin/"*
-copy_libs "$cli/lib" "$cli/bin/jb" "$cli/bin/jb-mcp"
+copy_libs "$cli/lib" "$cli/bin/"*
 for f in "$cli/bin/"*; do fix_refs "$f" "@executable_path/../lib"; done
 for f in "$cli/lib/"*.dylib; do fix_refs "$f" "@loader_path"; done
 check "$cli/bin/"* "$cli/lib/"*.dylib

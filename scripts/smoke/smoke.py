@@ -39,6 +39,8 @@ def clean_env(ffmpeg_dirs):
         try:
             if any(Path(p).glob("avcodec-*.dll")) or any(Path(p).glob("libavcodec.*dylib")):
                 continue
+            if (Path(p) / f"ffprobe{EXE}").exists() or (Path(p) / f"ffmpeg{EXE}").exists():
+                continue
         except OSError:
             pass
         keep.append(p)
