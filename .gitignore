@@ -5,3 +5,4 @@ dist/
 /local-corpus/
 *.wfp
 !crates/jb-filmora/tests/fixtures/*.wfp
+/.claude/
