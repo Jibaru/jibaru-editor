@@ -39,7 +39,8 @@ The software only connects to the internet in these cases:
   plain download: no identifier, project information or usage data is
   sent. GitHub may log the request (for example your IP address) under
   [GitHub's privacy statement](https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement).
-  You can turn automatic update checks off in the app's settings.
+  You can turn automatic update checks off with **Help → Check for Updates
+  Automatically** (also in the update notice).
 - **Links you click.** Help menu items open web pages in your default
   browser.
 - **Agents you connect.** The `jb-mcp` server talks only to the AI client
