@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { IcCheck, IcChevronRight } from './icons'
 
 export type MenuItem =
@@ -9,6 +9,8 @@ export type MenuItem =
       action?: () => void
       disabled?: boolean
       checked?: boolean
+      /** Optional leading icon (toolbar "More" menus). */
+      icon?: ReactNode
       children?: MenuItem[]
     }
 
@@ -90,6 +92,7 @@ function List({ items, x, y, onClose, parentLeft }: { items: MenuItem[]; x: numb
               }}
             >
               {hasChecks && <span className="check">{item.checked ? <IcCheck size={12} /> : null}</span>}
+              {item.icon && <span className="menu-icon">{item.icon}</span>}
               <span className="label">{item.label}</span>
               {item.shortcut && <kbd>{item.shortcut}</kbd>}
               {item.children && <IcChevronRight size={12} />}

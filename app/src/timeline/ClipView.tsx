@@ -18,6 +18,8 @@ interface Props {
   pps: number
   selected: boolean
   ghost?: boolean
+  /** Text of a title template (a nested sequence holding one title), drawn as a title clip. */
+  titleText?: string | null
   /** Visible horizontal window in clip-local pixels. */
   view: [number, number]
   onPointerDown?: (e: RPE, clip: Clip, edge: Edge) => void
@@ -66,16 +68,16 @@ function WaveCanvas({ clip, media, width, view, pps, color }: { clip: Clip; medi
   return <canvas ref={ref} className="wave" style={{ left: x0, width: x1 - x0 }} />
 }
 
-export const ClipView = memo(function ClipView({ clip, track, media, left, width, height, pps, selected, ghost, view, onPointerDown, onContextMenu }: Props) {
+export const ClipView = memo(function ClipView({ clip, track, media, left, width, height, pps, selected, ghost, titleText, view, onPointerDown, onContextMenu }: Props) {
   const src = clip.source
-  const kind = src.type === 'title' ? 'title' : track.kind === 'audio' ? 'audio' : 'video'
+  const kind = src.type === 'title' || titleText != null ? 'title' : track.kind === 'audio' ? 'audio' : 'video'
   const tiny = width < 22
   const down = (edge: Edge) => (e: RPE) => {
     if (e.button !== 0) return
     e.stopPropagation()
     onPointerDown?.(e, clip, edge)
   }
-  const label = src.type === 'title' ? src.text || 'Title' : clip.name
+  const label = src.type === 'title' ? src.text || 'Title' : titleText != null ? titleText || clip.name : clip.name
   const audible = media && (media.has_audio || media.kind === 'audio')
   const fadeIn = clip.audio?.fade_in ?? 0
   const fadeOut = clip.audio?.fade_out ?? 0
@@ -123,9 +125,6 @@ export const ClipView = memo(function ClipView({ clip, track, media, left, width
       )}
       {selected && fadeIn >= 0 && kind !== 'title' && <i className="fade-handle in" style={{ left: Math.min(width - 10, (seconds(fadeIn) * pps)) }} />}
       {selected && fadeOut >= 0 && kind !== 'title' && <i className="fade-handle out" style={{ right: Math.min(width - 10, seconds(fadeOut) * pps) }} />}
-      {clip.transition_out && (
-        <div className="transition-mark" style={{ width: Math.max(8, seconds(clip.transition_out.duration) * pps / 2) }} title={catalogLabel(clip.transition_out.kind)} />
-      )}
       {!track.locked && !ghost && (
         <>
           <div className="edge start" onPointerDown={down('start')} />

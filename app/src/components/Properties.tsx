@@ -9,6 +9,7 @@ import { ratioOf } from '../core/presets'
 import type { Clip, Command, MediaAsset, Project, Track } from '../core/types'
 import { audioTarget } from '../edit'
 import { exec, getState, setState, useEditor, type PropsTab } from '../store'
+import { TransitionPanel } from '../timeline/TransitionPanel'
 import { IcImage } from '../ui/icons'
 import { AnimationTab } from './props/AnimationTab'
 import { AudioTab } from './props/AudioTab'
@@ -22,7 +23,9 @@ export function Properties() {
   const path = useEditor(s => s.snap?.path ?? null)
   const selection = useEditor(s => s.selection)
   const tab = useEditor(s => s.propsTab)
+  const transitionSel = useEditor(s => s.transitionSel)
   if (!project) return <section className="panel properties" />
+  if (transitionSel) return <TransitionPanel key={transitionSel} project={project} clipId={transitionSel} />
   const found = selection.length ? findClip(project, selection[selection.length - 1]) : null
   if (!found) return <ProjectInfo project={project} path={path} />
   return <ClipProperties key={found.clip.id} project={project} clip={found.clip} track={found.track} tab={tab} />

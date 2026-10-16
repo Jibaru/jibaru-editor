@@ -19,6 +19,7 @@ import {
 } from './core/model'
 import type { Clip, Command, MediaAsset, Project, Snapshot, Ticks, Track } from './core/types'
 import type { MenuItem } from './ui/ContextMenu'
+import { removeTransitionCmds } from './timeline/transitions'
 
 export type LibraryTab = 'media' | 'stock' | 'audio' | 'titles' | 'transitions' | 'effects' | 'filters' | 'stickers' | 'templates'
 export type PropsTab = 'video' | 'audio' | 'speed' | 'animation' | 'color'
@@ -27,6 +28,8 @@ export interface EditorState {
   snap: Snapshot | null
   selection: string[]
   selectedMedia: string[]
+  /** Clip whose outgoing transition is selected (transitions are not clips). */
+  transitionSel: string | null
   playhead: Ticks
   playing: boolean
   /** Playback rate; negative plays backwards (J/K/L shuttle). */
@@ -75,6 +78,7 @@ let state: EditorState = {
   snap: null,
   selection: [],
   selectedMedia: [],
+  transitionSel: null,
   playhead: 0,
   playing: false,
   rate: 1,
@@ -153,7 +157,8 @@ function applySnapshot(snap: Snapshot) {
   // Drop selections that no longer exist.
   const selection = state.selection.filter(id => findClip(p, id))
   const selectedMedia = state.selectedMedia.filter(id => p.media.some(m => m.id === id))
-  setState({ snap, selection, selectedMedia })
+  const transitionSel = state.transitionSel && findClip(p, state.transitionSel)?.clip.transition_out ? state.transitionSel : null
+  setState({ snap, selection, selectedMedia, transitionSel })
   if (opened) requestAnimationFrame(() => zoomToFit())
 }
 
@@ -331,14 +336,25 @@ export async function importMedia(paths?: string[]) {
 
 export function select(ids: string[], mode: 'replace' | 'toggle' | 'add' = 'replace') {
   setState(s => {
-    if (mode === 'replace') return { selection: ids, selectedMedia: [] }
+    if (mode === 'replace') return { selection: ids, selectedMedia: [], transitionSel: null }
     const set = new Set(s.selection)
     for (const id of ids) {
       if (mode === 'toggle' && set.has(id)) set.delete(id)
       else set.add(id)
     }
-    return { selection: [...set], selectedMedia: [] }
+    return { selection: [...set], selectedMedia: [], transitionSel: null }
   })
+}
+
+/** Selects the transition going out of `clipId` (clears the clip selection). */
+export function selectTransition(clipId: string | null) {
+  setState({ transitionSel: clipId, selection: [], selectedMedia: [] })
+}
+
+/** Commands that remove the transition out of `clipId`, with the crossfade on its linked audio. */
+export function removeTransitionCommands(p: Project, clipId: string): Command[] {
+  const found = findClip(p, clipId)
+  return found?.clip.transition_out ? removeTransitionCmds(p, found.track, found.clip) : []
 }
 
 export function selectAll() {
@@ -519,6 +535,11 @@ export async function splitAtPlayhead() {
 export async function deleteSelection(ripple = false) {
   const p = project()
   if (!p) return
+  if (state.transitionSel) {
+    const cmds = removeTransitionCommands(p, state.transitionSel)
+    if (cmds.length && (await exec(cmds.length === 1 ? cmds[0] : { op: 'batch', commands: cmds }))) setState({ transitionSel: null })
+    return
+  }
   if (state.selectedMedia.length && !state.selection.length) {
     const ok = await exec({ op: 'batch', commands: state.selectedMedia.map(media_id => ({ op: 'remove_media', media_id })) })
     if (ok) setState({ selectedMedia: [] })

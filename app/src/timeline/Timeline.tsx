@@ -1,6 +1,7 @@
+import './timeline.css'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent as RME, type PointerEvent as RPE } from 'react'
 import { registerDropTarget, useLibDrag, type LibDrag } from '../drag'
-import { displayTracks, findClip, fps, frameTicks, mainSequence, newId, seconds, sequenceDuration, ticks } from '../core/model'
+import { findClip, fps, frameTicks, mainSequence, newId, seconds, sequenceDuration, ticks } from '../core/model'
 import { TICKS_PER_SECOND, type Clip, type Command, type MediaAsset, type Project, type Ticks, type Track } from '../core/types'
 import {
   addMediaToTimeline,
@@ -15,6 +16,7 @@ import {
   paste,
   seek,
   select,
+  selectTransition,
   setState,
   setTimelineViewWidth,
   splitAtPlayhead,
@@ -23,10 +25,18 @@ import {
   zoomBy,
 } from '../store'
 import { sep, type MenuItem } from '../ui/ContextMenu'
+import { TipButton } from './Tooltip'
 import { IcEye, IcEyeOff, IcGear, IcLink, IcLinkOff, IcLock, IcPlus, IcScissors, IcSpeaker, IcSpeakerOff, IcTrackHeight, IcUnlock, IcWand } from '../ui/icons'
 import { ClipView, type Edge } from './ClipView'
-import { HEADER_W, RULER_H, insertCommands, layoutRows, overlaps, rulerLabel, rulerStep, snap, snapPoints, tx, xt, type Row } from './geometry'
-import { TimelineToolbar } from './Toolbar'
+import { HEADER_W, RULER_H, insertCommands, layoutRows, timelineTracks, overlaps, rulerLabel, rulerStep, snap, snapPoints, tx, xt, type Row } from './geometry'
+import { TimelineToolbar, openCrop } from './Toolbar'
+import { TransitionView, trackTransitions, copiedTransition } from './TransitionView'
+import { cutNear, defaultTransition, newTransition, setTransitionCommands, transitionWindow } from './transitions'
+import { Markers } from './Markers'
+import { TimelineDialogs } from './Dialogs'
+import { AudioMeter } from './Meter'
+import { getUi, setUi, useUi } from './tlstate'
+import { addKeyframes, addMarker, deleteAllTransitions, detachAudio, freezeFrame, linkSelection, notSupported, removeAllMarkers, unlinkSelection } from './edit'
 
 type Op =
   | { type: 'move'; ids: string[]; dt: Ticks; trackId: string | null; insertAt: Ticks | null; invalid: boolean }
@@ -44,6 +54,10 @@ export function Timeline() {
   const [op, setOp] = useState<Op | null>(null)
   const [snapAt, setSnapAt] = useState<Ticks | null>(null)
   const libDrag = useLibDrag()
+  const tool = useUi(s => s.tool)
+  const quickPreview = useUi(s => s.quickPreview)
+  const meter = useUi(s => s.meter)
+  const compact = useUi(s => s.compactTracks)
 
   useLayoutEffect(() => {
     const el = scroller.current!
@@ -85,8 +99,8 @@ export function Timeline() {
   }, [])
 
   const seq = project ? mainSequence(project) : null
-  const tracks = useMemo(() => (seq ? displayTracks(seq) : []), [seq])
-  const { rows, height: contentH } = useMemo(() => layoutRows(tracks), [tracks])
+  const tracks = useMemo(() => (seq ? timelineTracks(seq) : []), [seq])
+  const { rows, height: contentH } = useMemo(() => layoutRows(tracks, compact), [tracks, compact])
   const duration = seq ? sequenceDuration(seq) : 0
   const contentW = HEADER_W + Math.max(tx(duration, pps) + 300, view.width)
 
@@ -141,6 +155,14 @@ export function Timeline() {
   const onClipDown = (e: RPE, clip: Clip, edge: Edge) => {
     const found = findClip(project, clip.id)
     if (!found) return
+    if (toolClick(e)) return
+    if (e.altKey && edge === 'body' && found.track.kind === 'video') {
+      // ⌥ + click: keyframe at the clicked time (Filmora's Keyframing shortcut).
+      select([clip.id])
+      seek(timeAt(e.clientX))
+      addKeyframes()
+      return
+    }
     const additive = e.metaKey || e.ctrlKey || e.shiftKey
     let ids: string[]
     if (additive) {
@@ -157,7 +179,72 @@ export function Timeline() {
     else startTrim(e, clip, found.track, edge)
   }
 
+  /** Handles a click for the non-select mouse tools. True when it consumed the event. */
+  const toolClick = (e: RPE | RME): boolean => {
+    const tool = getUi().tool
+    if (tool === 'select') return false
+    e.stopPropagation()
+    const t = timeAt(e.clientX)
+    const all = seq.tracks.filter(tr => !tr.locked).flatMap(tr => tr.clips)
+    if (tool === 'split') {
+      const row = rowAt(e.clientY)
+      const target = row?.track.clips.find(c => t > c.start && t < c.end)
+      const at = snapToFrameT(t, project)
+      if (target && at > target.start && at < target.end) exec({ op: 'split_clip', clip_id: target.id, at })
+    } else if (tool === 'forward') select(all.filter(c => c.end > t).map(c => c.id))
+    else if (tool === 'backward') select(all.filter(c => c.start < t).map(c => c.id))
+    else if (tool === 'zoom') {
+      seek(t)
+      zoomBy(e.altKey ? 1 / 1.5 : 1.5)
+    }
+    return true
+  }
+
+  // Slide edit: the clip moves between its neighbours, which trim to follow it.
+  const startSlide = (e: RPE, clip: Clip, track: Track): boolean => {
+    const frame = frameTicks(project.settings.frame_rate)
+    const i = track.clips.findIndex(c => c.id === clip.id)
+    const prev = track.clips[i - 1] && clip.start - track.clips[i - 1].end <= frame ? track.clips[i - 1] : null
+    const next = track.clips[i + 1] && track.clips[i + 1].start - clip.end <= frame ? track.clips[i + 1] : null
+    if (!prev && !next) return false
+    const x0 = e.clientX
+    const len = clip.end - clip.start
+    const lo = prev ? prev.start + frame : clip.start
+    const hi = next ? next.end - frame - len : clip.start
+    let dt = 0
+    const mv = (ev: PointerEvent) => {
+      dt = Math.min(hi - clip.start, Math.max(lo - clip.start, xt(ev.clientX - x0, getState().zoom)))
+      setOp({ type: 'move', ids: [clip.id], dt, trackId: null, insertAt: null, invalid: false })
+    }
+    const up = async () => {
+      window.removeEventListener('pointermove', mv)
+      window.removeEventListener('pointerup', up)
+      setOp(null)
+      if (!dt) return
+      const start = clip.start + dt
+      const cmds: Command[] = []
+      // Order the edits so no step overlaps: shrink first, then move, then grow.
+      if (dt > 0) {
+        if (next) cmds.push({ op: 'trim_clip', clip_id: next.id, start: next.start + dt, end: null })
+        cmds.push({ op: 'move_clip', clip_id: clip.id, start, track_id: null })
+        if (prev) cmds.push({ op: 'trim_clip', clip_id: prev.id, start: null, end: prev.end + dt })
+      } else {
+        if (prev) cmds.push({ op: 'trim_clip', clip_id: prev.id, start: null, end: prev.end + dt })
+        cmds.push({ op: 'move_clip', clip_id: clip.id, start, track_id: null })
+        if (next) cmds.push({ op: 'trim_clip', clip_id: next.id, start: next.start + dt, end: null })
+      }
+      await exec({ op: 'batch', commands: cmds })
+    }
+    window.addEventListener('pointermove', mv)
+    window.addEventListener('pointerup', up)
+    return true
+  }
+
   const startMove = (e: RPE, anchor: Clip, ids: string[]) => {
+    if (getUi().slideEdit && ids.length === 1) {
+      const f = findClip(project, anchor.id)
+      if (f && startSlide(e, anchor, f.track)) return
+    }
     const x0 = e.clientX
     const y0 = e.clientY
     const moving = ids.map(id => findClip(project, id)).filter((x): x is { track: Track; clip: Clip } => !!x && !x.track.locked)
@@ -283,6 +370,7 @@ export function Timeline() {
   // Marquee selection on empty lane space.
   const onLaneDown = (e: RPE) => {
     if (e.button !== 0) return
+    if (toolClick(e)) return
     const el = scroller.current!
     const r = el.getBoundingClientRect()
     const cx = (x: number) => x - r.left + el.scrollLeft
@@ -342,6 +430,11 @@ export function Timeline() {
     const found = findClip(project, clip.id)!
     const media = clip.source.type === 'media' ? project.media.find(m => m.id === (clip.source as { media_id: string }).media_id) : null
     const ph = getState().playhead
+    const isVideo = found.track.kind === 'video'
+    const visual = isVideo && clip.source.type !== 'title'
+    const audible = !!media && (media.has_audio || media.kind === 'audio')
+    const inside = ph > clip.start && ph < clip.end
+    const linked = !!clip.link_group
     const items: MenuItem[] = [
       { label: 'Cut', shortcut: '⌘X', action: cutSelection },
       { label: 'Copy', shortcut: '⌘C', action: copySelection },
@@ -350,39 +443,65 @@ export function Timeline() {
       { label: 'Delete', shortcut: '⌫', action: () => deleteSelection(false) },
       { label: 'Ripple Delete', shortcut: '⇧⌫', action: () => deleteSelection(true) },
       sep,
-      { label: 'Split', shortcut: '⌘B', action: splitAtPlayhead, disabled: !(ph > clip.start && ph < clip.end) },
+      { label: 'Split', shortcut: '⌘B', action: splitAtPlayhead, disabled: !inside },
+      { label: 'Trim Start to Playhead', shortcut: '⌥[', disabled: !inside, action: () => exec({ op: 'trim_clip', clip_id: clip.id, start: ph, end: null }) },
+      { label: 'Trim End to Playhead', shortcut: '⌥]', disabled: !inside, action: () => exec({ op: 'trim_clip', clip_id: clip.id, start: null, end: ph }) },
+      ...(visual
+        ? [
+            { label: 'Crop and Zoom', shortcut: '⌥C', action: openCrop },
+            { label: 'Rotate 90 CW', shortcut: '⌥⌘→', action: () => exec({ op: 'set_rotation', clip_id: clip.id, degrees: (((clip.transform?.rotation.value.type === 'float' ? clip.transform.rotation.value.value : 0) + 90) % 360) }) },
+          ]
+        : []),
+      sep,
+      ...(audible || linked
+        ? [
+            { label: 'Adjust Audio', action: () => setState({ propsTab: 'audio' }) },
+            ...(isVideo ? [{ label: linked ? 'Unlink Audio' : 'Detach Audio', shortcut: '^⌥D', action: linked ? unlinkSelection : detachAudio }] : []),
+            { label: 'Speech to Text', action: notSupported('Speech to Text') },
+            { label: 'AI Translation', action: notSupported('AI Translation') },
+            {
+              label: clip.audio?.muted ? 'Unmute' : 'Mute',
+              shortcut: '⇧⌘M',
+              action: () => exec({ op: 'set_mute', clip_id: clip.id, muted: !clip.audio?.muted }),
+            },
+            { label: 'AI Vocal Remover', action: notSupported('AI Vocal Remover') },
+            sep,
+          ]
+        : []),
       {
         label: 'Speed',
-        children: [0.25, 0.5, 1, 1.5, 2, 4].map(r => ({
-          label: `${r}x`,
-          checked: (clip.speed?.rate ?? 1) === r,
-          action: () => exec({ op: 'set_speed', clip_id: clip.id, rate: r, reverse: null }),
-        })),
+        children: [
+          { label: 'Uniform Speed', shortcut: '^R', action: () => setState({ propsTab: 'speed' }) },
+          { label: 'Speed Ramping', action: () => setState({ propsTab: 'speed' }) },
+          sep,
+          ...[0.5, 1, 2, 4].map(r => ({ label: `${r}x`, checked: (clip.speed?.rate ?? 1) === r, action: () => exec({ op: 'set_speed', clip_id: clip.id, rate: r, reverse: null }) })),
+          sep,
+          { label: 'Add Freeze Frame', shortcut: '⌥F', action: freezeFrame, disabled: !(ph >= clip.start && ph < clip.end) || !visual },
+        ],
+        disabled: clip.source.type === 'title',
       },
+      sep,
       {
         label: 'Reverse',
         checked: !!clip.speed?.reverse,
-        action: () => exec({ op: 'set_speed', clip_id: clip.id, rate: clip.speed?.rate ?? 1, reverse: !clip.speed?.reverse }),
+        disabled: clip.source.type === 'title',
+        action: () => exec({ op: 'set_reverse', clip_id: clip.id, reverse: !clip.speed?.reverse }),
       },
       sep,
       {
-        label: clip.audio?.muted ? 'Unmute' : 'Mute',
-        disabled: !media || !(media.has_audio || media.kind === 'audio'),
-        action: () => clip.audio && exec({ op: 'set_audio', clip_id: clip.id, audio: { ...clip.audio, muted: !clip.audio.muted } }),
-      },
-      {
-        label: 'Remove Transition',
-        disabled: !clip.transition_out,
-        action: () => exec({ op: 'set_transition', clip_id: clip.id, transition: null }),
-      },
-      {
-        label: 'Remove Effects',
-        disabled: !clip.effects?.length,
-        action: () => exec({ op: 'batch', commands: (clip.effects ?? []).map(fx => ({ op: 'remove_effect', clip_id: clip.id, effect_id: fx.id })) }),
+        label: 'Effect&Filter',
+        children: [
+          { label: 'Remove Effects', disabled: !clip.effects?.length, action: () => exec({ op: 'batch', commands: (clip.effects ?? []).map(fx => ({ op: 'remove_effect', clip_id: clip.id, effect_id: fx.id })) }) },
+        ],
       },
       sep,
+      { label: 'Create Compound Clip', shortcut: '⌥G', action: () => exec({ op: 'create_compound_clip', clip_ids: getState().selection, name: null }) },
+      sep,
+      { label: clip.disabled ? 'Enable Clip' : 'Disable Clip', shortcut: 'E', action: () => exec({ op: 'set_clip_enabled', clip_id: clip.id, enabled: !!clip.disabled }) },
+      { label: 'Add Marker', shortcut: 'M', action: addMarker },
       { label: 'Select All Clips on Track', action: () => select(found.track.clips.map(c => c.id)) },
-      { label: 'Properties', action: () => setState({ propsTab: found.track.kind === 'audio' ? 'audio' : 'video' }) },
+      sep,
+      { label: 'Enable Timeline Snapping', shortcut: 'N', checked: getState().snapping, action: () => setState(s => ({ snapping: !s.snapping })) },
     ]
     openMenu(e.clientX, e.clientY, items)
   }
@@ -390,23 +509,49 @@ export function Timeline() {
   const laneMenu = (e: RME, track: Track | null) => {
     e.preventDefault()
     const t = timeAt(e.clientX)
+    const clipboardTransition = copiedTransition()
     openMenu(e.clientX, e.clientY, [
       {
         label: 'Paste',
         shortcut: '⌘V',
-        disabled: !getState().clipboard.length,
-        action: () => {
+        disabled: !getState().clipboard.length && !(clipboardTransition && track),
+        action: async () => {
+          if (clipboardTransition && track) {
+            const c = cutNear(project, track, t, Number.MAX_SAFE_INTEGER)
+            if (c) {
+              const tr = newTransition(project, c.a, c.b, clipboardTransition.kind, clipboardTransition.duration)
+              if (await exec({ op: 'batch', commands: setTransitionCommands(project, track, c.a, tr) })) selectTransition(c.a.id)
+              return
+            }
+          }
           seek(t)
           paste()
         },
       },
-      { label: 'Move Playhead Here', action: () => seek(t) },
+      sep,
+      { label: 'Smart BGM Generation', action: notSupported('Smart BGM Generation') },
+      { label: 'Speech to Text', action: notSupported('Speech to Text') },
+      { label: 'AI Translation', action: notSupported('AI Translation') },
+      sep,
+      { label: 'Delete All Transitions', action: deleteAllTransitions },
+      { label: 'Delete All Markers', action: removeAllMarkers, disabled: !(seq.markers?.length || seq.tracks.some(x => x.clips.some(c => c.markers?.length))) },
+      sep,
+      {
+        label: 'Select Clip Range',
+        shortcut: 'X',
+        action: () => {
+          const c = (track ?? seq.tracks.find(x => x.kind === 'video'))?.clips.find(c => t >= c.start && t < c.end)
+          if (c) setState({ markIn: c.start, markOut: c.end })
+        },
+      },
+      sep,
+      { label: 'Render Preview', shortcut: '↵', action: () => toast('The preview is rendered in real time; no pre-render is needed') },
       sep,
       { label: 'Add Video Track', action: () => addTrack('video') },
       { label: 'Add Audio Track', action: () => addTrack('audio') },
       ...(track ? trackItems(track, seq.tracks) : []),
       sep,
-      { label: 'Snapping', checked: getState().snapping, action: () => setState(s => ({ snapping: !s.snapping })) },
+      { label: 'Enable Timeline Snapping', shortcut: 'N', checked: getState().snapping, action: () => setState(s => ({ snapping: !s.snapping })) },
     ])
   }
 
@@ -420,21 +565,39 @@ export function Timeline() {
 
   const hover = libDrag ? dropTarget(libDrag) : null
   const hoverMedia = libDrag?.item.type === 'media' ? project.media.find(m => m.id === libDrag.item.id) : null
+  const hoverCut = (() => {
+    if (!hover?.row || libDrag?.item.type !== 'transition') return null
+    const c = cutNear(project, hover.row.track, hover.time, xt(TRANSITION_SNAP_PX, pps))
+    if (!c) return null
+    const d = defaultTransition()
+    return { row: hover.row, a: c.a, tr: newTransition(project, c.a, c.b, libDrag.item.id, d.duration) }
+  })()
 
   return (
     <section className="panel timeline">
       <TimelineToolbar />
-      <div className="tl-scroll" ref={scroller} onContextMenu={e => laneMenu(e, null)}>
+      <div
+        className={`tl-scroll tool-${tool}`}
+        ref={scroller}
+        onContextMenu={e => laneMenu(e, null)}
+        onMouseMove={quickPreview ? e => {
+          if (e.buttons) return
+          const r = scroller.current!.getBoundingClientRect()
+          if (e.clientX - r.left < HEADER_W) return
+          seek(timeAt(e.clientX))
+        } : undefined}
+      >
         <div className="tl-content" style={{ width: contentW, height: Math.max(contentH, view.height) }}>
           <div className="tl-ruler-row" style={{ width: contentW }}>
             <div className="tl-corner">
-              <button className="ticon sm" title="Timeline settings"><IcGear size={17} /></button>
-              <button className="ticon sm" title="Unlink"><IcLinkOff size={17} /></button>
-              <button className="ticon sm" title="Link"><IcLink size={17} /></button>
-              <button className="ticon sm dim" title="Track height"><IcTrackHeight size={17} /></button>
+              <TipButton tip={{ label: 'Timeline settings' }} className="sm" data-tb="tl-settings" onClick={e => openMenu(e.currentTarget.getBoundingClientRect().left, e.currentTarget.getBoundingClientRect().bottom + 6, settingsMenu())}><IcGear size={17} /></TipButton>
+              <TipButton tip={{ label: 'Unlink' }} className="sm" data-tb="unlink" onClick={unlinkSelection}><IcLinkOff size={17} /></TipButton>
+              <TipButton tip={{ label: 'Link' }} className="sm" data-tb="link" onClick={linkSelection}><IcLink size={17} /></TipButton>
+              <TipButton tip={{ label: 'Track height' }} className={`sm ${compact ? '' : 'dim'}`} data-tb="track-height" onClick={e => openMenu(e.currentTarget.getBoundingClientRect().left, e.currentTarget.getBoundingClientRect().bottom + 6, trackHeightMenu())}><IcTrackHeight size={17} /></TipButton>
             </div>
             <Ruler pps={pps} from={view.left - HEADER_W} width={view.width} fpsVal={fps(project.settings.frame_rate)} onDown={scrub} />
             <div className="render-bar" style={{ left: HEADER_W, width: tx(duration, pps) }} />
+            <Markers project={project} pps={pps} from={view.left - HEADER_W} width={view.width} />
             <PlayheadHead pps={pps} onDown={scrub} />
           </div>
 
@@ -442,7 +605,7 @@ export function Timeline() {
 
           {rows.map((row, i) => (
             <div key={row.track.id} className={`tl-row ${row.track.kind} ${i % 2 ? 'odd' : 'even'}`} style={{ top: row.top, height: row.height, width: contentW }}>
-              <TrackHeader track={row.track} tracks={seq.tracks} />
+              <TrackHeader track={row.track} tracks={seq.tracks} height={row.height} />
               <div
                 className={`tl-lane ${row.track.locked ? 'locked' : ''} ${hover?.row?.track.id === row.track.id ? 'drop' : ''}`}
                 onPointerDown={onLaneDown}
@@ -466,6 +629,7 @@ export function Timeline() {
                       clip={c}
                       track={row.track}
                       media={media}
+                      titleText={templateText(project, c)}
                       left={left}
                       width={width}
                       height={row.height - 4}
@@ -478,6 +642,18 @@ export function Timeline() {
                     />
                   )
                 })}
+                {trackTransitions(project, row.track).map(({ clip: c, next }) => {
+                  if (!c.transition_out) return null
+                  const [from, to] = transitionWindow(c.transition_out, c.end)
+                  if (tx(to, pps) < vx0 || tx(from, pps) > vx1 || movingSet.has(c.id)) return null
+                  const [top, h] = transitionArea(project, row, c)
+                  return <TransitionView key={`tr-${c.id}`} project={project} track={row.track} clip={c} next={next} pps={pps} top={top} height={h} />
+                })}
+                {hoverCut && hoverCut.row.track.id === row.track.id && (() => {
+                  const [from, to] = transitionWindow(hoverCut.tr, hoverCut.a.end)
+                  const [top, h] = transitionArea(project, row, hoverCut.a)
+                  return <div className="transition-box drop-preview" style={{ left: tx(from, pps), width: tx(to, pps) - tx(from, pps), top, height: h }} />
+                })()}
                 {trim && row.track.clips.some(c => c.id === trim.id) && (
                   <div className="trim-tip" style={{ left: tx(trim.edge === 'start' ? trim.start : trim.end, pps) }}>
                     {formatDur(trim.end - trim.start, project)}
@@ -499,7 +675,7 @@ export function Timeline() {
               const left = tx(f.clip.start + mov.dt, pps)
               return (
                 <div key={id} className={`drag-layer ${mov.invalid ? 'invalid' : ''}`} style={{ top: row.top, left: HEADER_W, height: row.height }}>
-                  <ClipView clip={f.clip} track={row.track} media={media} left={left} width={tx(f.clip.end - f.clip.start, pps)} height={row.height - 4} pps={pps} selected view={[vx0 - left, vx1 - left]} />
+                  <ClipView clip={f.clip} track={row.track} media={media} titleText={templateText(project, f.clip)} left={left} width={tx(f.clip.end - f.clip.start, pps)} height={row.height - 4} pps={pps} selected view={[vx0 - left, vx1 - left]} />
                 </div>
               )
             })}
@@ -528,8 +704,50 @@ export function Timeline() {
         </button>
         <HScroll scroller={scroller} contentW={contentW} view={view} />
       </div>
+      {meter && <AudioMeter />}
+      <TimelineDialogs />
     </section>
   )
+}
+
+const TRANSITION_SNAP_PX = 60
+
+/** The text of a title template clip (a nested sequence holding only titles), else null. */
+function templateText(project: Project, clip: Clip): string | null {
+  if (clip.source.type !== 'sequence') return null
+  const id = clip.source.sequence_id
+  const inner = project.sequences.find(s => s.id === id)?.tracks.flatMap(t => t.clips) ?? []
+  if (!inner.length || !inner.every(c => c.source.type === 'title')) return null
+  const t = inner[0].source as { text?: string }
+  return t.text ?? ''
+}
+
+/** Vertical span (top, height) of a transition box in a lane: the thumbnail strip, or the waveform on audio tracks. */
+function transitionArea(project: Project, row: Row, clip: Clip): [number, number] {
+  const clipH = row.height - 4
+  if (row.track.kind === 'audio') return [2 + 18, clipH - 18]
+  if (clip.source.type === 'title') return [2, clipH]
+  const media = clip.source.type === 'media' ? project.media.find(m => m.id === (clip.source as { media_id: string }).media_id) : null
+  const audio = !!media && (media.has_audio || media.kind === 'audio')
+  return [2 + 17, clipH - 17 - (audio ? 19 : 0)]
+}
+
+function settingsMenu(): MenuItem[] {
+  const s = getState()
+  return [
+    { label: 'Enable Timeline Snapping', shortcut: 'N', checked: s.snapping, action: () => setState({ snapping: !s.snapping }) },
+    sep,
+    { label: 'Add Video Track', action: () => addTrack('video') },
+    { label: 'Add Audio Track', action: () => addTrack('audio') },
+  ]
+}
+
+function trackHeightMenu(): MenuItem[] {
+  const compact = getUi().compactTracks
+  return [
+    { label: 'Normal', checked: !compact, action: () => setUi({ compactTracks: false }) },
+    { label: 'Small', checked: compact, action: () => setUi({ compactTracks: true }) },
+  ]
 }
 
 function formatDur(t: Ticks, p: Project) {
@@ -562,7 +780,7 @@ function trackItems(track: Track, all: Track[]): MenuItem[] {
   ]
 }
 
-function TrackHeader({ track, tracks }: { track: Track; tracks: Track[] }) {
+function TrackHeader({ track, tracks, height }: { track: Track; tracks: Track[]; height: number }) {
   const flags = (patch: { locked?: boolean; muted?: boolean; hidden?: boolean }) =>
     exec({ op: 'set_track_flags', track_id: track.id, locked: patch.locked ?? null, muted: patch.muted ?? null, hidden: patch.hidden ?? null })
   return (
@@ -578,18 +796,19 @@ function TrackHeader({ track, tracks }: { track: Track; tracks: Track[] }) {
         ])
       }}
     >
-      <span className="track-name">{track.name}</span>
+      {/* Short rows show only the icons, like the reference. */}
+      {height >= 40 && <span className="track-name">{track.name}</span>}
       <div className="track-icons">
         <button className={`ticon xs ${track.locked ? 'on' : ''}`} title={track.locked ? 'Unlock track' : 'Lock track'} onClick={() => flags({ locked: !track.locked })}>
-          {track.locked ? <IcLock size={18} /> : <IcUnlock size={18} />}
+          {track.locked ? <IcLock size={16} /> : <IcUnlock size={16} />}
         </button>
         <button className={`ticon xs ${track.muted ? 'on' : ''}`} title={track.muted ? 'Unmute track' : 'Mute track'} onClick={() => flags({ muted: !track.muted })}>
-          {track.muted ? <IcSpeakerOff size={18} /> : <IcSpeaker size={18} />}
+          {track.muted ? <IcSpeakerOff size={16} /> : <IcSpeaker size={16} />}
         </button>
-        <button className="ticon xs" title="Auto enhance"><IcWand size={18} /></button>
+        <button className="ticon xs" title="Auto enhance"><IcWand size={16} /></button>
         {track.kind === 'video' && (
           <button className={`ticon xs ${track.hidden ? 'on' : ''}`} title={track.hidden ? 'Show track' : 'Hide track'} onClick={() => flags({ hidden: !track.hidden })}>
-            {track.hidden ? <IcEyeOff size={18} /> : <IcEye size={18} />}
+            {track.hidden ? <IcEyeOff size={16} /> : <IcEye size={16} />}
           </button>
         )}
       </div>
@@ -598,17 +817,18 @@ function TrackHeader({ track, tracks }: { track: Track; tracks: Track[] }) {
 }
 
 function Ruler({ pps, from, width, fpsVal, onDown }: { pps: number; from: number; width: number; fpsVal: number; onDown: (e: RPE) => void }) {
-  const { major, minor } = rulerStep(pps)
+  const { major, subs } = rulerStep(pps, fpsVal)
+  const minor = major / subs
   const start = Math.max(0, Math.floor(Math.max(0, from) / pps / minor) * minor)
   const end = (Math.max(0, from) + width + 200) / pps
   const ticksEls = []
   for (let i = Math.round(start / minor); i * minor <= end; i++) {
     const s = i * minor
-    const isMajor = i % 5 === 0
+    const isMajor = i % subs === 0
     const x = s * pps
     ticksEls.push(
       <div key={i} className={`rtick ${isMajor ? 'major' : ''}`} style={{ left: x }}>
-        {isMajor && <span>{rulerLabel(s, major, fpsVal)}</span>}
+        {isMajor && <span>{rulerLabel(s, fpsVal)}</span>}
       </div>,
     )
   }
@@ -638,8 +858,8 @@ function PlayheadLine({ pps, height, scroller, firstRowTop }: { pps: number; hei
   return (
     <>
       <div className="ph-line" style={{ left: x, height }} />
-      <button className="ph-split" style={{ left: x, top: firstRowTop + 4 }} title="Split (⌘B)" onPointerDown={e => e.stopPropagation()} onClick={splitAtPlayhead}>
-        <IcScissors size={14} />
+      <button className="ph-split" style={{ left: x, top: firstRowTop - 12 }} title="Split (⌘B)" onPointerDown={e => e.stopPropagation()} onClick={splitAtPlayhead}>
+        <IcScissors size={17} />
       </button>
     </>
   )
@@ -712,19 +932,12 @@ async function handleDrop(project: Project, d: LibDrag, track: Track | null, tim
   }
   if (!track) return toast('Drop onto a clip in the timeline')
   if (item.type === 'transition') {
-    // The cut nearest to the drop point, between two touching clips.
-    const frame = frameTicks(project.settings.frame_rate)
-    let best: Clip | null = null
-    for (let i = 0; i + 1 < track.clips.length; i++) {
-      const a = track.clips[i]
-      const b = track.clips[i + 1]
-      if (b.start - a.end > frame) continue
-      if (!best || Math.abs(a.end - time) < Math.abs(best.end - time)) best = a
-    }
-    if (!best || Math.abs(best.end - time) > ticks(3)) return toast('Drop the transition between two adjacent clips')
-    const dur = Math.min(TICKS_PER_SECOND, Math.floor((best.end - best.start) / 2))
-    await exec({ op: 'set_transition', clip_id: best.id, transition: { id: newId(), kind: item.id, duration: dur, alignment: 'center', params: {} } })
-    select([best.id])
+    // The cut nearest the drop point (or the end of the last clip: a fade out).
+    const c = cutNear(project, track, time, ticks(3))
+    if (!c) return toast('Drop the transition between two adjacent clips')
+    const d = defaultTransition()
+    const tr = newTransition(project, c.a, c.b, item.id, c.a.transition_out?.duration ?? d.duration, c.a.transition_out?.alignment ?? 'center')
+    if (await exec({ op: 'batch', commands: setTransitionCommands(project, track, c.a, tr) })) selectTransition(c.a.id)
     return
   }
   if (item.type === 'effect') {

@@ -245,6 +245,35 @@ export function apply(p: Project, cmd: Command): void {
     case 'rename_project':
       p.name = cmd.name
       break
+    case 'detach_audio': {
+      const clip = clipRef(p, cmd.clip_id)
+      ensureUnlocked(p, cmd.clip_id)
+      const partners = clip.link_group ? linkedIds(p, cmd.clip_id).filter(id => id !== clip.id) : []
+      if (partners.length) {
+        for (const id of [clip.id, ...partners]) delete clipRef(p, id).link_group
+        break
+      }
+      const seq = p.sequences.find(s => s.tracks.some(t => t.clips.some(c => c.id === clip.id)))!
+      let track = cmd.track_id ? trackMut(p, cmd.track_id) : seq.tracks.find(t => t.kind === 'audio' && !t.locked && t.clips.every(c => c.end <= clip.start || c.start >= clip.end))
+      if (!track) {
+        track = { id: newId(), kind: 'audio', name: `Audio ${seq.tracks.filter(t => t.kind === 'audio').length + 1}`, locked: false, muted: false, hidden: false, clips: [] }
+        seq.tracks.push(track)
+      }
+      const audio: Clip = { ...structuredClone(clip), id: newId() }
+      delete audio.transition_out
+      delete audio.link_group
+      insertClip(track, audio)
+      if (clip.audio) clip.audio.muted = true
+      break
+    }
+    case 'link_clips': {
+      const group = newId()
+      for (const id of cmd.clip_ids) clipRef(p, id).link_group = group
+      break
+    }
+    case 'unlink_clips':
+      for (const id of cmd.clip_ids) for (const l of linkedIds(p, id)) delete clipRef(p, l).link_group
+      break
     case 'batch':
       for (const c of cmd.commands) apply(p, c)
       break
