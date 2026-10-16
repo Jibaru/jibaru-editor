@@ -1,12 +1,13 @@
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { devMediaServer } from './dev/mediaServer'
+import { p3Colors } from './dev/p3Colors'
 
 // Tauri expects a fixed port and fails if it is taken.
 const host = process.env.TAURI_DEV_HOST
 
 export default defineConfig({
-  plugins: [react(), devMediaServer()],
+  plugins: [p3Colors(), react(), devMediaServer()],
   clearScreen: false,
   server: {
     port: 1420,
