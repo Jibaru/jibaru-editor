@@ -2,6 +2,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod media;
+#[cfg(target_os = "macos")]
+mod menu;
 mod state;
 
 use jb_core::{Command, MediaAsset, ProjectSettings};
@@ -197,6 +199,12 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .manage(AppState(Mutex::new(session)))
         .setup(|app| {
+            #[cfg(target_os = "macos")]
+            {
+                let handle = app.handle().clone();
+                app.set_menu(menu::build(&handle)?)?;
+                app.on_menu_event(move |app, e| menu::forward(app, e.id().as_ref()));
+            }
             let dir = jb_media::MediaCache::default_dir();
             app.manage(Arc::new(Engine::new(&dir)?));
             // Optional project to open at startup: `jibaru-editor path/to/project.jbp`.
