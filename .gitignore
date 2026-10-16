@@ -1,0 +1,7 @@
+/target
+node_modules/
+dist/
+.DS_Store
+/local-corpus/
+*.wfp
+!crates/jb-filmora/tests/fixtures/*.wfp

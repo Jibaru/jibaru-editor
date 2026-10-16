@@ -1,0 +1,26 @@
+[workspace]
+resolver = "2"
+members = ["crates/*"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/Jibaru/jibaru-editor"
+
+[workspace.dependencies]
+jb-core = { path = "crates/jb-core" }
+jb-filmora = { path = "crates/jb-filmora" }
+jb-media = { path = "crates/jb-media" }
+jb-render = { path = "crates/jb-render" }
+jb-export = { path = "crates/jb-export" }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+thiserror = "2"
+anyhow = "1"
+uuid = { version = "1", features = ["v4", "serde"] }
+clap = { version = "4", features = ["derive"] }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

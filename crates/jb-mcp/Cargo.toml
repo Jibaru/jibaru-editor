@@ -1,0 +1,9 @@
+[package]
+name = "jb-mcp"
+description = "MCP server exposing the command bus to agents"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+jb-core.workspace = true

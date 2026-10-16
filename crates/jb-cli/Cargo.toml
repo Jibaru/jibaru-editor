@@ -1,0 +1,13 @@
+[package]
+name = "jb-cli"
+description = "The jb command-line tool"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+jb-core.workspace = true
+
+[[bin]]
+name = "jb"
+path = "src/main.rs"
