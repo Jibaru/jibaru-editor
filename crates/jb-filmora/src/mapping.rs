@@ -118,8 +118,9 @@ pub fn color_to_int(c: [f64; 4]) -> (i64, i64) {
 
 /// Rendered glyph height relative to Filmora's text box height
 /// (calibrated against Filmora exports: the "Basic" title box is 6.67% of
-/// the frame height and its glyphs ~4.8%).
-pub const TITLE_GLYPH_RATIO: f64 = 0.72;
+/// the frame height; measured on Filmora 15.7 exports, Arial text set at
+/// 0.752 of the box matches the rendered text width to 0.2%).
+pub const TITLE_GLYPH_RATIO: f64 = 0.752;
 
 pub fn file_stem(path: &str) -> String {
     let name = path.rsplit(['/', '\\']).next().unwrap_or(path);

@@ -140,7 +140,7 @@ fn maps_the_fixture() {
     assert_eq!(t.text, "Hello World");
     assert_eq!(t.position, [0.5, 0.85]);
     assert_eq!(t.color, [1.0, 0.8, 0.0, 1.0]);
-    assert!((t.font_size - 0.048).abs() < 1e-3, "{}", t.font_size);
+    assert!((t.font_size - 0.0667 * 0.752).abs() < 1e-3, "{}", t.font_size);
     assert!(t.stroke.is_some() && t.shadow.is_none());
     assert_eq!(text.transform, Transform::default(), "the text box transform is folded into the title");
 
