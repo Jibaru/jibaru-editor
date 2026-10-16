@@ -1,4 +1,4 @@
-import { menuBar } from '../actions'
+import { menuBar, nativeMenuBar } from '../actions'
 import { openMenu, saveProject, setState, useEditor } from '../store'
 import {
   IcApps,
@@ -22,7 +22,7 @@ export function TitleBar() {
   return (
     <header className="titlebar" data-tauri-drag-region>
       {isMac && <div className="traffic-space" data-tauri-drag-region />}
-      <nav className="menubar">
+      <nav className="menubar" hidden={nativeMenuBar}>
         {menuBar().map(m => (
           <button
             key={m.name}

@@ -25,6 +25,7 @@ import {
   zoomToFit,
   seek,
   duration,
+  toast,
 } from './store'
 import { sep, type MenuItem } from './ui/ContextMenu'
 
@@ -93,11 +94,45 @@ export function menuBar(): { name: string; items: () => MenuItem[] }[] {
       name: 'Help',
       items: () => [
         { label: 'About Jibaru Editor', action: () => window.open('https://github.com/Jibaru/jibaru-editor') },
-        { label: 'Keyboard Shortcuts', action: () => setState({ toast: { kind: 'info', text: `Space play · J/K/L shuttle · ${mod}B split · ${mod}Z undo · ⌫ delete`, id: Date.now() } }) },
+        { label: 'Keyboard Shortcuts', action: () => toast(`Space play · J/K/L shuttle · ${mod}B split · ${mod}Z undo · ⌫ delete`) },
       ],
     },
   ]
 }
+
+/** Actions behind the native macOS menu items (src-tauri/src/menu.rs). */
+const MENU_ACTIONS: Record<string, () => unknown> = {
+  'file.new': newProject,
+  'file.open': () => openProject(),
+  'file.save': () => saveProject(),
+  'file.save_as': () => saveProject(true),
+  'file.import': () => importMedia(),
+  'file.export': () => setState({ exportOpen: true }),
+  'edit.undo': () => (isTyping() ? document.execCommand('undo') : undo()),
+  'edit.redo': () => (isTyping() ? document.execCommand('redo') : redo()),
+  'edit.duplicate': duplicateSelection,
+  'edit.delete': () => deleteSelection(false),
+  'edit.ripple_delete': () => deleteSelection(true),
+  'edit.split': splitAtPlayhead,
+  'tools.add_video_track': () => addTrack('video'),
+  'tools.add_audio_track': () => addTrack('audio'),
+  'tools.snapping': () => setState(s => ({ snapping: !s.snapping })),
+  'view.zoom_in': () => zoomBy(1.5),
+  'view.zoom_out': () => zoomBy(1 / 1.5),
+  'view.zoom_fit': zoomToFit,
+  'view.play': togglePlay,
+  'view.stop': stop,
+  'help.shortcuts': () => toast(`Space play · J/K/L shuttle · ${mod}B split · ${mod}Z undo · ⌫ delete`),
+}
+
+const isTyping = () => !!(document.activeElement as HTMLElement | null)?.closest?.('input, textarea, [contenteditable="true"]')
+
+export function runMenuAction(id: string) {
+  MENU_ACTIONS[id]?.()
+}
+
+/** True when the OS menu bar shows our menus (macOS app), so the window hides its own. */
+export const nativeMenuBar = isMac && '__TAURI_INTERNALS__' in window
 
 /** Global shortcuts. Ignored while typing in a text field. */
 export function installShortcuts() {
@@ -149,7 +184,26 @@ export function installShortcuts() {
     if (!(e.target as HTMLElement).closest?.('input, textarea')) e.preventDefault()
   }
   window.addEventListener('contextmenu', block)
+  // System Cut/Copy/Paste menu items reach the page as clipboard events.
+  const clip = (fn: () => unknown) => (e: ClipboardEvent) => {
+    if (isTyping()) return
+    e.preventDefault()
+    fn()
+  }
+  const onCopy = clip(copySelection)
+  const onCut = clip(cutSelection)
+  const onPaste = clip(paste)
+  document.addEventListener('copy', onCopy)
+  document.addEventListener('cut', onCut)
+  document.addEventListener('paste', onPaste)
+  let unlisten: (() => void) | undefined
+  if (nativeMenuBar)
+    import('@tauri-apps/api/event').then(({ listen }) => listen<string>('menu', e => runMenuAction(e.payload)).then(u => (unlisten = u)))
   return () => {
+    unlisten?.()
+    document.removeEventListener('copy', onCopy)
+    document.removeEventListener('cut', onCut)
+    document.removeEventListener('paste', onPaste)
     window.removeEventListener('keydown', onKey)
     window.removeEventListener('contextmenu', block)
   }

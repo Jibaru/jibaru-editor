@@ -104,7 +104,7 @@ function TimelineMonitor({ ratio, setRatio }: { ratio: string; setRatio: (r: str
           />
           <button className="ticon" title="Mark in"><IcMarkIn size={20} /></button>
           <button className="ticon" title="Mark out"><IcMarkOut size={20} /></button>
-          <button className="ticon" title="Settings"><IcGear size={19} /></button>
+          <button className="ticon corner" title="Settings"><IcGear size={19} /></button>
           <button
             className="ticon"
             title="Snapshot"

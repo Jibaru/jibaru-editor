@@ -92,8 +92,8 @@ export const IcGrid = make(<><path d="M5 5h5M14 5h5M5 9.5h5M14 9.5h5M5 14h5M14 1
 export const IcSnap = make(<><path d="M6 4v7a6 6 0 0 0 12 0V4" /><path d="M6 8h3.5M14.5 8H18" /></>)
 
 // ---------- Player ----------
-export const IcPrevFrame = make(<><path d="M17 5.5v13L8 12z" /><path d="M5.5 5.5v13" /></>)
-export const IcNextFrame = make(<><path d="M7 5.5v13l9-6.5z" /><path d="M18.5 5.5v13" /></>)
+export const IcPrevFrame = make(<><path d="M15 5.5v13L5.5 12z" /><path d="M19 5.5v13" /></>)
+export const IcNextFrame = make(<><path d="M9 5.5v13l9.5-6.5z" /><path d="M5 5.5v13" /></>)
 export const IcPlay = make(<path d="M7 4.8v14.4L19 12z" />)
 export const IcPause = make(<path d="M8 5v14M16 5v14" strokeWidth={2.2} />)
 export const IcStop = make(<rect x="5.5" y="5.5" width="13" height="13" rx="1" />)
@@ -121,7 +121,7 @@ export const IcRecord = make(<><circle cx="12" cy="12" r="7.5" /><circle cx="12"
 export const IcWebcam = make(<><circle cx="12" cy="10" r="6" /><circle cx="12" cy="10" r="2.2" /><path d="M8 19.5h8M12 16v3.5" /></>)
 export const IcFilm = make(<><rect x="4" y="4.5" width="16" height="15" rx="2.5" /><path d="M4 8.5h16M8 4.5v4M12 4.5v4M16 4.5v4" /><path d="M10.5 11.5v5l4-2.5z" /></>)
 export const IcImage = make(<><rect x="3.5" y="5" width="17" height="14" rx="2.5" /><circle cx="9" cy="10" r="1.6" /><path d="m4 17.5 5-5 4 4 2.5-2.5 4.5 4" /></>)
-export const IcVideoBadge = make(<><rect x="4.5" y="4.5" width="15" height="15" rx="3" /><path d="M10 9v6l5-3z" fill="currentColor" stroke="none" /></>)
+export const IcVideoBadge = make(<><rect x="3" y="4" width="18" height="16" rx="3.5" fill="currentColor" stroke="none" /><path d="M9.5 8.5v7l6-3.5z" fill="#1d5e50" stroke="none" /></>)
 export const IcNote = make(<><path d="M9 17V6.5L18 4.5v10" /><circle cx="6.8" cy="17" r="2.2" /><circle cx="15.8" cy="14.5" r="2.2" /></>)
 export const IcFolder = make(<path d="M4 7.5A1.5 1.5 0 0 1 5.5 6h4l2 2h7A1.5 1.5 0 0 1 20 9.5v8a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z" />)
 

@@ -81,7 +81,7 @@ export const ClipView = memo(function ClipView({ clip, track, media, left, width
   const fadeOut = clip.audio?.fade_out ?? 0
   return (
     <div
-      className={`clip ${kind} ${selected ? 'sel' : ''} ${ghost ? 'ghost' : ''} ${track.locked ? 'locked' : ''} ${clip.disabled ? 'disabled' : ''}`}
+      className={`clip ${kind} ${width < 26 ? 'narrow' : ''} ${selected ? 'sel' : ''} ${ghost ? 'ghost' : ''} ${track.locked ? 'locked' : ''} ${clip.disabled ? 'disabled' : ''}`}
       data-clip={clip.id}
       style={{ left, width: Math.max(2, width), height }}
       onPointerDown={down('body')}
@@ -95,7 +95,7 @@ export const ClipView = memo(function ClipView({ clip, track, media, left, width
             {clip.effects?.length ? <span className="fx-dot" title={clip.effects.map(e => catalogLabel(e.kind)).join(', ')} /> : null}
           </div>
           <div className="clip-body">
-            {media && media.kind !== 'audio' && <Thumbs clip={clip} media={media} width={width} height={height - 17 - 14} pps={pps} view={view} />}
+            {media && media.kind !== 'audio' && <Thumbs clip={clip} media={media} width={width} height={height - 17 - 19} pps={pps} view={view} />}
           </div>
           <div className="clip-audio">
             {audible && media && <WaveCanvas clip={clip} media={media} width={width} view={view} pps={pps} color="#47bea3" />}

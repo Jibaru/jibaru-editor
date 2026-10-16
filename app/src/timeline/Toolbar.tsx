@@ -62,42 +62,42 @@ export function TimelineToolbar() {
 
   return (
     <div className="tl-toolbar">
-      <button className="ticon" title="Layout"><IcLayout size={20} /></button>
+      <button className="ticon" title="Layout"><IcLayout size={21} /></button>
       <i className="tb-sep" />
-      <button className="ticon on-bg corner" title="Selection tool"><IcPointer size={20} /></button>
-      <button className="ticon" title={`Undo (${mod}Z)`} disabled={!canUndo} onClick={undo}><IcUndo size={20} /></button>
-      <button className="ticon" title={`Redo (⇧${mod}Z)`} disabled={!canRedo} onClick={redo}><IcRedo size={20} /></button>
-      <button className="ticon" title="Delete (⌫)" disabled={!hasSel} onClick={() => deleteSelection(false)}><IcTrash size={20} /></button>
-      <button className="ticon" title={`Split (${mod}B)`} onClick={splitAtPlayhead}><IcScissors size={20} /></button>
-      {hasSel && <button className="ticon" title="Crop" onClick={later('Crop')}><IcCrop size={20} /></button>}
-      <button className="ticon corner" title="Text" onClick={() => setState({ libraryTab: 'titles' })}><IcTitles size={20} /></button>
-      <button className="ticon corner" title="Shapes" onClick={later('Shapes')}><IcShapes size={20} /></button>
-      <button className="ticon" title="Pen" onClick={later('Pen tool')}><IcPen size={20} /></button>
+      <button className="ticon on-bg corner" title="Selection tool"><IcPointer size={21} /></button>
+      <button className="ticon" title={`Undo (${mod}Z)`} disabled={!canUndo} onClick={undo}><IcUndo size={21} /></button>
+      <button className="ticon" title={`Redo (⇧${mod}Z)`} disabled={!canRedo} onClick={redo}><IcRedo size={21} /></button>
+      <button className="ticon" title="Delete (⌫)" disabled={!hasSel} onClick={() => deleteSelection(false)}><IcTrash size={21} /></button>
+      <button className="ticon" title={`Split (${mod}B)`} onClick={splitAtPlayhead}><IcScissors size={21} /></button>
+      {hasSel && <button className="ticon" title="Crop" onClick={later('Crop')}><IcCrop size={21} /></button>}
+      <button className="ticon corner" title="Text" onClick={() => setState({ libraryTab: 'titles' })}><IcTitles size={21} /></button>
+      <button className="ticon corner" title="Shapes" onClick={later('Shapes')}><IcShapes size={21} /></button>
+      <button className="ticon" title="Pen" onClick={later('Pen tool')}><IcPen size={21} /></button>
       {hasSel ? (
         <>
-          <button className="ticon corner" title="Speed" onClick={speedMenu}><IcSpeed size={20} /></button>
-          <button className="ticon" title="Duration" onClick={() => setState({ propsTab: 'speed' })}><IcDuration size={20} /></button>
-          <button className="ticon" title="Add keyframe" onClick={later('Keyframes')}><IcKeyframeAdd size={20} /></button>
-          <button className="ticon" title="Freeze frame" onClick={later('Freeze frame')}><IcFreeze size={20} /></button>
+          <button className="ticon corner" title="Speed" onClick={speedMenu}><IcSpeed size={21} /></button>
+          <button className="ticon" title="Duration" onClick={() => setState({ propsTab: 'speed' })}><IcDuration size={21} /></button>
+          <button className="ticon" title="Add keyframe" onClick={later('Keyframes')}><IcKeyframeAdd size={21} /></button>
+          <button className="ticon" title="Freeze frame" onClick={later('Freeze frame')}><IcFreeze size={21} /></button>
           <i className="tb-sep" />
-          <button className="ticon" title="Auto edit" onClick={later('Auto edit')}><IcAutoEdit size={20} /></button>
+          <button className="ticon" title="Auto edit" onClick={later('Auto edit')}><IcAutoEdit size={21} /></button>
           <button className="ticon" title="More"><IcDoubleRight size={18} /></button>
         </>
       ) : (
         <>
           <i className="tb-sep" />
-          <button className="ticon" title="Auto edit" onClick={later('Auto edit')}><IcAutoEdit size={20} /></button>
-          <button className="ticon" title="Beat detection" onClick={later('Beat detection')}><IcAudioBeat size={20} /></button>
+          <button className="ticon" title="Auto edit" onClick={later('Auto edit')}><IcAutoEdit size={21} /></button>
+          <button className="ticon" title="Beat detection" onClick={later('Beat detection')}><IcAudioBeat size={21} /></button>
         </>
       )}
       <span className="spacer" />
-      <button className={`ticon ${snapping ? 'accent' : ''}`} title="Snapping (N)" onClick={() => setState({ snapping: !snapping })}><IcSnap size={20} /></button>
-      <button className="ticon" title="Marker" onClick={later('Markers')}><IcMarker size={20} /></button>
-      <button className="ticon" title="Record voiceover" onClick={later('Voiceover recording')}><IcMic size={20} /></button>
-      <button className="ticon" title="Audio mixer" onClick={later('Audio mixer')}><IcMixer size={20} /></button>
-      <button className="ticon" title="Picture in picture" onClick={later('Picture in picture')}><IcPip size={20} /></button>
-      <button className="ticon" title="Zoom to fit (⇧Z)" onClick={zoomToFit}><IcFit size={20} /></button>
-      <button className="ticon" title="Zoom out" onClick={() => zoomBy(1 / 1.5)}><IcZoomOut size={20} /></button>
+      <button className={`ticon ${snapping ? 'accent' : ''}`} title="Snapping (N)" onClick={() => setState({ snapping: !snapping })}><IcSnap size={21} /></button>
+      <button className="ticon" title="Marker" onClick={later('Markers')}><IcMarker size={21} /></button>
+      <button className="ticon" title="Record voiceover" onClick={later('Voiceover recording')}><IcMic size={21} /></button>
+      <button className="ticon" title="Audio mixer" onClick={later('Audio mixer')}><IcMixer size={21} /></button>
+      <button className="ticon" title="Picture in picture" onClick={later('Picture in picture')}><IcPip size={21} /></button>
+      <button className="ticon" title="Zoom to fit (⇧Z)" onClick={zoomToFit}><IcFit size={21} /></button>
+      <button className="ticon" title="Zoom out" onClick={() => zoomBy(1 / 1.5)}><IcZoomOut size={21} /></button>
       <div
         className="zoom-slider"
         ref={slider}
@@ -121,8 +121,8 @@ export function TimelineToolbar() {
         <div className="slider-fill" style={{ width: `${k * 100}%` }} />
         <div className="slider-knob" style={{ left: `${k * 100}%` }} />
       </div>
-      <button className="ticon" title="Zoom in" onClick={() => zoomBy(1.5)}><IcZoomIn size={20} /></button>
-      <button className="ticon grid" title="Track layout"><IcGrid size={20} /></button>
+      <button className="ticon" title="Zoom in" onClick={() => zoomBy(1.5)}><IcZoomIn size={21} /></button>
+      <button className="ticon grid" title="Track layout"><IcGrid size={21} /></button>
       <button className="ticon xs" title="Options"><IcCaretDown size={12} /></button>
     </div>
   )

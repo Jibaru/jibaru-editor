@@ -106,10 +106,12 @@ export function toast(text: string, kind: 'info' | 'error' = 'info') {
 
 function applySnapshot(snap: Snapshot) {
   const p = snap.project
+  const opened = state.snap?.project.id !== p.id
   // Drop selections that no longer exist.
   const selection = state.selection.filter(id => findClip(p, id))
   const selectedMedia = state.selectedMedia.filter(id => p.media.some(m => m.id === id))
   setState({ snap, selection, selectedMedia })
+  if (opened) requestAnimationFrame(() => zoomToFit())
 }
 
 /** Runs one command on the backend. Returns false (and shows the error) on failure. */

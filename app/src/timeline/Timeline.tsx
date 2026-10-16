@@ -581,15 +581,15 @@ function TrackHeader({ track, tracks }: { track: Track; tracks: Track[] }) {
       <span className="track-name">{track.name}</span>
       <div className="track-icons">
         <button className={`ticon xs ${track.locked ? 'on' : ''}`} title={track.locked ? 'Unlock track' : 'Lock track'} onClick={() => flags({ locked: !track.locked })}>
-          {track.locked ? <IcLock size={16} /> : <IcUnlock size={16} />}
+          {track.locked ? <IcLock size={18} /> : <IcUnlock size={18} />}
         </button>
         <button className={`ticon xs ${track.muted ? 'on' : ''}`} title={track.muted ? 'Unmute track' : 'Mute track'} onClick={() => flags({ muted: !track.muted })}>
-          {track.muted ? <IcSpeakerOff size={16} /> : <IcSpeaker size={16} />}
+          {track.muted ? <IcSpeakerOff size={18} /> : <IcSpeaker size={18} />}
         </button>
-        <button className="ticon xs" title="Auto enhance"><IcWand size={16} /></button>
+        <button className="ticon xs" title="Auto enhance"><IcWand size={18} /></button>
         {track.kind === 'video' && (
           <button className={`ticon xs ${track.hidden ? 'on' : ''}`} title={track.hidden ? 'Show track' : 'Hide track'} onClick={() => flags({ hidden: !track.hidden })}>
-            {track.hidden ? <IcEyeOff size={16} /> : <IcEye size={16} />}
+            {track.hidden ? <IcEyeOff size={18} /> : <IcEye size={18} />}
           </button>
         )}
       </div>

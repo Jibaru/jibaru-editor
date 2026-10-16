@@ -86,7 +86,7 @@ function ProjectInfo({ project, path }: { project: Project; path: string | null 
           <dt>Sample Rate:</dt>
           <dd>{s.sample_rate}Hz</dd>
           <dt>Duration:</dt>
-          <dd>{timecode(sequenceDuration(mainSequence(project)), s.frame_rate).slice(3)}</dd>
+          <dd>{timecode(sequenceDuration(mainSequence(project)), s.frame_rate)}</dd>
           <dt>Thumbnail:</dt>
           <dd>
             <div className="info-thumb">

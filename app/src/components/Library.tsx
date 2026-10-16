@@ -32,7 +32,7 @@ import {
   IcCaretRight,
 } from '../ui/icons'
 
-const TABS: { id: LibraryTab; label: string; icon: (p: { size?: number }) => ReactNode }[] = [
+const TABS: { id: LibraryTab; label: string; icon: (p: { size?: number; strokeWidth?: number }) => ReactNode }[] = [
   { id: 'media', label: 'Media', icon: IcMedia },
   { id: 'stock', label: 'Stock Media', icon: IcStock },
   { id: 'audio', label: 'Audio', icon: IcAudio },
@@ -74,7 +74,7 @@ export function Library() {
       <div className="panel-head lib-tabs">
         {TABS.map(t => (
           <button key={t.id} className={tab === t.id ? 'on' : ''} onClick={() => setState({ libraryTab: t.id })}>
-            <t.icon size={22} />
+            <t.icon size={25} strokeWidth={1.7} />
             <span>{t.label}</span>
           </button>
         ))}
