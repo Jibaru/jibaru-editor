@@ -652,6 +652,11 @@ impl<'a> Exporter<'a> {
         // Visual properties.
         if ty != CLIP_TEXT && ty != CLIP_AUDIO && changed(old, new, |c| c.transform.clone()) {
             self.patch_transform(v, old.map(|o| &o.transform), &new.transform, &new.id);
+        } else if ty == CLIP_TEXT && new.transform != Transform::default() && changed(old, new, |c| c.transform.clone())
+        {
+            // The text clip's transform mirrors the text box; position and
+            // size are edited through the title data instead.
+            self.warnings.push(format!("clip {}: text clip transform is derived from the title, not written", new.id));
         }
         if ty != CLIP_AUDIO && changed(old, new, |c| c.opacity.clone()) {
             let mut pip = nested(v, "pipBuf").unwrap_or_else(|| serde_json::from_str(DEFAULT_PIP).unwrap_or_default());
