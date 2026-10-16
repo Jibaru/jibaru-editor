@@ -39,7 +39,7 @@ Edit `claude_desktop_config.json`. On macOS it is in `~/Library/Application Supp
 
 On Windows, use a path like `"C:\\tools\\jb-mcp.exe"`. Restart Claude Desktop after editing.
 
-Relative file paths given to tools resolve against the server's working directory, which the client chooses. Prefer absolute paths. Media probing needs FFmpeg's `ffprobe` on `PATH`; you can also set `JB_FFPROBE` to its location via the server's `env` entry.
+Relative file paths given to tools resolve against the server's working directory, which the client chooses. Prefer absolute paths.
 
 ### Tools
 

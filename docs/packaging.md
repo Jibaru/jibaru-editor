@@ -12,9 +12,8 @@ Homebrew's, which enables libx264/libx265) are only for development.
 | `jb-<v>-windows-x64.zip` | `jb.exe`, `jb-mcp.exe`, `ffprobe.exe`, FFmpeg DLLs, licenses |
 | `SHA256SUMS.txt` | Checksums (release only) |
 
-`jb import-media` currently probes files with the `ffprobe` tool; the CLI
-looks for it next to its own executable first (then `JB_FFPROBE`, then
-`PATH`), so the CLI packages ship the LGPL `ffprobe` from the same build.
+`jb import-media` probes files through the linked FFmpeg libraries; the bundled
+`ffprobe` is only kept for the smoke tests and for troubleshooting.
 
 macOS packages are arm64 only for now; `scripts/ffmpeg/build-macos.sh`
 accepts `x86_64` for an Intel build.
