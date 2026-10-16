@@ -42,6 +42,11 @@ pub struct Mapping {
     /// Pitch ratio of the grain content (1 = original pitch).
     pub pitch: f64,
     pub reverse: bool,
+    /// Output sample where rendering always starts, when the caller renders
+    /// contiguously from there (playback): grains before it are never
+    /// aligned, so the first block does not rebuild a `CHAIN` of grains.
+    /// `None` renders any range independently of the blocks before it.
+    pub chain_from: Option<i64>,
 }
 
 impl Mapping {
@@ -119,9 +124,15 @@ fn alignment(r: &dyn SampleReader, m: &Mapping, k: i64) -> Result<f64> {
     if let Some(d) = cached(k) {
         return Ok(d);
     }
+    // The first grain of a chain keeps its natural position.
+    let first = m.chain_from.map(|o| (o - GRAIN as i64 + 1).div_euclid(HOP));
+    if first.is_some_and(|f| k <= f) {
+        return Ok(0.0);
+    }
+    let stop = (k - CHAIN).max(first.unwrap_or(i64::MIN));
     let mut j = k - 1;
     let mut prev = 0.0;
-    while j > k - CHAIN {
+    while j > stop {
         if let Some(d) = cached(j) {
             prev = d;
             break;
@@ -273,7 +284,7 @@ mod tests {
     fn stretch_keeps_pitch_and_level() {
         let src = Sine(440.0 / 48000.0);
         for rate in [0.5, 1.5, 2.0] {
-            let m = Mapping { source_at_origin: 0.0, origin: 0, rate, pitch: 1.0, reverse: false };
+            let m = Mapping { source_at_origin: 0.0, origin: 0, rate, pitch: 1.0, reverse: false, chain_from: None };
             let out = render(&src, &m, 10_000, 9600).unwrap();
             let f = freq(&out) * 48000.0;
             assert!((f - 440.0).abs() < 8.0, "rate {rate}: {f} Hz");
@@ -285,7 +296,14 @@ mod tests {
     fn pitch_shift_changes_frequency_not_speed() {
         let src = Sine(440.0 / 48000.0);
         let semis: f64 = 12.0;
-        let m = Mapping { source_at_origin: 0.0, origin: 0, rate: 1.0, pitch: 2f64.powf(semis / 12.0), reverse: false };
+        let m = Mapping {
+            source_at_origin: 0.0,
+            origin: 0,
+            rate: 1.0,
+            pitch: 2f64.powf(semis / 12.0),
+            reverse: false,
+            chain_from: None,
+        };
         let out = render(&src, &m, 4800, 9600).unwrap();
         let f = freq(&out) * 48000.0;
         assert!((f - 880.0).abs() < 15.0, "{f} Hz");
@@ -294,7 +312,7 @@ mod tests {
     #[test]
     fn blocks_concatenate_seamlessly() {
         let src = Sine(300.0 / 48000.0);
-        let m = Mapping { source_at_origin: 123.0, origin: 0, rate: 1.3, pitch: 1.0, reverse: false };
+        let m = Mapping { source_at_origin: 123.0, origin: 0, rate: 1.3, pitch: 1.0, reverse: false, chain_from: None };
         let whole = render(&src, &m, 5000, 1024).unwrap();
         let mut parts = Vec::new();
         for i in 0..8 {

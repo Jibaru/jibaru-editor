@@ -27,6 +27,7 @@ pub mod mixer;
 pub mod pool;
 pub mod probe;
 pub mod proxy;
+pub mod shuttle;
 pub mod stretch;
 pub mod video;
 pub mod waveform;

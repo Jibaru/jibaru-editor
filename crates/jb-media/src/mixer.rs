@@ -133,6 +133,7 @@ fn voice_raw(source: &dyn AudioSource, v: &AudioVoice, at: i64, n: usize, rate: 
         rate: r,
         pitch: grain_pitch,
         reverse: v.reverse,
+        chain_from: None,
     };
     let reader = VoiceReader { source, media_id: &v.media_id, key: format!("{}:{}", v.clip_id, v.media_id), rate };
     crate::stretch::render(&reader, &m, at, n)

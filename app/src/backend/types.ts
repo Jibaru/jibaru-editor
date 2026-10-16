@@ -53,6 +53,8 @@ export interface PlaybackStats {
   render_ms: number
   audio_underruns: number
   audio_clock: boolean
+  /** RMS level of the audio queued recently (before the master volume). */
+  audio_rms: number
   width: number
   height: number
 }

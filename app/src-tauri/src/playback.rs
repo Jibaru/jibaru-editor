@@ -11,6 +11,13 @@
 //! decode  prefetch the next frames' sources so `video` finds them decoded
 //! ```
 //!
+//! Shuttle (J/K/L: reverse, 0.5x, 2x, 4x, 8x) keeps audio as the master
+//! clock: `jb_media::shuttle` plays the normal-speed mix time-stretched
+//! (WSOLA), so speeds other than 1x keep the original pitch, like a
+//! pitch-corrected NLE shuttle rather than a tape; reverse plays the grains
+//! backwards. The device's consumed frames times the rate is the timeline
+//! clock.
+//!
 //! Dropped-frame strategy: the video thread always renders the frame due at
 //! the clock, skipping any it fell behind on, so A/V sync never drifts and a
 //! slow frame only lowers the frame rate. When paused, the latest seek target
@@ -22,6 +29,7 @@
 use crate::audio_out::AudioShared;
 use jb_core::eval::{evaluate, Layer, LayerContent};
 use jb_core::{Project, Rational, Ticks, TICKS_PER_SECOND};
+use jb_media::shuttle::Shuttle;
 use jb_media::MediaPool;
 use jb_render::Renderer;
 use serde::Serialize;
@@ -88,6 +96,8 @@ pub struct Stats {
     pub render_ms: f64,
     pub audio_underruns: u64,
     pub audio_clock: bool,
+    /// RMS level of the audio queued recently (before the master volume).
+    pub audio_rms: f64,
     pub width: u32,
     pub height: u32,
 }
@@ -127,7 +137,7 @@ impl Inner {
                 let played = a.played.load(Ordering::Relaxed).saturating_sub(c.anchor_played);
                 let lat = a.latency_us.load(Ordering::Relaxed) as f64 / 1e6;
                 let s = (played as f64 / a.sample_rate as f64 - lat).max(0.0);
-                return c.anchor_time + secs(s);
+                return c.anchor_time + secs(s * c.rate);
             }
         }
         c.anchor_time + secs(c.anchor_wall.elapsed().as_secs_f64() * c.rate)
@@ -203,7 +213,9 @@ impl Playback {
         c.rate = if rate == 0.0 { 1.0 } else { rate };
         c.anchor_time = time.clamp(0, duration.max(0));
         c.anchor_wall = Instant::now();
-        c.audio_clock = (c.rate - 1.0).abs() < 1e-9 && self.inner.audio_ok();
+        // Audio is the master clock at every speed: shuttle audio is
+        // time-stretched (see `audio_thread`).
+        c.audio_clock = self.inner.audio_ok();
         if let Some(a) = &self.inner.audio {
             a.clear();
             c.anchor_played = a.played.load(Ordering::Relaxed);
@@ -338,9 +350,10 @@ fn video_thread(inner: Arc<Inner>) {
         let duration = project.main().duration();
         let now = inner.clock(&c);
         let (index, playing) = if c.playing {
-            if now >= duration {
+            // Forward stops at the end, reverse shuttle at the start.
+            if now >= duration || (c.rate < 0.0 && now <= 0) {
                 c.playing = false;
-                c.target = (duration - 1).max(0);
+                c.target = if c.rate < 0.0 { 0 } else { (duration - 1).max(0) };
                 c.generation += 1;
                 let end = c.target;
                 drop(c);
@@ -475,7 +488,10 @@ fn audio_thread(inner: Arc<Inner>) {
     let audio = inner.audio.clone().expect("audio device");
     let rate = audio.sample_rate;
     let mut generation = u64::MAX;
-    let mut next_sample: i64 = 0;
+    // Output frames queued since the clock anchor, and the shuttle that maps
+    // them to the timeline (with the project revision its cache belongs to).
+    let mut played: i64 = 0;
+    let mut shuttle: Option<(u64, Shuttle)> = None;
     let ahead = (AUDIO_AHEAD * rate as f64) as usize;
     loop {
         let mut c = lock(&inner.ctl);
@@ -484,7 +500,8 @@ fn audio_thread(inner: Arc<Inner>) {
         }
         if c.generation != generation {
             generation = c.generation;
-            next_sample = jb_media::audio::ticks_to_samples(if c.playing { c.anchor_time } else { c.target }, rate);
+            played = 0;
+            shuttle = None;
         }
         let project = c.project.clone();
         if c.playing && c.audio_clock {
@@ -492,20 +509,31 @@ fn audio_thread(inner: Arc<Inner>) {
                 let _ = inner.wake.wait_timeout(c, Duration::from_millis(4));
                 continue;
             }
+            let revision = c.revision;
+            let origin = jb_media::audio::ticks_to_samples(c.anchor_time, rate);
+            let (rev, s) = shuttle.get_or_insert_with(|| (revision, Shuttle::new(origin, c.rate)));
+            if *rev != revision {
+                // Edited while playing: same time mapping, fresh audio.
+                s.invalidate();
+                *rev = revision;
+            }
             drop(c);
-            let block =
-                match jb_media::mixer::mix(&project, project.main(), next_sample, AUDIO_BLOCK, inner.pool.as_ref()) {
-                    Ok(b) => b,
-                    Err(e) => {
-                        eprintln!("audio mix: {e:#}");
-                        vec![0.0; AUDIO_BLOCK * 2]
-                    }
-                };
+            let block = match s.render(&project, project.main(), inner.pool.as_ref(), played, AUDIO_BLOCK) {
+                Ok(b) => b,
+                Err(e) => {
+                    eprintln!("audio mix: {e:#}");
+                    vec![0.0; AUDIO_BLOCK * 2]
+                }
+            };
             // Only queue it if nothing was seeked meanwhile.
             let c = lock(&inner.ctl);
             if c.generation == generation && c.playing {
                 audio.push(&block);
-                next_sample += AUDIO_BLOCK as i64;
+                played += AUDIO_BLOCK as i64;
+                drop(c);
+                let ms = block.iter().map(|x| (*x as f64).powi(2)).sum::<f64>() / block.len().max(1) as f64;
+                let mut s = lock(&inner.stats);
+                s.audio_rms = s.audio_rms * 0.9 + ms.sqrt() * 0.1;
             }
         } else if let Some(t) = c.scrub.take() {
             drop(c);

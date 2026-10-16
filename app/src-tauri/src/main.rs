@@ -225,8 +225,8 @@ fn playback_report(app: AppHandle, displayed_fps: f64, frames: u64) {
     if std::env::var_os("JB_PLAYBACK_LOG").is_some() {
         let s = app.state::<Services>().playback.stats();
         eprintln!(
-            "playback: displayed {displayed_fps:.1} fps ({frames} frames), rendered {:.1} fps, dropped {}, render {:.1} ms, {}x{}, audio clock {}, underruns {}",
-            s.fps, s.dropped, s.render_ms, s.width, s.height, s.audio_clock, s.audio_underruns
+            "playback: displayed {displayed_fps:.1} fps ({frames} frames), rendered {:.1} fps, dropped {}, render {:.1} ms, {}x{}, audio clock {}, underruns {}, audio rms {:.3}",
+            s.fps, s.dropped, s.render_ms, s.width, s.height, s.audio_clock, s.audio_underruns, s.audio_rms
         );
     }
 }
