@@ -121,6 +121,14 @@ pub struct ExportReport {
     pub fps: f64,
 }
 
+/// Sampling time of frame `index`: its exact start time rounded down to a
+/// tick. Filmora writes clip and transition bounds rounded down the same way,
+/// so a frame on a boundary sees the same side of it as in Filmora (a cut or
+/// a transition midpoint at a fractional tick time).
+pub fn frame_time(rate: Rational, index: i64) -> Ticks {
+    ((index as i128 * rate.den as i128 * jb_core::time::TICKS_PER_SECOND as i128) / rate.num as i128) as Ticks
+}
+
 /// Frame count of `[start, end)` at `rate`.
 pub fn frame_count(rate: Rational, start: Ticks, end: Ticks) -> u64 {
     if end <= start {
@@ -235,7 +243,7 @@ pub fn export(
                 if cancel.load(Ordering::Relaxed) {
                     break;
                 }
-                let t = rate.frame_start(first_frame + i as i64);
+                let t = frame_time(rate, first_frame + i as i64);
                 let plan = evaluate(project, seq, t);
                 if settings.prefetch {
                     prefetch(&plan.layers, media, settings.prefetch_max_size);
