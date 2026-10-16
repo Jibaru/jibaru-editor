@@ -551,6 +551,12 @@ impl<'a> Exporter<'a> {
             if st.channels != ChannelMode::Stereo {
                 notes.push(format!("clip {}: audio channels kept for Jibaru; Filmora won't show it", clip.id));
             }
+            st.voice_filter = clip.audio.voice_filter.clone();
+            st.hum_removal = clip.audio.hum_removal;
+            st.hiss_removal = clip.audio.hiss_removal;
+            if st.voice_filter.is_some() || st.hum_removal.is_some() || st.hiss_removal.is_some() {
+                notes.push(format!("clip {}: voice filter and audio cleanup kept for Jibaru; Filmora won't show them", clip.id));
+            }
             clips.push((uid.clone(), st));
         }
         self.notes.extend(notes);
@@ -1181,7 +1187,15 @@ impl<'a> Exporter<'a> {
             // a muted video clip is what Filmora has anyway.
             // Noise reduction and channel routing live in the Jibaru sidecar.
             let only_mute =
-                AudioSettings { muted: false, denoise_db: None, channels: ChannelMode::Stereo, ..new.clone() }
+                AudioSettings {
+                    muted: false,
+                    denoise_db: None,
+                    channels: ChannelMode::Stereo,
+                    voice_filter: None,
+                    hum_removal: None,
+                    hiss_removal: None,
+                    ..new.clone()
+                }
                     == AudioSettings::default();
             if !only_mute {
                 self.warnings.push(format!("clip {clip_id}: audio settings only apply to audio clips in Filmora"));

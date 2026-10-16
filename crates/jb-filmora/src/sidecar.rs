@@ -10,7 +10,8 @@
 //! ```json
 //! {"version": 1,
 //!  "clips": {"<clip thisUId>": {"effects": [{"index": 2, "effect": {EffectInstance}}],
-//!                               "denoise_db": 15.0, "channels": "left"}},
+//!                               "denoise_db": 15.0, "channels": "left",
+//!                               "voice_filter": "echo", "hum_removal": 50.0, "hiss_removal": 40.0}},
 //!  "native_kinds": {"<effect thisUId>": "jb.auto_enhance"}}
 //! ```
 //!
@@ -48,11 +49,19 @@ pub struct ClipState {
     /// `Some(value)` when it differs from Filmora's fields.
     pub denoise_db: Option<Option<f64>>,
     pub channels: ChannelMode,
+    pub voice_filter: Option<String>,
+    pub hum_removal: Option<f64>,
+    pub hiss_removal: Option<f64>,
 }
 
 impl ClipState {
     pub fn is_empty(&self) -> bool {
-        self.effects.is_empty() && self.denoise_db.is_none() && self.channels == ChannelMode::Stereo
+        self.effects.is_empty()
+            && self.denoise_db.is_none()
+            && self.channels == ChannelMode::Stereo
+            && self.voice_filter.is_none()
+            && self.hum_removal.is_none()
+            && self.hiss_removal.is_none()
     }
 
     fn to_json(&self) -> Value {
@@ -70,6 +79,15 @@ impl ClipState {
         }
         if self.channels != ChannelMode::Stereo {
             o.insert("channels".into(), serde_json::to_value(self.channels).unwrap_or_default());
+        }
+        if let Some(f) = &self.voice_filter {
+            o.insert("voice_filter".into(), json!(f));
+        }
+        if let Some(h) = self.hum_removal {
+            o.insert("hum_removal".into(), json!(h));
+        }
+        if let Some(h) = self.hiss_removal {
+            o.insert("hiss_removal".into(), json!(h));
         }
         Value::Object(o)
     }
@@ -125,6 +143,11 @@ pub fn apply(project: &mut Project, doc: &Value) {
                 if let Some(c) = state.get("channels").and_then(|c| serde_json::from_value(c.clone()).ok()) {
                     clip.audio.channels = c;
                 }
+                if let Some(f) = state.get("voice_filter").and_then(Value::as_str) {
+                    clip.audio.voice_filter = Some(f.to_string());
+                }
+                clip.audio.hum_removal = state.get("hum_removal").and_then(Value::as_f64).or(clip.audio.hum_removal);
+                clip.audio.hiss_removal = state.get("hiss_removal").and_then(Value::as_f64).or(clip.audio.hiss_removal);
             }
         }
     }

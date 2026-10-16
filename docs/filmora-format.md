@@ -472,7 +472,8 @@ The writer reports them as `WriteReport::notes` (not warnings).
 ```json
 {"version": 1,
  "clips": {"<clip thisUId>": {"effects": [{"index": 2, "effect": {...}}],
-                              "denoise_db": 15.0, "channels": "left"}},
+                              "denoise_db": 15.0, "channels": "left",
+                              "voice_filter": "echo", "hum_removal": 50.0, "hiss_removal": 40.0}},
  "native_kinds": {"<effect thisUId>": "jb.auto_enhance"}}
 ```
 
@@ -483,6 +484,8 @@ The writer reports them as `WriteReport::notes` (not warnings).
 - `denoise_db`: only when it differs from Filmora's `CacheAlg`
   `AudioDenoiseCache` state (`null` = turned off in Jibaru).
 - `channels`: audio channel routing other than stereo.
+- `voice_filter`, `hum_removal`, `hiss_removal`: the Audio tab's voice
+  filter and cleanup (Jibaru's own DSP; no Filmora field is used).
 - `native_kinds`: effects written as Filmora built-ins and read back under
   the Jibaru kind. `jb.auto_enhance` is written as AutoEnhance
   (`45D9AD95-4F03-4B2F-A8C7-8F7817B73FA4`, `amount`, chain `BasicFollow`).

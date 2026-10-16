@@ -308,6 +308,8 @@ fn jibaru_only_state_round_trips_through_the_sidecar() {
     audio.denoise_db = Some(12.0);
     run(&mut h, json!({"op": "set_audio", "clip_id": music.id, "audio": audio}));
     run(&mut h, json!({"op": "set_audio_channels", "clip_id": music.id, "channels": "left"}));
+    run(&mut h, json!({"op": "set_voice_filter", "clip_id": music.id, "filter": "echo"}));
+    run(&mut h, json!({"op": "set_audio_cleanup", "clip_id": music.id, "hum_removal": 50, "hiss_removal": 30}));
     run(&mut h, json!({"op": "set_project_settings", "width": 1080, "height": 1920}));
     run(&mut h, json!({"op": "rename_media", "media_id": media, "name": "Renamed"}));
     w.project = h.project.clone();
@@ -329,6 +331,10 @@ fn jibaru_only_state_round_trips_through_the_sidecar() {
     assert!(tl.contains("\"aspectRatioX\":9") && tl.contains("\"aspectRatioY\":16"));
     let rm = rp.clip(&music.id).unwrap();
     assert_eq!((rm.audio.denoise_db, rm.audio.channels), (Some(12.0), ChannelMode::Left));
+    assert_eq!(
+        (rm.audio.voice_filter.as_deref(), rm.audio.hum_removal, rm.audio.hiss_removal),
+        (Some("echo"), Some(50.0), Some(30.0))
+    );
     assert_eq!((rp.settings.width, rp.settings.height), (1080, 1920));
     assert_eq!(rp.media(&media).unwrap().name, "Renamed");
 
@@ -337,6 +343,9 @@ fn jibaru_only_state_round_trips_through_the_sidecar() {
     let mut audio = rm.audio.clone();
     audio.denoise_db = None;
     audio.channels = ChannelMode::Stereo;
+    audio.voice_filter = None;
+    audio.hum_removal = None;
+    audio.hiss_removal = None;
     run(&mut h, json!({"op": "set_audio", "clip_id": music.id, "audio": audio}));
     for e in ["11111111-2222-4333-8444-555555555555", "e-mask"] {
         run(&mut h, json!({"op": "remove_effect", "clip_id": a.id, "effect_id": e}));
@@ -346,6 +355,8 @@ fn jibaru_only_state_round_trips_through_the_sidecar() {
     let r2 = write_read(&w2);
     assert_eq!(r2.project.clip(&music.id).unwrap().audio.denoise_db, None);
     assert_eq!(r2.project.clip(&music.id).unwrap().audio.channels, ChannelMode::Stereo);
+    assert_eq!(r2.project.clip(&music.id).unwrap().audio.voice_filter, None);
+    assert_eq!(r2.project.clip(&music.id).unwrap().audio.hum_removal, None);
     let effects = &r2.project.clip(&a.id).unwrap().effects;
     assert_eq!(
         effects.iter().map(|e| e.kind.as_str()).filter(|k| k.starts_with("jb.")).collect::<Vec<_>>(),
