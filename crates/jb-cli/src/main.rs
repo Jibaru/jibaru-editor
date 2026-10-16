@@ -212,6 +212,25 @@ enum FxCmd {
         #[arg(long, short)]
         output: PathBuf,
     },
+    /// Implemented vs missing Filmora items per category, from
+    /// docs/filmora-catalog.json checked against the effect registry.
+    CatalogStatus {
+        /// Catalog file (default: docs/filmora-catalog.json).
+        #[arg(long)]
+        catalog: Option<PathBuf>,
+        /// Bucket by implementation group, Filmora store category or kind.
+        #[arg(long, value_enum, default_value_t = jb_cli::catalog::GroupBy::Group)]
+        by: jb_cli::catalog::GroupBy,
+        /// Only one kind: transition, effect, filter, overlay, animation, title, lut.
+        #[arg(long)]
+        kind: Option<String>,
+        /// Only premium (paid) store items.
+        #[arg(long)]
+        premium: bool,
+        /// Missing items to list per bucket, most popular first.
+        #[arg(long, default_value_t = 3)]
+        top: usize,
+    },
 }
 
 /// Successful output: JSON data plus a human rendering.
@@ -474,6 +493,12 @@ fn run(cmd: Cmd) -> JbResult<Out> {
         }
         Cmd::Fx { cmd: FxCmd::Previews { output, filter, force } } => {
             Ok(Out::json(integrations::fx_previews(&output, &filter, force)?))
+        }
+        Cmd::Fx { cmd: FxCmd::CatalogStatus { catalog, by, kind, premium, top } } => {
+            let opts = jb_cli::catalog::StatusOptions { catalog, by, kind, premium_only: premium, top };
+            let data = jb_cli::catalog::catalog_status(&opts)?;
+            let text = jb_cli::catalog::status_text(&data);
+            Ok(Out::new(data, text))
         }
         Cmd::Frame { project, at, output, preview } => {
             let p = project_io::load_project(&project)?;

@@ -2,6 +2,7 @@
 //! server: loading/saving, summaries, command parsing and execution, media
 //! import and frame evaluation, all with structured, actionable errors.
 
+pub mod catalog;
 pub mod commands;
 pub mod error;
 pub mod integrations;
