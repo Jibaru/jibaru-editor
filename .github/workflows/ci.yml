@@ -25,8 +25,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-
       # FFmpeg is linked dynamically. On macOS the Homebrew build is used for
       # development; releases bundle an LGPL build.
       - name: Install FFmpeg (macOS)
@@ -42,6 +40,16 @@ jobs:
           # bindgen in ffmpeg-sys-next's build script can overflow the
           # default 1 MB main-thread stack on Windows.
           "RUSTFLAGS=-C link-arg=/STACK:16777216" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      # Build scripts record FFmpeg's versioned library path, so the cache is
+      # keyed on the installed FFmpeg version to avoid linking a stale path.
+      - name: FFmpeg version for the cache key
+        id: ffver
+        shell: bash
+        run: echo "v=$(ffmpeg -version 2>/dev/null | head -1 | awk '{print $3}')-$(brew list --versions ffmpeg 2>/dev/null | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ffmpeg-${{ steps.ffver.outputs.v }}
 
       - run: cargo build --workspace --all-targets
       - name: Report hardware decode / encode support
