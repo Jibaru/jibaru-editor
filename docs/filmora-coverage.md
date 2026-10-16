@@ -39,6 +39,10 @@ parameters, speed ramps or blend modes occur in the corpus.
 
 ## Renderer notes, in priority order
 
+How the renderer measures against Filmora's own exports of these projects,
+and the fitted models of the transitions and effects below, are in
+`docs/fidelity.md`.
+
 1. **Transform** (`video/effect/transform`): position/scale on every visual
    clip; already mapped to `jb_core::Transform`. Scale is relative to the
    fitted size (`Scale_x` 100 = fitted; 41.6 and 172.5 are observed).
