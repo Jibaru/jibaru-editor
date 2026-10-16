@@ -1,0 +1,310 @@
+{
+ "Aspect": "16:9",
+ "AutoLine": 0,
+ "AutoLineLimited": 0,
+ "AutoLineScale": 1.0,
+ "AutoLineVer": 1,
+ "Background": {
+  "Alpha": 255,
+  "Border": {
+   "Alpha": 255,
+   "Color": 0,
+   "Enable": 0,
+   "Gradient": {
+    "Angle": 0,
+    "ColorPos": [
+     {
+      "Color": 16777215,
+      "Pos": 0
+     },
+     {
+      "Color": 0,
+      "Pos": 100
+     }
+    ],
+    "Enable": 0,
+    "FillMode": 0,
+    "GradType": 0,
+    "GradVer": "2.0"
+   },
+   "Size": 0
+  },
+  "Bottom": 2.0,
+  "Color": 0,
+  "Enable": 0,
+  "FillMode": 0,
+  "Gradient": {
+   "Angle": 0,
+   "ColorPos": [
+    {
+     "Color": 16777215,
+     "Pos": 0
+    },
+    {
+     "Color": 0,
+     "Pos": 100
+    }
+   ],
+   "Enable": 0,
+   "FillMode": 0,
+   "GradType": 0,
+   "GradVer": "2.0"
+  },
+  "Left": 2.0,
+  "OffsetX": 0,
+  "OffsetY": 0,
+  "Radian": 0,
+  "Right": 2.0,
+  "Texture": {
+   "Enable": 0,
+   "File": "",
+   "FillMode": 0,
+   "KeepRatio": 0,
+   "LoopPath": "",
+   "SegmentNum": 0
+  },
+  "Top": 2.0
+ },
+ "BasePixel": 0,
+ "BoldVer": 1,
+ "ChangeAlignMode": 0,
+ "CleanAreaSize": 0,
+ "Curve": {
+  "Angle": 180,
+  "Animation": {
+   "Duration": 10000000,
+   "Enable": 0,
+   "Loop": 0
+  },
+  "Distance": 0.0,
+  "Enable": 0,
+  "Mode": 0,
+  "PathAnchorType": 0,
+  "PathClose": 0,
+  "PathType": 0,
+  "VerticalPath": 1
+ },
+ "DirectX": 1,
+ "DirectY": 1,
+ "Edge": {
+  "Bottom": 0.8300030827522278,
+  "Left": 0.42301639914512634,
+  "Right": 0.42301639914512634,
+  "Top": 0.10333022475242615
+ },
+ "FeatureVersion": 1,
+ "FillTextArea": 0,
+ "Glow": {
+  "color": 16777215,
+  "enable": 0,
+  "hrotation": 0,
+  "intensity": 50,
+  "param": [
+   {
+    "color": 16777215,
+    "hrotation": 0,
+    "intensity": 50,
+    "range": 50,
+    "vrotation": 0
+   },
+   {
+    "color": 16777215,
+    "hrotation": 0,
+    "intensity": 50,
+    "range": 50,
+    "vrotation": 0
+   }
+  ],
+  "range": 50,
+  "type": 0,
+  "vrotation": 0
+ },
+ "Gradient": {
+  "Angle": 0,
+  "ColorPos": [
+   {
+    "Color": 16777215,
+    "Pos": 0
+   },
+   {
+    "Color": 0,
+    "Pos": 100
+   }
+  ],
+  "Enable": 0,
+  "FillMode": 0,
+  "GradType": 0,
+  "GradVer": "2.0"
+ },
+ "HideChar": 0,
+ "HideText": 0,
+ "Layout": {
+  "Angle": 0.0,
+  "CharSpace": 0,
+  "LineSpace": 0,
+  "TextAlign": "center",
+  "TextAlignMode": "horizontal",
+  "TextAlignPos": "center",
+  "Underline": 0,
+  "UnderlineColor": -1
+ },
+ "NLEProjChangeStatus": false,
+ "Offset": {
+  "x": 0.0,
+  "y": 0.0
+ },
+ "OutputTextPath": 0,
+ "PosX": 0.5,
+ "PosY": 0.5,
+ "Record": {
+  "AspectX": 0,
+  "AspectY": 0,
+  "AutoLine": 0,
+  "AutoLineLimited": 0,
+  "AutoLineScale": 0.0,
+  "TextMode": 1,
+  "ViewHeight": 0,
+  "ViewWidth": 0
+ },
+ "Rotate3D": {
+  "x": 0.0,
+  "y": 0.0,
+  "z": 0.0
+ },
+ "ScaleX": 0.3023532032966614,
+ "ScaleY": 0.06666667014360428,
+ "TemplatePath": "",
+ "Text": "",
+ "TextData": [
+  {
+   "Basic": {
+    "BgTexture": {
+     "Enable": 0,
+     "File": "",
+     "FillMode": 0,
+     "KeepRatio": 0,
+     "LoopPath": "",
+     "SegmentNum": 0
+    },
+    "Effect": 0,
+    "Enable": 1,
+    "FontBold": 0,
+    "FontHSize": 24.0,
+    "FontItalic": 0,
+    "FontName": "Arial",
+    "FontSize": 24.0,
+    "FontVSize": 24.0,
+    "TextAlpha": 255,
+    "TextBlurRadius": 0,
+    "TextColor": [
+     {
+      "Color": 16777215
+     }
+    ],
+    "Texture": {
+     "Enable": 0,
+     "File": "",
+     "FillMode": 0,
+     "KeepRatio": 0,
+     "LoopPath": "",
+     "SegmentNum": 0
+    }
+   },
+   "Border": {
+    "Alpha": 255,
+    "Angle": 0,
+    "BlurRadius": 0,
+    "Color": 65535,
+    "Distance": 0,
+    "Enable": 0,
+    "Gradient": {
+     "Angle": 0,
+     "ColorPos": [
+      {
+       "Color": 16777215,
+       "Pos": 0
+      },
+      {
+       "Color": 0,
+       "Pos": 100
+      }
+     ],
+     "Enable": 0,
+     "FillMode": 0,
+     "GradType": 0,
+     "GradVer": "2.0"
+    },
+    "Size": 5,
+    "Texture": {
+     "Enable": 0,
+     "File": "",
+     "FillMode": 0,
+     "KeepRatio": 0,
+     "LoopPath": "",
+     "SegmentNum": 0
+    }
+   },
+   "CharCase": 0,
+   "CharData": "",
+   "CharSpace": 0,
+   "LineSpace": 0,
+   "Shadow": {
+    "Alpha": 255,
+    "BlurRadius": 3,
+    "Color": 255,
+    "Direction": 4,
+    "Distance": 8,
+    "Enable": 0,
+    "Gradient": {
+     "Angle": 0,
+     "ColorPos": [
+      {
+       "Color": 16777215,
+       "Pos": 0
+      },
+      {
+       "Color": 0,
+       "Pos": 100
+      }
+     ],
+     "Enable": 0,
+     "FillMode": 0,
+     "GradType": 0,
+     "GradVer": "2.0"
+    },
+    "InAlpha": 255,
+    "InAngle": 0,
+    "InBlurRadius": 5,
+    "InColor": 255,
+    "InDistance": 10,
+    "InEnable": 0,
+    "Texture": {
+     "Enable": 0,
+     "File": "",
+     "FillMode": 0,
+     "KeepRatio": 0,
+     "LoopPath": "",
+     "SegmentNum": 0
+    }
+   },
+   "Strikeout": 0,
+   "StrikeoutColor": -1,
+   "Underline": 0,
+   "UnderlineColor": -1
+  }
+ ],
+ "TextMode": 1,
+ "TextScale": 1.0,
+ "TextVersion": 1.0,
+ "Texture": {
+  "Enable": 0,
+  "File": "",
+  "FillMode": 0,
+  "KeepRatio": 0,
+  "LoopPath": "",
+  "SegmentNum": 0
+ },
+ "UseDefaultBaseline": 0,
+ "UseDefaultSliderColor": 1,
+ "ViewSize": "1920:1080"
+}
