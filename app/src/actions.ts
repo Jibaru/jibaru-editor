@@ -146,6 +146,11 @@ export function installShortcuts() {
       fn()
     }
     if (getState().menu) return
+    // With the native menu bar, its accelerators own these keys (they arrive as
+    // `menu` events or DOM clipboard events), so handling them here too would
+    // run the action twice.
+    if (nativeMenuBar && m && 'nosiezdbcxv=-.'.includes(k) && k !== '') return
+    if (nativeMenuBar && !m && e.shiftKey && k === 'z') return
     if (m) {
       if (k === 's') return run(() => saveProject(e.shiftKey))
       if (k === 'o') return run(() => openProject())
