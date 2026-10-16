@@ -630,7 +630,15 @@ impl<'a> Frame<'a> {
         let fitted = match t.fit {
             FitMode::Fit => {
                 let s = (canvas[0] / cw).min(canvas[1] / ch);
-                [cw * s, ch * s]
+                let f = [cw * s, ch * s];
+                // Filmora fills the frame when the source aspect is within
+                // about 1% of the canvas (a 1600x897 photo is stretched to
+                // 16:9 instead of leaving 1-pixel bars; measured on exports).
+                if (f[0] / canvas[0]).min(f[1] / canvas[1]) > 0.99 {
+                    canvas
+                } else {
+                    f
+                }
             }
             FitMode::Fill => {
                 let s = (canvas[0] / cw).max(canvas[1] / ch);

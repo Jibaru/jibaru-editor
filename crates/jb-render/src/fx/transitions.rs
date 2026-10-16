@@ -94,20 +94,27 @@ fn hblur(use_b: bool, uv: vec2f, off: vec2f, s: f32, sigma: f32) -> vec4f {
 "#;
 
 /// Fast wipe along `dir` (the direction the outgoing clip leaves towards),
-/// calibrated on Filmora's Fast Wipe Left/Right previews.
+/// fitted frame by frame on Filmora's exports of Fast Wipe Left: the effect
+/// spans two frames on each side of the cut at the midpoint. With `f`
+/// frames (of a 2 s transition, 60 |p - 0.5|) to the cut, the clip is offset
+/// by 0.14 × 3.2^(2 - f) of the frame and box-blurred along the motion over
+/// ±0.07 × 5^(2 - f) (capped), so it travels 0.14 → 0.45 frame widths in
+/// the last two frames and is a smear on the cut frame.
 fn fast_wipe_body(dir: [f32; 2]) -> String {
     body(&format!(
         r#"{DBLUR}
 fn fx(uv: vec2f) -> vec4f {{
     let p = prog();
-    let cut = 0.485;
     let d = vec2f({:.1}, {:.1});
-    if (p < cut) {{
-        let u = seg(p, 0.44, cut);
-        return dblur(false, uv, d * (0.6 * u * u), d, 0.16 * p_blur() * u);
+    let f = 60.0 * abs(p - 0.5);
+    let off = min(0.14 * pow(3.2, 2.0 - f), 0.7);
+    // Box half-width w as a gaussian sigma (w / sqrt(3)).
+    let sigma = min(0.07 * pow(5.0, 2.0 - f), 0.45) * 0.577 * p_blur();
+    if (f > 2.5) {{ return select(sa(uv), sb(uv), p >= 0.5); }}
+    if (p < 0.5) {{
+        return dblur(false, uv, d * off, d, sigma);
     }}
-    let k = 1.0 - seg(p, cut, 0.56);
-    return dblur(true, uv, -d * (0.6 * k * k * k), d, 0.16 * p_blur() * k * k);
+    return dblur(true, uv, -d * off, d, sigma);
 }}
 "#,
         dir[0], dir[1]
@@ -198,16 +205,18 @@ pub fn register(r: &mut Registry) {
             "Fade to Black",
             "Basic",
             Transition,
-            "Fades out to black and back in on the next clip. Filmora: Fade / Dip to Black \
-             (smoothstep down over 15-48%, short black hold, smoothstep up over 52-87%).",
+            "Fades out to black and back in on the next clip. Filmora: Fade / Dip to Black; \
+             measured on Filmora's exports, the display-space gain is smoothstep(0, 0.475, |p - 0.5|) \
+             (black only at the midpoint).",
             &[],
         ),
         body(
             r#"
 fn fx(uv: vec2f) -> vec4f {
     let p = prog();
-    if (p < 0.5) { return toward(sa(uv), vec3f(0.0), smoothstep(0.15, 0.48, p)); }
-    return toward(sb(uv), vec3f(0.0), 1.0 - smoothstep(0.52, 0.87, p));
+    let k = 1.0 - smoothstep(0.0, 0.475, abs(p - 0.5));
+    if (p < 0.5) { return toward(sa(uv), vec3f(0.0), k); }
+    return toward(sb(uv), vec3f(0.0), k);
 }
 "#,
         ),
@@ -255,24 +264,18 @@ fn fx(uv: vec2f) -> vec4f {
             "Fast Zoom",
             "Zoom",
             Transition,
-            "The clip rushes into a radial-blurred zoom right before a hard cut; the next clip lands \
-             bright and blurred and settles. Timing matched to Filmora: Fast Zoom.",
-            &[ParamSpec::float("zoom", "Zoom", 1.0, 3.0, 1.3), ParamSpec::float("blur", "Blur", 0.0, 2.0, 1.0)],
+            "A sharp zoom punch on the cut: the clip zooms in over its last frames, the next clip \
+             lands zoomed in and settles back. Matched to Filmora's exports of Fast Zoom: the scale \
+             peaks at 1.3 on the first frame of the next clip and decays as exp(-60 |p - 0.5|) \
+             (1.30, 1.11, 1.04, 1.01 one, two and three frames away at 2 s), without blur.",
+            &[ParamSpec::float("zoom", "Zoom", 1.0, 3.0, 1.3), ParamSpec::float("blur", "Blur", 0.0, 2.0, 0.0)],
         ),
         body(&format!("{ZOOM_BLUR}{}", r#"
 fn fx(uv: vec2f) -> vec4f {
     let p = prog();
-    let cut = 0.485;
-    if (p < cut) {
-        let u = seg(p, 0.42, cut);
-        let s = 1.0 + (p_zoom() - 1.0) * u * u * u;
-        let c = zoom_blur(false, uv, s, 0.12 * p_blur() * u * u * u);
-        return bright(c, 1.0 + 0.03 * u * u * u);
-    }
-    let k = 1.0 - seg(p, cut, 0.575);
-    let s = 1.0 + 0.4 * (p_zoom() - 1.0) * k * k * k;
-    let c = zoom_blur(true, uv, s, 0.12 * p_blur() * k * k * k);
-    return bright(c, 1.0 + 0.12 * k * k * k);
+    let k = exp(-60.0 * abs(p - 0.5));
+    let s = 1.0 + (p_zoom() - 1.0) * k;
+    return zoom_blur(p >= 0.5, uv, s, 0.12 * p_blur() * k);
 }
 "#)),
     );
