@@ -18,7 +18,8 @@ test('every properties tab renders without errors', async ({ page }) => {
   }
   for (const tab of ['Media', 'Stock Media', 'Audio', 'Titles', 'Transitions', 'Effects', 'Filters', 'Stickers', 'Templates']) {
     await page.locator('.lib-tabs button', { hasText: new RegExp(`^${tab}$`) }).click()
-    for (const side of await page.locator('.lib-side button').all()) await side.click()
+    // Rows can fold and unfold others: click each one by position as the list stands.
+    for (let i = 0; i < (await page.locator('.lib-side button').count()); i++) await page.locator('.lib-side button').nth(i).click()
   }
   expect(b.errors).toEqual([])
 })

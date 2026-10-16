@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { backend } from '../backend'
 import { mediaInUse, seconds, shortDuration } from '../core/model'
 import type { MediaAsset, MediaKind } from '../core/types'
-import { applyLibraryItem, favKey, favorites, previewRef, previewTarget, tabCategories, tabItems, toggleFavorite, type LibraryItem } from '../library'
-import { FxThumb } from './FxPreview'
-import { appendMedia, deleteSelection, exec, importMedia, openMenu, previewInPlayer, setState, toast, useEditor, type LibraryTab } from '../store'
+import { CatalogBody } from './CatalogLibrary'
+import { appendMedia, deleteSelection, exec, importMedia, openMenu, setState, toast, useEditor, type LibraryTab } from '../store'
 import { sep, type MenuItem } from '../ui/ContextMenu'
 import { startLibraryDrag } from '../drag'
 import {
@@ -15,10 +14,6 @@ import {
   IcFilm,
   IcFilter,
   IcFilters,
-  IcMenuLines,
-  IcPreviewLens,
-  IcStar,
-  IcStarFill,
   IcImage,
   IcMedia,
   IcMic,
@@ -92,7 +87,6 @@ const storedSize = () => {
 
 export function Library() {
   const tab = useEditor(s => s.libraryTab)
-  const fx = useEditor(s => s.fx)
   const [sides, setSides] = useState<Partial<Record<LibraryTab, number>>>({})
   const [size, setSizeState] = useState(storedSize)
   const setSize = (v: number) => {
@@ -106,10 +100,7 @@ export function Library() {
   const side = sides[tab] ?? 0
   const setSide = (i: number) => setSides(s => ({ ...s, [tab]: i }))
   const catalog = tab === 'titles' || tab === 'transitions' || tab === 'effects' || tab === 'filters'
-  const categories = catalog ? tabCategories(tab, fx) : null
-  const sidebar: SideItem[] = categories
-    ? [{ label: 'All', caret: 'open', view: 'all' }, ...categories.map(c => ({ label: c, child: true, view: `cat:${c}` })), { label: 'Favorites', view: 'favorites' }]
-    : (SIDEBARS[tab] ?? [])
+  const sidebar: SideItem[] = SIDEBARS[tab] ?? []
   const entry = sidebar[side] ?? sidebar[0]
   return (
     <section className="panel library" style={{ ['--card-w' as string]: `${size}px` }}>
@@ -121,29 +112,33 @@ export function Library() {
           </button>
         ))}
       </div>
-      <div className="lib-body">
-        <aside className="lib-side">
-          {sidebar.map((s, i) => (
-            <button key={s.label} className={`${i === side ? 'on' : ''} ${s.child ? 'child' : ''} ${s.caret || !s.child ? 'boxed' : ''}`} onClick={() => setSide(i)}>
-              <span className="caret">{s.caret === 'open' ? <IcCaretDown size={10} /> : s.caret === 'closed' ? <IcCaretRight size={10} /> : null}</span>
-              {s.label}
-            </button>
-          ))}
-        </aside>
-        <div className="lib-main">
-          {entry?.empty ? (
-            <>
-              <Toolbar size={size} setSize={setSize} importButton={tab === 'media' || tab === 'audio'} />
-              <div className="lib-empty">{entry.empty}</div>
-            </>
-          ) : tab === 'media' ? (
-            <MediaGrid size={size} setSize={setSize} kind={entry?.view && entry.view !== 'all' ? (entry.view as MediaKind) : null} />
-          ) : tab === 'audio' ? (
-            <MediaGrid size={size} setSize={setSize} kind="audio" />
-          ) : (
-            <CatalogGrid tab={tab} view={entry?.view ?? 'all'} size={size} setSize={setSize} />
-          )}
-        </div>
+      <div className={`lib-body ${catalog ? 'catalog' : ''}`}>
+        {catalog ? (
+          <CatalogBody tab={tab} />
+        ) : (
+          <>
+            <aside className="lib-side">
+              {sidebar.map((s, i) => (
+                <button key={s.label} className={`${i === side ? 'on' : ''} ${s.child ? 'child' : ''} ${s.caret || !s.child ? 'boxed' : ''}`} onClick={() => setSide(i)}>
+                  <span className="caret">{s.caret === 'open' ? <IcCaretDown size={10} /> : s.caret === 'closed' ? <IcCaretRight size={10} /> : null}</span>
+                  {s.label}
+                </button>
+              ))}
+            </aside>
+            <div className="lib-main">
+              {entry?.empty ? (
+                <>
+                  <Toolbar size={size} setSize={setSize} importButton={tab === 'media' || tab === 'audio'} />
+                  <div className="lib-empty">{entry.empty}</div>
+                </>
+              ) : tab === 'media' ? (
+                <MediaGrid size={size} setSize={setSize} kind={entry?.view && entry.view !== 'all' ? (entry.view as MediaKind) : null} />
+              ) : (
+                <MediaGrid size={size} setSize={setSize} kind="audio" />
+              )}
+            </div>
+          </>
+        )}
       </div>
     </section>
   )
@@ -420,125 +415,3 @@ function MediaCard({ media, used, selected }: { media: MediaAsset; used: boolean
   )
 }
 
-function useFavorites(): Set<string> {
-  const [f, setF] = useState(favorites)
-  useEffect(() => {
-    const on = () => setF(favorites())
-    window.addEventListener('jb-favorites', on)
-    return () => window.removeEventListener('jb-favorites', on)
-  }, [])
-  return f
-}
-
-function CatalogGrid({ tab, view, size, setSize }: { tab: LibraryTab; view: string; size: number; setSize: (v: number) => void }) {
-  const fx = useEditor(s => s.fx)
-  const favs = useFavorites()
-  const [query, setQuery] = useState('')
-  const [sort, setSort] = useState<'default' | 'name'>('default')
-  const items: LibraryItem[] = useMemo(() => {
-    const all = tabItems(tab, fx)
-    const list = view === 'favorites' ? all.filter(i => favs.has(favKey(i))) : view.startsWith('cat:') ? all.filter(i => i.category === view.slice(4)) : all
-    return sort === 'name' ? [...list].sort((a, b) => a.label.localeCompare(b.label)) : list
-  }, [tab, fx, view, favs, sort])
-  const shown = items.filter(i => i.label.toLowerCase().includes(query.toLowerCase()))
-  const verb = tab === 'titles' ? 'Add to Timeline' : tab === 'transitions' ? 'Apply to the Nearest Cut' : 'Apply to Selected Clips'
-  return (
-    <>
-      <Toolbar
-        importButton={false}
-        size={size}
-        setSize={setSize}
-        filterMenu={() => [
-          { label: 'Default Order', checked: sort === 'default', action: () => setSort('default') },
-          { label: 'Sort by Name', checked: sort === 'name', action: () => setSort('name') },
-        ]}
-        moreMenu={() => [{ label: `Clear Favorites (${favs.size})`, disabled: !favs.size, action: () => [...tabItems(tab, fx)].filter(i => favs.has(favKey(i))).forEach(toggleFavorite) }]}
-      />
-      <Search value={query} onChange={setQuery} placeholder={`Search ${TABS.find(t => t.id === tab)?.label.toLowerCase()}`} />
-      {shown.length === 0 ? (
-        <div className="lib-empty">{view === 'favorites' ? 'Click the star on an item to add it to your favorites.' : 'Nothing matches your search.'}</div>
-      ) : (
-        <div className="lib-grid">
-          {shown.map(item => (
-            <CatalogCard key={item.id} item={item} fav={favs.has(favKey(item))} verb={verb} />
-          ))}
-        </div>
-      )}
-    </>
-  )
-}
-
-/**
- * A Transitions/Effects/Filters/Titles card, as in Filmora: the item's
- * still; on hover its looping preview with Preview, menu, favorite and add
- * buttons; a click selects it and plays it in the player.
- */
-function CatalogCard({ item, fav, verb }: { item: LibraryItem; fav: boolean; verb: string }) {
-  const [hover, setHover] = useState(false)
-  const selected = useEditor(s => s.librarySel === favKey(item))
-  const menu = (x: number, y: number) =>
-    openMenu(x, y, [
-      { label: verb, action: () => applyLibraryItem(item) },
-      { label: 'Preview', action: () => previewInPlayer(previewTarget(item)) },
-      { label: fav ? 'Remove from Favorites' : 'Add to Favorites', action: () => toggleFavorite(item) },
-    ])
-  const stop = (e: React.SyntheticEvent) => e.stopPropagation()
-  return (
-    <div
-      className={`card catalog-card ${selected ? 'on' : ''} ${hover ? 'hover' : ''}`}
-      data-item={item.id}
-      title={`${item.label}: click to preview, drag to the timeline or double-click to ${verb.toLowerCase()}`}
-      onPointerEnter={() => setHover(true)}
-      onPointerLeave={() => setHover(false)}
-      onPointerDown={e => e.button === 0 && startLibraryDrag(e, item)}
-      onClick={() => previewInPlayer(previewTarget(item))}
-      onDoubleClick={() => applyLibraryItem(item)}
-      onContextMenu={e => {
-        e.preventDefault()
-        menu(e.clientX, e.clientY)
-      }}
-    >
-      <div className="thumb">
-        <FxThumb item={previewRef(item)} hover={hover} />
-        <button className="ov preview" title="Preview" onPointerDown={stop} onClick={e => (stop(e), previewInPlayer(previewTarget(item)))}>
-          <IcPreviewLens size={14} />
-        </button>
-        <button
-          className="ov more"
-          title="More"
-          onPointerDown={stop}
-          onClick={e => {
-            stop(e)
-            const r = e.currentTarget.getBoundingClientRect()
-            menu(r.left, r.bottom + 2)
-          }}
-        >
-          <IcMenuLines size={14} />
-        </button>
-        <button
-          className={`ov fav ${fav ? 'on' : ''}`}
-          title={fav ? 'Remove from favorites' : 'Add to favorites'}
-          onPointerDown={stop}
-          onClick={e => {
-            stop(e)
-            toggleFavorite(item)
-          }}
-        >
-          {fav ? <IcStarFill size={14} /> : <IcStar size={14} />}
-        </button>
-        <button
-          className="ov add"
-          title={verb}
-          onPointerDown={stop}
-          onClick={e => {
-            stop(e)
-            applyLibraryItem(item)
-          }}
-        >
-          <IcPlus size={13} strokeWidth={2} />
-        </button>
-      </div>
-      <div className="name">{item.label}</div>
-    </div>
-  )
-}

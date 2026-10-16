@@ -9,7 +9,19 @@ import { backend, type LiveFrame, type NativeEngine } from '../backend'
 import { getState, setNativeClock, setState } from '../store'
 import type { PreviewRenderer, PreviewState } from './types'
 
-const QUALITY_HEIGHT = { full: 1080, half: 540, quarter: 360 } as const
+export const QUALITY_HEIGHT = { full: 1080, half: 540, quarter: 360 } as const
+
+/**
+ * Size the engine renders the player at: the screen in device pixels,
+ * capped by the quality setting (Full 1080p, 1/2 540p, 1/4 360p).
+ */
+export function playerRenderSize(screen: HTMLElement, q: keyof typeof QUALITY_HEIGHT): [number, number] {
+  const dpr = devicePixelRatio || 1
+  const cap = QUALITY_HEIGHT[q]
+  const h = Math.max(90, Math.min(cap, Math.round(screen.clientHeight * dpr)))
+  const w = Math.max(160, Math.min(Math.round((cap * 16) / 9) * 2, Math.round(screen.clientWidth * dpr)))
+  return [w, h]
+}
 
 export class NativePreview implements PreviewRenderer {
   private engine: NativeEngine
@@ -71,11 +83,7 @@ export class NativePreview implements PreviewRenderer {
 
   private sendSize() {
     if (!this.screen) return
-    const q = getState().previewQuality
-    const dpr = devicePixelRatio || 1
-    const cap = QUALITY_HEIGHT[q]
-    const h = Math.max(90, Math.min(cap, Math.round(this.screen.clientHeight * dpr)))
-    const w = Math.max(160, Math.min(Math.round((cap * 16) / 9) * 2, Math.round(this.screen.clientWidth * dpr)))
+    const [w, h] = playerRenderSize(this.screen, getState().previewQuality)
     const key = `${w}x${h}`
     if (key === this.size) return
     this.size = key

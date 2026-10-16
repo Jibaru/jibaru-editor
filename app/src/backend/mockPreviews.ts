@@ -2,7 +2,7 @@
 // with the same still + sprite sheet contract as the native generator
 // (jb_render::preview), so the UI and its tests run without the engine.
 
-import type { PreviewRef, SpriteLayout } from './types'
+import type { PlayerFrames, PreviewRef, SpriteLayout } from './types'
 
 export const MOCK_LAYOUT: SpriteLayout = { frame_w: 128, frame_h: 72, frames: 30, cols: 6, fps: 15 }
 
@@ -97,4 +97,21 @@ export function mockPreviewUrl(item: PreviewRef, part: 'still' | 'sprite'): stri
   const url = c.toDataURL('image/jpeg', 0.7)
   cache.set(key, url)
   return url
+}
+
+/**
+ * Player preview frames rendered by jb-render through the dev server
+ * (`/__jb/fxframes`, which runs `jb fx player-frames`); null without it.
+ */
+export async function mockPlayerFrames(item: PreviewRef, height: number): Promise<PlayerFrames | null> {
+  const q = 'fx' in item ? `fx=${encodeURIComponent(item.fx)}` : `title=${encodeURIComponent(JSON.stringify(item.title))}`
+  try {
+    const r = await fetch(`/__jb/fxframes?${q}&h=${height}`)
+    if (!r.ok) return null
+    const j = (await r.json()) as { id: string; frames: number; width: number; height: number; duration: number }
+    const urls = Array.from({ length: j.frames }, (_, i) => `/__jb/fxframe?id=${j.id}&i=${i}`)
+    return { urls, width: j.width, height: j.height, duration: j.duration }
+  } catch {
+    return null
+  }
 }

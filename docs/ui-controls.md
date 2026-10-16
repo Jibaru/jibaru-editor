@@ -188,13 +188,16 @@ shadow, corner radius, chroma key, 1:1 ratio) with no unknown effects.
 | Card menu: Reveal in Finder, Copy File Path, Delete | works / missing / works | works (Delete disabled with a reason when the media is used) | `reveal_path`, `remove_media` | library › media card |
 | Stock Media (Videos, Photos) | placeholder ("Nothing here yet") | unavailable: empty state | — | library › empty states |
 | Audio: Project Audio / Music / Sound Effects | partial | Project Audio works (import here too); Music and Sound Effects unavailable empty states | — | library › empty states |
-| Titles, Transitions, Effects, Filters: categories, drag to timeline | works | works | `add_clip`, `set_transition`, `add_effect` | library › titles, effects |
+| Titles, Transitions, Effects, Filters: categories, drag to timeline | works | works: Filmora's sidebar (Mine ▸ Favorites; Transitions / Video Effects / Filters ▾ with Filmora's groups, e.g. Trending, Fade&Dissolve, Zoom, Slides, Premium, 3D, Film Burn; Audio Transitions; Titles: Add Text, Mine, Title Templates), every registry item mapped to Filmora groups (`jb_render::library`); group header with the Commercial switch, two-column grid at Filmora's card size. AI and cloud rows (AI categories, Similar recommendations, premium/download badges) are left out | `add_clip`, `set_transition`, `add_effect` | library › catalog layout, titles, effects |
 | Catalog "+" button, double-click, card menu Apply | missing | works: title at the playhead, effect/filter on the selected clips, transition on the nearest cut | same | library › titles, effects |
-| Favorites (star, sidebar Favorites, card menu) | missing | works, per user | localStorage | library › titles, effects |
+| Favorites (star, Mine › Favorites, the store button next to the search, card menu) | missing | works, per user | localStorage | library › titles, effects |
+| Search all transitions / effects / filters / titles | works (current category) | works across the whole tab | view | library › catalog layout |
+| Commercial switch | missing | works, remembered; filters nothing out (every item is ours to use commercially) | localStorage | library › catalog layout |
+| Titles › Add Text tile | missing | works: default title at the playhead (or drag it) | `add_clip` | library › catalog layout |
 | Card previews: still, looping preview on hover, overlay buttons (Preview, menu, favorite, add) | generic icon | works: rendered by jb-render on our procedural sample footage, cached per renderer version, loaded as cards scroll into view; also on Animation presets | `jb://fxpreview`, `jb fx previews` | previews › cards |
-| Click a card: plays it in the player (Source tab), once, then rests on frame 0; Timeline goes back | missing | works: transitions/animations/titles on the sample footage (2 s), effects/filters on the timeline at the playhead (5 s), like Filmora | `preview_start` / `preview_stop` | previews › clicking a card |
+| Click a card: plays it in the player (Source tab), once, then rests on frame 0; Timeline goes back | missing | works: rendered live by the engine at the player's size and quality setting (1/2 Quality 540p by default, Full Quality 1080p); transitions/animations/titles on the sample footage (2 s, resolution-independent procedural scenes), effects/filters on the timeline at the playhead (5 s, samples when the timeline is empty), like Filmora. The browser build plays frames from `jb fx player-frames` | `preview_start` / `preview_stop`, `playback_size` | previews › clicking a card; `playback::previews_render_at_the_player_resolution` |
 | Effect sliders update the paused frame while dragging | on release only | works (live, no undo step until release) | `preview_command` | — |
-| Catalog filter / more menu | no-op | Sort by name; Clear Favorites | view | library › titles, effects |
+| Catalog more menu (⋯) | no-op | Default order / Sort by name; Clear Favorites | view | library › titles, effects |
 | Stickers, Templates | placeholder | unavailable: empty state | — | library › empty states |
 
 ## Menus (window menu bar on Windows and in the browser; native menu on macOS) and shortcuts

@@ -11,33 +11,49 @@ export interface LibraryItem {
   type: 'media' | 'title' | 'transition' | 'effect'
   id: string
   label: string
-  category?: string
+  /** Library sidebar groups listing the item, with its position in each. */
+  groups?: { group: string; order: number }[]
   sample?: string
 }
 
+/** Title templates, under Titles > Title Templates. */
 export const titleItems: LibraryItem[] = [
-  { type: 'title', id: 'default', label: 'Default Title', category: 'Default' },
-  { type: 'title', id: 'basic', label: 'Basic Title', category: 'Default' },
-  { type: 'title', id: 'lower_third', label: 'Lower Third', category: 'Lower Thirds' },
-  { type: 'title', id: 'subtitle', label: 'Subtitle', category: 'Subtitles' },
+  { type: 'title', id: 'default', label: 'Default Title', groups: [{ group: 'Default', order: 0 }] },
+  { type: 'title', id: 'basic', label: 'Basic Title', groups: [{ group: 'Default', order: 1 }] },
+  { type: 'title', id: 'lower_third', label: 'Lower Third', groups: [{ group: 'Lower Thirds', order: 0 }] },
+  { type: 'title', id: 'subtitle', label: 'Subtitle', groups: [{ group: 'Subtitles', order: 0 }] },
 ]
-
-/** Registry entries that belong to the properties panel or to imported projects, not to the library. */
-const HIDDEN = /^jb\.(color\.|filmora\.|auto_enhance$|pan_slide$|film_burn_02$|fast_wipe_)/
 
 const TAB_KIND: Partial<Record<LibraryTab, FxEntry['kind']>> = { transitions: 'transition', effects: 'effect', filters: 'filter' }
 
+/**
+ * Every item of a library tab: the registry items listed in one of its
+ * groups (jb_render::library; properties-panel effects are in none).
+ */
 export function tabItems(tab: LibraryTab, fx: FxEntry[]): LibraryItem[] {
   if (tab === 'titles') return titleItems
   const kind = TAB_KIND[tab]
   if (!kind) return []
   return fx
-    .filter(f => f.kind === kind && !HIDDEN.test(f.id) && f.category !== 'Panel')
-    .map(f => ({ type: kind === 'transition' ? 'transition' : 'effect', id: f.id, label: f.name, category: f.category, sample: kind }))
+    .filter(f => f.kind === kind && f.groups?.length)
+    .map(f => ({ type: kind === 'transition' ? 'transition' : 'effect', id: f.id, label: f.name, groups: f.groups, sample: kind }))
 }
 
-export function tabCategories(tab: LibraryTab, fx: FxEntry[]): string[] {
-  return [...new Set(tabItems(tab, fx).map(i => i.category ?? 'Default'))]
+/** Sidebar groups of a tab, in Filmora's order. */
+export function tabGroups(tab: LibraryTab, fx: FxEntry[]): string[] {
+  if (tab === 'titles') return [...new Set(titleItems.flatMap(i => (i.groups ?? []).map(g => g.group)))]
+  const kind = TAB_KIND[tab]
+  const index = new Map<string, number>()
+  for (const f of fx) if (f.kind === kind) for (const g of f.groups ?? []) index.set(g.group, g.index)
+  return [...index.keys()].sort((a, b) => index.get(a)! - index.get(b)!)
+}
+
+/** The items of one group, in display order. */
+export function groupItems(tab: LibraryTab, fx: FxEntry[], group: string): LibraryItem[] {
+  const at = (i: LibraryItem) => i.groups?.find(g => g.group === group)?.order ?? -1
+  return tabItems(tab, fx)
+    .filter(i => at(i) >= 0)
+    .sort((a, b) => at(a) - at(b))
 }
 
 /** Entry (in) vs exit (out) animations, following the registry descriptions. */

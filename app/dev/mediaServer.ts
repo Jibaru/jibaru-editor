@@ -175,6 +175,67 @@ function fxPreview(route: string, url: URL, res: ServerResponse) {
   res.end(fs.readFileSync(file))
 }
 
+/** The `jb` CLI that renders player previews: `JB_BIN`, else the workspace build. */
+function jbBin(): string | null {
+  const exe = process.platform === 'win32' ? 'jb.exe' : 'jb'
+  const found = [process.env.JB_BIN, ...['release', 'debug'].map(p => path.resolve(process.cwd(), '..', 'target', p, exe))].find(
+    p => p && fs.existsSync(p),
+  )
+  return found ?? null
+}
+
+const framesPending = new Map<string, Promise<string>>()
+
+/**
+ * Player previews of library items in the browser build, rendered by
+ * jb-render like the app's player does (`jb fx player-frames`):
+ *   /__jb/fxframes?fx=|title=&h=   JSON { id, frames, width, height, duration } or 404 without jb
+ *   /__jb/fxframe?id=&i=           frame i (JPEG)
+ */
+function fxFrames(route: string, url: URL, res: ServerResponse) {
+  const fail = (code: number, msg: string) => {
+    res.statusCode = code
+    res.end(msg)
+  }
+  const root = path.join(cache, 'fxframes')
+  if (route === 'fxframe') {
+    const id = (url.searchParams.get('id') ?? '').replace(/[^a-f0-9]/g, '')
+    const file = path.join(root, id, `${String(Number(url.searchParams.get('i') ?? 0)).padStart(3, '0')}.jpg`)
+    if (!id || !fs.existsSync(file)) return fail(404, 'no frame')
+    res.writeHead(200, { 'Content-Type': 'image/jpeg', 'Cache-Control': 'max-age=31536000' })
+    return res.end(fs.readFileSync(file))
+  }
+  const bin = jbBin()
+  const fx = url.searchParams.get('fx')
+  const title = url.searchParams.get('title')
+  const item = fx ?? (title ? `title:${title}` : null)
+  if (!bin || !item) return fail(404, bin ? 'missing fx or title' : 'jb not built')
+  const h = Math.max(36, Math.min(2160, Number(url.searchParams.get('h') ?? 540)))
+  const id = key(item, h, fs.statSync(bin).mtimeMs)
+  const dir = path.join(root, id)
+  const info = path.join(dir, 'info.json')
+  let p = framesPending.get(id)
+  if (!p) {
+    p = fs.existsSync(info)
+      ? Promise.resolve(fs.readFileSync(info, 'utf8'))
+      : run(bin, ['fx', 'player-frames', item, '--height', String(h), '-o', dir, '--json']).then(out => {
+          const d = JSON.parse(out.toString()).data
+          const json = JSON.stringify({ id, frames: d.frames, width: d.width, height: d.height, duration: d.duration })
+          fs.writeFileSync(info, json)
+          return json
+        })
+    p.finally(() => framesPending.delete(id)).catch(() => {})
+    framesPending.set(id, p)
+  }
+  p.then(
+    json => {
+      res.writeHead(200, { 'Content-Type': 'application/json' })
+      res.end(json)
+    },
+    e => fail(500, String(e)),
+  )
+}
+
 export function devMediaServer(): Plugin {
   return {
     name: 'jb-dev-media',
@@ -189,6 +250,7 @@ export function devMediaServer(): Plugin {
         }
         const route = url.pathname.replace(/^\//, '')
         if (route === 'fxpreview-info' || route === 'fxpreview') return fxPreview(route, url, res)
+        if (route === 'fxframes' || route === 'fxframe') return fxFrames(route, url, res)
         if (!file || !fs.existsSync(file)) return fail(404, 'not found')
         const send = (type: string) => (buf: Buffer) => {
           res.writeHead(200, { 'Content-Type': type, 'Cache-Control': 'max-age=31536000' })

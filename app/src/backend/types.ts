@@ -8,6 +8,10 @@ export interface FxEntry {
   kind: 'transition' | 'effect' | 'filter' | 'animation'
   description: string
   params: { name: string; label: string; ty: 'float' | 'int' | 'bool' | 'color' | 'vec2' | 'text'; min: number; max: number; default: [number, number, number, number]; unit: string }[]
+  /** Library sidebar groups listing it (jb_render::library), Filmora's
+   *  categories: `index` orders the groups of a tab, `order` the items of a
+   *  group. Empty: not shown in the library (properties-panel effects). */
+  groups?: { group: string; index: number; order: number }[]
 }
 
 /** A library item to preview: a registry id or a title template. */
@@ -196,4 +200,15 @@ export interface MediaUrls {
   frame(t: number, h: number, revision: number): string
   /** A library card preview: the still, or the hover sprite sheet. */
   fxPreview(item: PreviewRef, part: 'still' | 'sprite', version: string): string
+  /** Browser build only: the player preview of a library item rendered by
+   *  jb-render as frames `height` pixels tall (null when unavailable). */
+  playerFrames?(item: PreviewRef, height: number): Promise<PlayerFrames | null>
+}
+
+export interface PlayerFrames {
+  urls: string[]
+  width: number
+  height: number
+  /** Ticks. */
+  duration: number
 }

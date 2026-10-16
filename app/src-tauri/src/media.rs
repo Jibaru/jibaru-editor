@@ -131,6 +131,18 @@ pub struct FxEntry {
     pub kind: &'static str,
     pub description: &'static str,
     pub params: Vec<FxParam>,
+    /// Library sidebar groups listing the item (Filmora's categories), with
+    /// its position in each; empty for items not shown in the library.
+    pub groups: Vec<FxGroup>,
+}
+
+#[derive(Serialize)]
+pub struct FxGroup {
+    pub group: &'static str,
+    /// Position of the group in its tab's sidebar.
+    pub index: usize,
+    /// Position of the item in the group.
+    pub order: usize,
 }
 
 #[derive(Serialize)]
@@ -176,6 +188,14 @@ pub fn catalog() -> Vec<FxEntry> {
                     max: p.max,
                     default: p.default,
                     unit: p.unit,
+                })
+                .collect(),
+            groups: jb_render::library::places(i.id)
+                .filter(|(g, _)| g.kind == i.kind)
+                .map(|(g, order)| FxGroup {
+                    group: g.name,
+                    index: jb_render::library::group_names(g.kind).position(|n| n == g.name).unwrap_or(0),
+                    order,
                 })
                 .collect(),
         })

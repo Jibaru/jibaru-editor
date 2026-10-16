@@ -6,7 +6,7 @@ import { newId } from '../core/model'
 import type { Command, MediaAsset, Project, ProjectSettings, Snapshot } from '../core/types'
 import { apply } from './applyCommand'
 import catalog from '../fx-catalog.json'
-import { mockPreviewInfo, mockPreviewUrl } from './mockPreviews'
+import { mockPlayerFrames, mockPreviewInfo, mockPreviewUrl } from './mockPreviews'
 import type { Backend, FxEntry, MediaUrls } from './types'
 
 const defaultSettings: ProjectSettings = {
@@ -98,6 +98,7 @@ const media: MediaUrls = {
   file: path => `/__jb/file?${q({ path })}`,
   frame: () => '',
   fxPreview: (item, part) => mockPreviewUrl(item, part),
+  playerFrames: mockPlayerFrames,
 }
 
 export function createMockBackend(): Backend {

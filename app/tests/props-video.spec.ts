@@ -146,6 +146,7 @@ test('cloud AI modules are cleanly unavailable', async ({ page }) => {
 test('library effects get a module: params, disable, delete', async ({ page }) => {
   const b = await setup(page)
   await page.locator('.lib-tabs button', { hasText: /^Effects$/ }).click()
+  await page.locator('.lib-side button', { hasText: /^Basic$/ }).click()
   await page.locator('.catalog-card[data-item="jb.vineta"]').dblclick()
   const m = module(page, 'Vignette')
   await expect(m).toHaveCount(1)

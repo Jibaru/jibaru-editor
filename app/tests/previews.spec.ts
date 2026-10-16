@@ -24,8 +24,10 @@ test('cards show a still and animate on hover', async ({ page }) => {
 test('stills load lazily as cards scroll into view', async ({ page }) => {
   await boot(page)
   await tab(page, 'Effects')
+  // Search all effects: more cards than fit.
+  await page.locator('.lib-search input').fill('e')
   const cards = page.locator('.catalog-card')
-  expect(await cards.count()).toBeGreaterThan(40)
+  expect(await cards.count()).toBeGreaterThan(20)
   const last = cards.last()
   await expect(last.locator('img.fx-still')).toHaveCount(0)
   await last.scrollIntoViewIfNeeded()
@@ -58,6 +60,8 @@ test('clicking a card plays it in the player; Timeline goes back', async ({ page
 test('titles and effects preview too; seeking the timeline ends the preview', async ({ page }) => {
   await boot(page)
   await tab(page, 'Titles')
+  await page.locator('.lib-side button', { hasText: 'Title Templates' }).click()
+  await page.locator('.lib-side button', { hasText: 'Lower Thirds' }).click()
   await page.locator('.catalog-card[data-item="lower_third"]').click()
   await expect(page.locator('.screen.item-preview')).toHaveAttribute('data-preview', 'title:lower_third')
   await tab(page, 'Effects')

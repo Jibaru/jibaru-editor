@@ -661,4 +661,97 @@ mod tests {
         assert_eq!(sharp.time, back.time);
         assert!(diff(&sharp.rgba, &back.rgba) > 0.5, "the edit shows without seeking");
     }
+
+    /// Luma detail at a 2 px scale: mean difference between neighboring
+    /// 2x2 block averages.
+    fn detail(rgba: &[u8], w: usize, h: usize) -> f64 {
+        let (bw, bh) = (w / 2, h / 2);
+        let mut b = vec![0f64; bw * bh];
+        for y in 0..bh * 2 {
+            for x in 0..bw * 2 {
+                let p = &rgba[(y * w + x) * 4..];
+                b[(y / 2) * bw + x / 2] += (0.2126 * p[0] as f64 + 0.7152 * p[1] as f64 + 0.0722 * p[2] as f64) / 4.0;
+            }
+        }
+        let mut sum = 0.0;
+        for y in 0..bh {
+            for x in 0..bw - 1 {
+                sum += (b[y * bw + x + 1] - b[y * bw + x]).abs();
+            }
+        }
+        sum / ((bw - 1) * bh) as f64
+    }
+
+    /// `rgba` shrunk `k` times (box) and scaled back up (bilinear): what
+    /// playing a small card sprite in the player looks like.
+    fn upscaled(rgba: &[u8], w: usize, h: usize, k: usize) -> Vec<u8> {
+        let (sw, sh) = (w / k, h / k);
+        let mut small = vec![0f64; sw * sh * 4];
+        for y in 0..sh * k {
+            for x in 0..sw * k {
+                for c in 0..4 {
+                    small[((y / k) * sw + x / k) * 4 + c] += rgba[(y * w + x) * 4 + c] as f64 / (k * k) as f64;
+                }
+            }
+        }
+        let mut out = vec![0u8; w * h * 4];
+        for y in 0..h {
+            let fy = ((y as f64 + 0.5) / k as f64 - 0.5).clamp(0.0, (sh - 1) as f64);
+            let (y0, ty) = (fy.floor() as usize, fy.fract());
+            let y1 = (y0 + 1).min(sh - 1);
+            for x in 0..w {
+                let fx = ((x as f64 + 0.5) / k as f64 - 0.5).clamp(0.0, (sw - 1) as f64);
+                let (x0, tx) = (fx.floor() as usize, fx.fract());
+                let x1 = (x0 + 1).min(sw - 1);
+                for c in 0..4 {
+                    let at = |xx: usize, yy: usize| small[(yy * sw + xx) * 4 + c];
+                    let top = at(x0, y0) * (1.0 - tx) + at(x1, y0) * tx;
+                    let bot = at(x0, y1) * (1.0 - tx) + at(x1, y1) * tx;
+                    out[(y * w + x) * 4 + c] = (top * (1.0 - ty) + bot * ty).round() as u8;
+                }
+            }
+        }
+        out
+    }
+
+    /// A library item clicked in the library plays in the player rendered
+    /// live at the player's size (as the quality setting caps it), on sample
+    /// footage drawn at that size: as sharp as the timeline, not a card
+    /// sprite scaled up.
+    #[test]
+    fn previews_render_at_the_player_resolution() {
+        if jb_render::Renderer::new(64, 36).is_err() {
+            eprintln!("skipping: no GPU");
+            return;
+        }
+        let reg = Registry::builtin();
+        let pool = Arc::new(MediaPool::new(Default::default()));
+        let timeline = sample_preview(&reg, &PreviewItem::Fx("jb.gaussian_blur".into()), 320, 180).unwrap().project;
+        let p = Playback::new(pool, None, timeline, |_| {});
+        p.set_size(320, 180);
+        let mut seq = frame_at(&p, 0, 0).seq;
+        for id in ["jb.dissolve", "jb.vhs"] {
+            let item = sample_preview(&reg, &PreviewItem::Fx(id.into()), 1920, 1080).unwrap();
+            p.set_preview(Some(item.project), 0);
+            // 1/2 Quality (540p), Full Quality (1080p), 1/4 Quality (360p).
+            for (w, h) in [(960u32, 540u32), (1920, 1080), (640, 360)] {
+                p.set_size(w, h);
+                let f = loop {
+                    let f = next(&p, seq);
+                    seq = f.seq;
+                    if !f.playing && f.time == 0 && (f.width, f.height) == (w, h) {
+                        break f;
+                    }
+                };
+                let (w, h) = (w as usize, h as usize);
+                assert_eq!(f.rgba.len(), w * h * 4);
+                if h >= 540 {
+                    // A 256x144 card sprite is scaled up 3.75x (540p) to 7.5x (1080p).
+                    let sharp = detail(&f.rgba, w, h);
+                    let card = detail(&upscaled(&f.rgba, w, h, h / 144), w, h);
+                    assert!(sharp > card * 1.4, "{id} at {w}x{h}: detail {sharp:.2} vs {card:.2} for an upscaled card");
+                }
+            }
+        }
+    }
 }

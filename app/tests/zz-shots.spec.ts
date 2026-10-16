@@ -42,22 +42,39 @@ test('screenshots', async ({ page }) => {
   await page.locator('.player').screenshot({ path: `${dir}/player.png` })
 })
 
-// Library previews; with JB_FX_PREVIEWS=<jb fx previews dir> the cards show the real renders.
-test('library previews', async ({ page }) => {
-  await boot(page)
-  for (const t of ['Transitions', 'Effects', 'Filters', 'Titles']) {
-    await page.locator('.lib-tabs button', { hasText: new RegExp(`^${t}$`) }).click()
-    await page.waitForTimeout(600)
-    await page.locator('.library').screenshot({ path: `${dir}/prev-lib-${t}.png` })
-  }
-  await page.locator('.lib-tabs button', { hasText: /^Transitions$/ }).click()
-  const card = page.locator('.catalog-card[data-item="jb.dissolve"]')
-  await card.hover()
-  for (let i = 0; i < 6; i++) {
-    await page.waitForTimeout(330)
-    await card.screenshot({ path: `${dir}/prev-hover-${i}.png` })
-  }
-  await card.click()
-  await page.waitForTimeout(900)
-  await page.screenshot({ path: `${dir}/prev-click.png` })
+// Library previews; with JB_FX_PREVIEWS=<jb fx previews dir> the cards show
+// the real renders, and with jb built (target/release/jb, or JB_BIN) the
+// player plays them as rendered by jb-render. At 2x, like the Filmora
+// reference screenshots.
+test.describe('retina', () => {
+  test.use({ deviceScaleFactor: 2 })
+  test('library previews', async ({ page }) => {
+    await boot(page)
+    for (const t of ['Transitions', 'Effects', 'Filters', 'Titles']) {
+      await page.locator('.lib-tabs button', { hasText: new RegExp(`^${t}$`) }).click()
+      await page.waitForTimeout(600)
+      await page.locator('.library').screenshot({ path: `${dir}/prev-lib-${t}.png` })
+    }
+    await page.locator('.lib-tabs button', { hasText: /^Transitions$/ }).click()
+    const card = page.locator('.catalog-card[data-item="jb.dissolve"]')
+    await card.hover()
+    for (let i = 0; i < 6; i++) {
+      await page.waitForTimeout(330)
+      await card.screenshot({ path: `${dir}/prev-hover-${i}.png` })
+    }
+    // The library and the player, as in the reference (Dissolve clicked).
+    const lib = (await page.locator('.library').boundingBox())!
+    const player = (await page.locator('.player').boundingBox())!
+    const clip = { x: lib.x, y: lib.y, width: player.x + player.width - lib.x, height: Math.max(lib.height, player.height) }
+    await card.click()
+    await page.waitForSelector('.item-preview canvas[data-frames]', { timeout: 60_000 }).catch(() => {})
+    await page.waitForTimeout(700)
+    await page.screenshot({ path: `${dir}/prev-click.png`, clip })
+    await page.locator('.quality .select-btn').click()
+    await page.locator('.select-list button', { hasText: 'Full Quality' }).click()
+    await page.waitForSelector('.item-preview canvas[data-frames="1920x1080"]', { timeout: 60_000 }).catch(() => {})
+    await page.waitForTimeout(700)
+    await page.screenshot({ path: `${dir}/prev-click-full.png`, clip })
+    await page.locator('.player .stage').screenshot({ path: `${dir}/prev-player-full.png` })
+  })
 })

@@ -92,6 +92,8 @@ test('titles, effects, filters and transitions: + and double-click apply, favori
   const b = await boot(page)
   await tab(page, 'Titles')
   await seek(page, 3.5)
+  await side(page, 'Title Templates')
+  await side(page, 'Lower Thirds')
   await page.locator('.catalog-card[data-item="lower_third"]').dblclick()
   let titles = (await project(page)).sequences[0].tracks.flatMap((t: any) => t.clips).filter((c: any) => c.source.type === 'title')
   expect(titles.map((c: any) => c.name)).toContain('Lower Third')
@@ -110,12 +112,58 @@ test('titles, effects, filters and transitions: + and double-click apply, favori
   const card = page.locator('.catalog-card[data-item="jb.vhs"]')
   await card.hover()
   await card.locator('button.fav').click()
-  await side(page, 'Favorites')
+  // The store button opens Mine > Favorites.
+  await page.locator('.lib-store').click()
+  await expect(page.locator('.lib-side button.child.on')).toHaveText('Favorites')
+  await expect(page.locator('.lib-section-head')).toContainText(/favorites/i)
   await expect(page.locator('.catalog-card')).toHaveCount(1)
   await card.click({ button: 'right' })
   await menuItem(page, 'Remove from Favorites')
   await expect(page.locator('.catalog-card')).toHaveCount(0)
   titles = []
+})
+
+test('catalog tabs are laid out as in Filmora: Mine, the groups, search all, Commercial', async ({ page }) => {
+  await boot(page)
+  await tab(page, 'Transitions')
+  const rows = async () => (await page.locator('.lib-side button').allTextContents()).map(t => t.trim())
+  const tr = await rows()
+  expect(tr.slice(0, 8)).toEqual(['Mine', 'Transitions', 'Trending', 'Fade&Dissolve', 'Zoom', 'Slides', 'Premium', '3D'])
+  expect(tr).toContain('Film Burn')
+  expect(tr.at(-1)).toBe('Audio Transitions')
+  await expect(page.locator('.lib-side button.child.on')).toHaveText('Trending')
+  await expect(page.locator('.lib-section-head > span')).toHaveText('Trending')
+  await expect(page.locator('.lib-search input')).toHaveAttribute('placeholder', 'Search all transitions')
+  await expect(page.locator('.catalog-card').first()).toHaveAttribute('data-item', 'jb.dissolve')
+  // Two columns at this width.
+  const [a, b2, c] = await Promise.all([0, 1, 2].map(i => page.locator('.catalog-card').nth(i).boundingBox()))
+  expect(a!.y).toBe(b2!.y)
+  expect(c!.y).toBeGreaterThan(a!.y)
+  // Every group has items; folding the section hides them.
+  for (const g of tr.slice(2, -1)) {
+    await side(page, g)
+    expect(await page.locator('.catalog-card').count(), g).toBeGreaterThan(0)
+  }
+  await side(page, 'Transitions')
+  expect(await rows()).toEqual(['Mine', 'Transitions', 'Audio Transitions'])
+  // Search looks through the whole tab.
+  await page.locator('.lib-search input').fill('wipe')
+  await expect(page.locator('.lib-section-head > span')).toHaveText('Search results')
+  expect(await page.locator('.catalog-card').count()).toBeGreaterThan(10)
+  // Commercial: everything here is cleared for commercial use.
+  await page.locator('.lib-commercial .switch').click()
+  await expect(page.locator('.lib-commercial .switch')).toHaveClass(/\bon\b/)
+  expect(await page.locator('.catalog-card').count()).toBeGreaterThan(10)
+  await tab(page, 'Effects')
+  expect((await rows()).slice(0, 4)).toEqual(['Mine', 'Video Effects', 'Trending', 'Basic'])
+  await tab(page, 'Filters')
+  expect((await rows()).slice(0, 4)).toEqual(['Mine', 'Filters', 'Basic', 'Mono'])
+  await tab(page, 'Titles')
+  expect(await rows()).toEqual(['Add Text', 'Mine', 'Title Templates'])
+  await expect(page.locator('.lib-section-head')).toHaveText(/add text to continue/i)
+  await page.locator('.add-text-tile').click()
+  const titles = (await project(page)).sequences[0].tracks.flatMap((t: any) => t.clips).filter((c: any) => c.source.type === 'title')
+  expect(titles).toHaveLength(2)
 })
 
 test('stock media, audio libraries, stickers and templates show their empty states', async ({ page }) => {

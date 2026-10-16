@@ -3,6 +3,7 @@ import { backend } from '../backend'
 import { fps, mainSequence, seconds, sequenceDuration, ticks, timecode } from '../core/model'
 import { ASPECT_RATIOS, ratioOf, sizeForRatio } from '../core/presets'
 import { createPreview, type PreviewRenderer } from '../preview'
+import { playerRenderSize, QUALITY_HEIGHT } from '../preview/native'
 import {
   addMarkerAtPlayhead,
   appendMedia,
@@ -442,8 +443,10 @@ const PREVIEW_FPS = 30
  * Filmora: it starts right away, plays once and goes back to its first
  * frame. Transitions, animations and titles play on the sample footage;
  * effects and filters on the timeline at the playhead (5 s). The native
- * engine renders it like the timeline; the browser build plays the card's
- * sprite sheet.
+ * engine renders it live like the timeline, at the player's size and
+ * quality setting. The browser build plays frames the dev server renders
+ * with jb-render at the quality's height (`jb fx player-frames`), or the
+ * card's sprite sheet when it cannot.
  */
 function ItemPreview({ item }: { item: PreviewTarget }) {
   const screen = useRef<HTMLDivElement>(null)
@@ -453,6 +456,7 @@ function ItemPreview({ item }: { item: PreviewTarget }) {
   const [playing, setPlaying] = useState(false)
   const full = useEditor(s => s.playerFullscreen)
   const info = useEditor(s => s.previewInfo)
+  const quality = useEditor(s => s.previewQuality)
   const ctl = useRef<{ play(t: number): void; pause(): void; seek(t: number): void }>(null)
   const state = useRef({ time: 0, dur: 2 * 10_000_000, playing: false })
   state.current = { time, dur, playing }
@@ -461,6 +465,24 @@ function ItemPreview({ item }: { item: PreviewTarget }) {
 
   // Back to the timeline when the preview closes.
   useEffect(() => () => void backend.engine?.previewStop(getState().playhead), [])
+
+  // Native: the engine renders at the player's size and quality, as for the timeline.
+  useEffect(() => {
+    const engine = backend.engine
+    const el = screen.current
+    if (!engine || !el) return
+    let last = ''
+    const send = () => {
+      const [w, h] = playerRenderSize(el, getState().previewQuality)
+      if (`${w}x${h}` === last) return
+      last = `${w}x${h}`
+      engine.setSize(w, h)
+    }
+    send()
+    const ro = new ResizeObserver(send)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [quality])
 
   useEffect(() => {
     let alive = true
@@ -509,21 +531,34 @@ function ItemPreview({ item }: { item: PreviewTarget }) {
         unEnded()
       }
     }
-    // Browser: step through the card's sprite sheet on a clock.
+    // Browser: frames rendered by the dev server, else the card's sprite sheet, on a clock.
     if (!info) return
     const L = info.layout
     const img = new Image()
     img.src = backend.media.fxPreview(item.ref, 'sprite', info.version)
     c.width = L.frame_w * 2
     c.height = L.frame_h * 2
-    const total = 2 * 10_000_000
+    let total = 2 * 10_000_000
+    let frames: HTMLImageElement[] | null = null
+    backend.media.playerFrames?.(item.ref, QUALITY_HEIGHT[getState().previewQuality]).then(r => {
+      if (!alive || !r) return
+      frames = r.urls.map(u => Object.assign(new Image(), { src: u }))
+      c.width = r.width
+      c.height = r.height
+      total = r.duration
+      setDur(total)
+      c.dataset.frames = `${r.width}x${r.height}`
+    })
     setDur(total)
     let t = 0
     let run = true
     let last = performance.now()
     let raf = 0
     const draw = () => {
-      const i = Math.min(L.frames - 1, Math.floor((t / total) * L.frames))
+      const p = t / total
+      const f = frames?.[Math.min(frames.length - 1, Math.floor(p * frames.length))]
+      if (f?.complete && f.naturalWidth) return g.drawImage(f, 0, 0, c.width, c.height)
+      const i = Math.min(L.frames - 1, Math.floor(p * L.frames))
       if (img.complete && img.naturalWidth) g.drawImage(img, (i % L.cols) * L.frame_w, Math.floor(i / L.cols) * L.frame_h, L.frame_w, L.frame_h, 0, 0, c.width, c.height)
     }
     const tick = (now: number) => {
@@ -552,7 +587,7 @@ function ItemPreview({ item }: { item: PreviewTarget }) {
       alive = false
       cancelAnimationFrame(raf)
     }
-  }, [item.key, item.ref, info])
+  }, [item.key, item.ref, info, backend.engine ? null : quality])
 
   useEffect(
     () =>
