@@ -22,7 +22,7 @@ use std::collections::BTreeSet;
 use std::sync::Arc;
 
 /// Rendering options.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct RenderOptions {
     /// Composite, blend and blur in linear light instead of display-referred
     /// (gamma-encoded) values. Off by default because Filmora, like most
@@ -31,12 +31,6 @@ pub struct RenderOptions {
     pub linear_light: bool,
     /// Hint passed to the frame source so decoders can scale down (previews).
     pub source_max_size: Option<(u32, u32)>,
-}
-
-impl Default for RenderOptions {
-    fn default() -> Self {
-        Self { linear_light: false, source_max_size: None }
-    }
 }
 
 /// Diagnostics of the last rendered frame.

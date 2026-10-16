@@ -89,7 +89,8 @@ fn solid_colors_and_blend_modes() {
         if v <= 0.0031308 { v * 12.92 } else { 1.055 * v.powf(1.0 / 2.4) - 0.055 }
     });
     let (b, t) = (to_disp(bottom), to_disp(top));
-    let cases: Vec<(BlendMode, Box<dyn Fn(f64, f64) -> f64>)> = vec![
+    type BlendFn = Box<dyn Fn(f64, f64) -> f64>;
+    let cases: Vec<(BlendMode, BlendFn)> = vec![
         (BlendMode::Normal, Box::new(|_b, s| s)),
         (BlendMode::Multiply, Box::new(|b, s| b * s)),
         (BlendMode::Screen, Box::new(|b, s| b + s - b * s)),
