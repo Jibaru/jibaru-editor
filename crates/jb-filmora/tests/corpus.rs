@@ -135,6 +135,42 @@ fn check_edits(path: &Path) {
         h.execute(&Command::SetTitle { clip_id: id, title: t }).unwrap();
     }
     h.execute(&Command::RenameProject { name: "edited".into() }).unwrap();
+    // Property-panel edits on the first video and audio media clips.
+    let main = h.project.main().clone();
+    let pick = |kind: TrackKind| {
+        main.tracks
+            .iter()
+            .filter(|t| t.kind == kind && !t.locked)
+            .flat_map(|t| &t.clips)
+            .find(|c| matches!(c.source, ClipSource::Media { .. }) && c.duration() > 2 * TICKS_PER_SECOND)
+            .map(|c| c.id.clone())
+    };
+    let f = |v: f64| serde_json::json!({"type": "float", "value": v});
+    let mut cmds = Vec::new();
+    if let Some(v) = pick(TrackKind::Video) {
+        cmds.extend([
+            serde_json::json!({"op": "set_blend_mode", "clip_id": v, "blend_mode": "overlay"}),
+            serde_json::json!({"op": "set_crop", "clip_id": v, "crop": [0.1, 0.1, 0.0, 0.0]}),
+            serde_json::json!({"op": "set_flip", "clip_id": v, "horizontal": true}),
+            serde_json::json!({"op": "add_keyframe", "clip_id": v, "param": "transform.scale", "time": 0, "value": f(1.0)}),
+            serde_json::json!({"op": "add_keyframe", "clip_id": v, "param": "transform.scale", "time": TICKS_PER_SECOND, "value": f(1.2)}),
+            serde_json::json!({"op": "add_animation", "clip_id": v, "kind": "jb.anim.fade_in", "placement": "in"}),
+            serde_json::json!({"op": "add_marker", "clip_id": v, "marker": {"id": "corpus-clip-marker", "time": 0, "name": "m"}}),
+        ]);
+    }
+    if let Some(a) = pick(TrackKind::Audio) {
+        cmds.extend([
+            serde_json::json!({"op": "set_pan", "clip_id": a, "pan": 0.25}),
+            serde_json::json!({"op": "set_pitch", "clip_id": a, "semitones": -1.0}),
+            serde_json::json!({"op": "set_equalizer", "clip_id": a, "preset": "pop"}),
+            serde_json::json!({"op": "set_normalization", "clip_id": a, "target_lufs": -16.0}),
+        ]);
+    }
+    cmds.push(serde_json::json!({"op": "add_marker", "marker": {"id": "corpus-marker", "time": 0, "name": "start"}}));
+    for c in cmds {
+        let cmd: Command = serde_json::from_value(c.clone()).unwrap();
+        h.execute(&cmd).unwrap_or_else(|e| panic!("{c}: {e}"));
+    }
     wfp.project = h.project.clone();
     let out = scratch("edited.wfp");
     let report = jb_filmora::write(&wfp, &out).unwrap();
@@ -142,6 +178,16 @@ fn check_edits(path: &Path) {
     let again = jb_filmora::read(&out).unwrap();
     assert_eq!(clip_count(&again.project), expected, "{}", path.display());
     assert_eq!(again.project.name, "edited");
+    assert!(again.project.main().markers.iter().any(|m| m.name == "start"), "{}", path.display());
+    let edited_clips = |p: &Project| {
+        p.sequences
+            .iter()
+            .flat_map(|s| &s.tracks)
+            .flat_map(|t| &t.clips)
+            .filter(|c| c.blend_mode == BlendMode::Overlay)
+            .count()
+    };
+    assert_eq!(edited_clips(&again.project), edited_clips(&h.project));
     for s in &again.project.sequences {
         for t in &s.tracks {
             for c in &t.clips {

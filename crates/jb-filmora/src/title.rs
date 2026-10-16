@@ -66,9 +66,18 @@ pub fn title_from_script(script: &Value, transform_scale_y: Option<f64>) -> Titl
         stroke,
         shadow,
         background,
-        ..Default::default()
+        alignment: match script.get("Layout").and_then(|l| str_of(l, "TextAlign")) {
+            Some("left") => jb_core::TextAlignment::Left,
+            Some("right") => jb_core::TextAlignment::Right,
+            _ => jb_core::TextAlignment::Center,
+        },
+        letter_spacing: script.get("Layout").and_then(|l| f64_of(l, "CharSpace")).unwrap_or(0.0) / SPACING_UNIT,
+        line_spacing: script.get("Layout").and_then(|l| f64_of(l, "LineSpace")).unwrap_or(0.0) / SPACING_UNIT,
     }
 }
+
+/// `Layout.CharSpace`/`LineSpace` units per font size (inferred).
+const SPACING_UNIT: f64 = 100.0;
 
 fn transform_effect_mut(clip: &mut Value) -> Option<&mut Value> {
     clip.get_mut("effectChainList")?
@@ -160,6 +169,25 @@ pub fn patch_title_clip(clip: &mut Value, old: Option<&TitleData>, new: &TitleDa
                     }
                     None => shadow["Enable"] = json!(0),
                 }
+            }
+        }
+    }
+    if old.is_none_or(|o| {
+        (o.alignment, o.letter_spacing, o.line_spacing) != (new.alignment, new.letter_spacing, new.line_spacing)
+    }) {
+        if let Some(l) = script.as_object_mut().map(|o| o.entry("Layout").or_insert_with(|| json!({}))) {
+            if old.is_none_or(|o| o.alignment != new.alignment) {
+                l["TextAlign"] = json!(match new.alignment {
+                    jb_core::TextAlignment::Left => "left",
+                    jb_core::TextAlignment::Center => "center",
+                    jb_core::TextAlignment::Right => "right",
+                });
+            }
+            if old.is_none_or(|o| o.letter_spacing != new.letter_spacing) {
+                l["CharSpace"] = json!((new.letter_spacing * SPACING_UNIT).round() as i64);
+            }
+            if old.is_none_or(|o| o.line_spacing != new.line_spacing) {
+                l["LineSpace"] = json!((new.line_spacing * SPACING_UNIT).round() as i64);
             }
         }
     }

@@ -18,6 +18,8 @@ mod export;
 mod import;
 mod json;
 mod mapping;
+mod markers;
+mod props;
 mod title;
 
 pub use archive::Entry;
@@ -68,6 +70,9 @@ pub struct Raw {
     pub timeline: Value,
     /// `ProjectFolder/Medias/medias_info.json`, when present.
     pub medias_info: Option<Value>,
+    /// Archive path and content of the timeline's `extra.json` (markers).
+    pub extra_path: Option<String>,
+    pub extra: Option<Value>,
     /// The project exactly as it was mapped at read time; the writer diffs
     /// against it so only fields that were edited get rewritten.
     pub baseline: Project,

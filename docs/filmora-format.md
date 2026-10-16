@@ -407,7 +407,41 @@ here is preserved verbatim; an unedited project is written back
 byte-for-byte. Clips created in Jibaru get JSON modeled on the shapes above
 (top-level titles are wrapped in a new nested timeline).
 
-Not mapped (preserved, edits warned about): blend modes other than normal,
-crop, flip, fit mode, rotation keyframes, transform keyframes, effect
-parameter keyframes, pan, pitch, mute, track lock/mute/hide, clip disable,
-markers, beat detection, AI/stabilization/denoise state.
+Property-panel edits beyond these are written as described in §13. Not
+mapped (preserved; edits warned about): track names and heights, clip
+groups, beat detection, AI/stabilization/denoise state.
+
+## 13. Property-panel edits
+
+`crates/jb-filmora/src/props.rs` and `markers.rs` implement these. Sources:
+the corpus, the timeline of a store template (`resThumbnailTemplate`,
+serialization 17) and the data files of Filmora's presets
+(`configs/AnimationKeyFrame`, `configs/AnimationNew`, `configs/Speed`),
+which contain clip effect objects. Fields are only written when the
+corresponding property was edited, so unedited files stay byte-identical.
+
+| Property | Written as | Status |
+|---|---|---|
+| Sequence markers | `extra.json` `allMarkersInfo["<timeline userData 3 GUID>"] = [{"name", "position" (ticks), "comments", "color" (0xRRGGBB)}]`. `extra.json` is created next to the timeline if missing. | verified (one sample) |
+| Clip markers | Same, keyed by the clip's userData 3 GUID (shared by linked clips), `position` clip-local. | inferred |
+| Parameter keyframes (transform, effect params, balance) | `paramMapList: [{"key": 3, "keyFrame": {"parameter": "<keyframe string>"}, "name": "<param>"}]` on the effect, values in the effect's own units, times in clip-local seconds. | shape from presets; time base inferred |
+| Keyframe interpolation | `Interpolation` 1 = linear with slope derivatives, 7 = hold, 6 = curve: a flat `_rightDerivative` at the segment start eases in, a flat `_leftDerivative` at its end eases out, both = ease in-out. The last key's interpolation is not stored. | codes from presets; ease encoding ours |
+| Opacity keyframes | `pipBuf.OpacityKeyFrame` (0–100). | shape verified, keys inferred |
+| Volume keyframes | `volumeKeyframe.parameter` (dB). | shape verified, keys inferred |
+| Rotation | transform `Rotation`, degrees. | name from presets |
+| Flip | transform `FlipX`, `FlipY` (paramType 5). | unverified |
+| Fit mode | transform `FitMode` (5): 0 fit, 1 fill, 2 stretch, 3 none. | unverified |
+| Crop | `video/effect/crop-pan-zoom` `CropLeft/Top/Right/Bottom` (3, fractions of the source). Pan & Zoom presets use a different keyframed rect, not mapped. | unverified |
+| Blend mode | `pipBuf.BlendMode` in the order of Filmora's menu: 0 normal, 1 darken, 2 multiply, 3 color burn, 4 linear burn, 5 darker color, 6 lighten, 7 screen, 8 color dodge, 9 linear dodge (add), 10 lighter color, 11 overlay, 12 soft light, 13 hard light, 14 vivid light, 15 linear light, 16 pin light, 17 hard mix, 18 difference, 19 exclusion, 20 subtract, 21 divide (22 modes, matching the 0–21 range of the store "Allpurpose BlendMode" filter). | inferred |
+| Clip disabled | clip `"enable": false`. | unverified |
+| Track lock / hide / mute | track `locked`, `visible` (false = hidden video track or muted audio track), `mute`. | `locked`/`visible` seen in serialization 17; `mute` unverified |
+| Speed ramp | `speedParam` keys at source seconds (`offset + position × span`) with the rate; `speed.rampPreset` names the preset. Presets (rate over % of the source range): Montage, Hero moment, Bullet time, Jumper, Flash in, Flash out, from `configs/Speed`. | curve values verified; storage inferred |
+| Maintain pitch | `speed.keepPitch`. | unverified |
+| Freeze frame | clip `"freezeFrame": true`, `offsetEnd = offset`. | unverified |
+| Balance (pan) | `audio/effect/volume` `Balance`, −100 … 100. | unverified |
+| Pitch | `audio/effect/pitch` `Pitch` (semitones) in `BasicFollow`. | unverified |
+| Mute | `audio/effect/clip_volume` `Mute` = 1. | unverified |
+| Auto normalization | `audio/effect/clip_volume` `AutoNormalize` = 1, `NormalizeTarget` (LUFS), `MeasuredLoudness`. | unverified |
+| Equalizer | `audio/effect/equalizer` `Preset` (string), `Band0`…`Band9` (dB). | unverified |
+| Entry/exit animations | Effects in an `Animation` chain: `id` = preset GUID from `configs/AnimationNew` (e.g. Fade1 in `{C0BBEA86-…}`), `AnimationScene` = `animation_scene_in`/`out`/`loop`/`combo` (6), `inPoint`/`outPoint` = clip-local range. Registry animations without a preset are written under their own id, with a warning. | ids verified; placement in the clip unverified |
+| Title alignment, spacing | `scriptBuf.Layout.TextAlign` (`left`/`center`/`right`), `CharSpace`/`LineSpace` = spacing × 100. | `TextAlign` verified; spacing units inferred |

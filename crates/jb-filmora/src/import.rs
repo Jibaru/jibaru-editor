@@ -31,10 +31,29 @@ pub fn import(entries: Vec<Entry>) -> Result<WfpProject> {
         None => None,
     };
 
+    let extra_path = timeline_path.strip_suffix("timeline.wesproj").map(|d| format!("{d}extra.json"));
+    let extra = match extra_path.as_ref().and_then(|p| entries.iter().find(|e| &e.name == p)) {
+        Some(e) => parse_json(&e.name, &e.data).ok(),
+        None => None,
+    };
+    let extra_path = extra_path.filter(|_| extra.is_some());
+
     let mut ctx = Ctx::new(&timeline, medias_info.as_ref());
-    let project = ctx.project(&project_info)?;
+    let mut project = ctx.project(&project_info)?;
+    if let Some(x) = &extra {
+        crate::markers::import_markers(&mut project, &timeline, x);
+    }
     let warnings = std::mem::take(&mut ctx.warnings);
-    let raw = Raw { entries, project_info, timeline_path, timeline, medias_info, baseline: project.clone() };
+    let raw = Raw {
+        entries,
+        project_info,
+        timeline_path,
+        timeline,
+        medias_info,
+        extra_path,
+        extra,
+        baseline: project.clone(),
+    };
     Ok(WfpProject { project, raw, warnings })
 }
 
@@ -168,9 +187,9 @@ impl<'a> Ctx<'a> {
                 id,
                 kind,
                 name,
-                locked: false,
-                muted: false,
-                hidden: false,
+                locked: t.get("locked").and_then(Value::as_bool).unwrap_or(false),
+                muted: track_muted(t, kind),
+                hidden: kind == TrackKind::Video && t.get("visible").and_then(Value::as_bool) == Some(false),
                 clips,
                 height: None,
                 extra: marker(json!({ "timeline": tl_id, "index": index })),
@@ -260,9 +279,11 @@ impl<'a> Ctx<'a> {
         }
         let (opacity, blend) = opacity_of(c);
         clip.opacity = opacity;
-        if blend != 0 {
-            self.warnings.push(format!("clip {}: blend mode {blend} not mapped, rendered as normal", clip.id));
+        match crate::props::blend_from_code(blend) {
+            Some(b) => clip.blend_mode = b,
+            None => self.warnings.push(format!("clip {}: blend mode {blend} not mapped, rendered as normal", clip.id)),
         }
+        clip.disabled = c.get("enable").and_then(Value::as_bool) == Some(false);
         clip.audio = audio_of(c);
         let (effects, animations) = effects_of(c);
         clip.effects = effects;
@@ -395,6 +416,8 @@ fn guess_kind(path: &str) -> MediaKind {
 /// (`inPoint = offset / rate`). `speedParam` stores the rate curve over the
 /// whole media; a uniform rate `r` is written as two keys `r → 1.0` spanning
 /// `_totalTime` (Filmora's own convention), so only longer curves are ramps.
+/// Ramp keys are at source seconds; they become a `SpeedCurve` over the
+/// clip's source range.
 pub fn speed_of(c: &Value, dur: Ticks) -> (Ticks, Speed) {
     let mut speed = Speed::default();
     let Some(sp) = c.get("speed").filter(|v| v.is_object()) else {
@@ -404,6 +427,11 @@ pub fn speed_of(c: &Value, dur: Ticks) -> (Ticks, Speed) {
     let offset_end = f64_of(sp, "offsetEnd").unwrap_or(offset);
     let source_in = secs_to_ticks(offset);
     speed.reverse = sp.get("reverse").and_then(Value::as_bool).unwrap_or(false);
+    speed.maintain_pitch = sp.get("keepPitch").and_then(Value::as_bool).unwrap_or(true);
+    if c.get("freezeFrame").and_then(Value::as_bool) == Some(true) {
+        speed.freeze = true;
+        return (source_in, speed);
+    }
     let ratio = if dur > 0 { (offset_end - offset) * TICKS_PER_SECOND as f64 / dur as f64 } else { 0.0 };
     let kf = str_of(sp, "speedParam").and_then(KfParam::parse);
     let keys = kf.as_ref().map(|k| k.keys.as_slice()).unwrap_or_default();
@@ -416,19 +444,26 @@ pub fn speed_of(c: &Value, dur: Ticks) -> (Ticks, Speed) {
     } else if all_equal {
         keys.first().map_or(ratio, |k| k.value)
     } else {
-        // A real speed curve: keyframe times are source seconds; map them to
-        // clip-local time through the clip's average rate (approximation).
-        let avg = ratio.max(1e-6);
-        let ramp: Vec<Keyframe> = keys
+        // A real speed curve over the clip's source range.
+        let span = (offset_end - offset).max(1e-9);
+        let points: Vec<SpeedPoint> = keys
             .iter()
-            .map(|k| Keyframe {
-                time: ((secs_to_ticks(k.time) - source_in) as f64 / avg).round() as Ticks,
-                value: jb_core::Value::Float(k.value),
-                interpolation: Interpolation::Linear,
-            })
+            .map(|k| SpeedPoint { position: ((k.time - offset) / span).clamp(0.0, 1.0), speed: k.value.max(0.01) })
             .collect();
-        speed.ramp = Some(Param { value: jb_core::Value::Float(avg), keyframes: ramp });
-        avg
+        if let Ok(mut curve) = jb_core::speed::custom_curve(&points) {
+            if let Some(p) = str_of(sp, "rampPreset").filter(|p| !p.is_empty()) {
+                curve.preset = p.to_string();
+            }
+            let (mut ramp, d) = jb_core::speed::ramp_for(&curve, secs_to_ticks(offset_end - offset));
+            // Fit the ramp to the stored clip length exactly.
+            let k = dur as f64 / d.max(1) as f64;
+            for kf in &mut ramp.keyframes {
+                kf.time = (kf.time as f64 * k).round() as Ticks;
+            }
+            speed.ramp = Some(Param { value: jb_core::Value::Float(ratio), ..ramp });
+            speed.curve = Some(curve);
+        }
+        ratio
     };
     if speed.rate <= 0.0 {
         speed.rate = 1.0;
@@ -437,45 +472,45 @@ pub fn speed_of(c: &Value, dur: Ticks) -> (Ticks, Speed) {
 }
 
 pub fn transform_of(c: &Value) -> Transform {
+    use crate::props::*;
     let mut t = Transform::default();
+    if let Some(e) = find_effect(c, FX_CROP) {
+        for (i, n) in CROP_PARAMS.iter().enumerate() {
+            if let Some(v) = effect_param_f64(e, n) {
+                t.crop[i] = v;
+            }
+        }
+    }
     let Some(e) = find_effect(c, FX_TRANSFORM) else { return t };
-    let p = |n: &str| effect_param_f64(e, n);
-    if let Some(x) = p("Position_x") {
-        t.position_x = Param::float(x - 0.5);
+    if let Some(x) = effect_param_full(e, "Position_x", 1.0, 0.5) {
+        t.position_x = x;
     }
-    if let Some(y) = p("Position_y") {
-        t.position_y = Param::float(y - 0.5);
+    if let Some(y) = effect_param_full(e, "Position_y", 1.0, 0.5) {
+        t.position_y = y;
     }
-    let sx = p("Scale_x");
-    let sy = p("Scale_y").or(sx);
+    let sx = effect_param_full(e, "Scale_x", 100.0, 0.0);
+    let sy = effect_param_full(e, "Scale_y", 100.0, 0.0).or_else(|| sx.clone());
     if let Some(sx) = sx {
-        t.scale_x = Param::float(sx / 100.0);
+        t.scale_x = sx;
     }
     if let Some(sy) = sy {
-        t.scale_y = Param::float(sy / 100.0);
+        t.scale_y = sy;
     }
-    if let Some(r) = ROTATION_PARAMS.iter().find_map(|n| p(n)) {
-        t.rotation = Param::float(r);
+    if let Some(r) = ROTATION_PARAMS.iter().find_map(|n| effect_param_full(e, n, 1.0, 0.0)) {
+        t.rotation = r;
     }
+    t.flip_h = effect_param_f64(e, TF_FLIP_X).is_some_and(|v| v != 0.0);
+    t.flip_v = effect_param_f64(e, TF_FLIP_Y).is_some_and(|v| v != 0.0);
+    t.fit = effect_param_f64(e, TF_FIT).map_or(FitMode::Fit, |v| fit_from_code(v.round() as i64));
     t
 }
 
-/// Candidate names of the rotation parameter (not present in the corpus).
+/// Candidate names of the rotation parameter ("Rotation" is what Filmora's
+/// animation presets use).
 pub const ROTATION_PARAMS: &[&str] = &["Rotation", "Rotate", "Rotate_z"];
 
 fn keyframes_of(text: Option<&str>, scale: f64) -> Vec<Keyframe> {
-    text.and_then(KfParam::parse)
-        .map(|k| {
-            k.keys
-                .iter()
-                .map(|k| Keyframe {
-                    time: secs_to_ticks(k.time),
-                    value: jb_core::Value::Float(k.value * scale),
-                    interpolation: Interpolation::Linear,
-                })
-                .collect()
-        })
-        .unwrap_or_default()
+    text.and_then(KfParam::parse).map(|k| crate::props::keyframes_from(&k, 1.0 / scale, 0.0)).unwrap_or_default()
 }
 
 /// Opacity (0..1) and the raw blend mode from `pipBuf`.
@@ -487,10 +522,14 @@ pub fn opacity_of(c: &Value) -> (Param, i64) {
 }
 
 pub fn audio_of(c: &Value) -> AudioSettings {
+    use crate::props::*;
     let mut a = AudioSettings::default();
     if let Some(e) = find_effect(c, FX_VOLUME) {
         if let Some(g) = effect_param_f64(e, "VolumeGain") {
             a.gain_db = Param::float(g);
+        }
+        if let Some(b) = effect_param_full(e, AU_BALANCE, 100.0, 0.0) {
+            a.pan = b;
         }
     }
     a.gain_db.keyframes =
@@ -499,17 +538,49 @@ pub fn audio_of(c: &Value) -> AudioSettings {
         a.fade_in = secs_to_ticks(effect_param_f64(e, "FadeInTime").unwrap_or(0.0));
         a.fade_out = secs_to_ticks(effect_param_f64(e, "FadeOutTime").unwrap_or(0.0));
     }
+    if let Some(e) = find_effect(c, FX_PITCH) {
+        a.pitch = effect_param_f64(e, AU_PITCH).unwrap_or(0.0);
+    }
+    if let Some(e) = find_effect(c, FX_CLIP_VOLUME) {
+        a.muted = effect_param_f64(e, AU_MUTE).is_some_and(|v| v != 0.0);
+        if effect_param_f64(e, AU_NORMALIZE).is_some_and(|v| v != 0.0) {
+            a.normalize = Some(Normalization {
+                target_lufs: effect_param_f64(e, AU_NORMALIZE_TARGET).unwrap_or(-23.0),
+                measured_lufs: effect_param_f64(e, AU_LOUDNESS),
+            });
+        }
+    }
+    if let Some(e) = find_effect(c, FX_EQUALIZER) {
+        let bands: Vec<Option<f64>> = (0..10).map(|i| effect_param_f64(e, &eq_band(i))).collect();
+        if let Some(preset) = effect_param(e, EQ_PRESET).and_then(|p| p.get("unValue")).and_then(Value::as_str) {
+            let mut b = [0.0; 10];
+            for (i, v) in bands.iter().enumerate() {
+                b[i] = v.unwrap_or(0.0);
+            }
+            a.equalizer = Some(Equalizer { preset: preset.to_string(), bands: b });
+        }
+    }
     a
 }
 
 /// Effects surfaced in the model: everything except the ones mapped into
 /// core clip fields and parameterless structural defaults.
 pub fn is_surfaced(id: &str, effect: &Value) -> bool {
-    if matches!(id, FX_TRANSFORM | FX_VOLUME | FX_FADE) {
+    use crate::props::*;
+    if matches!(id, FX_TRANSFORM | FX_VOLUME | FX_FADE | FX_PITCH | FX_CLIP_VOLUME | FX_EQUALIZER) {
         return false;
     }
-    let has_params = effect.get("paramList").and_then(Value::as_array).is_some_and(|l| !l.is_empty());
-    !(STRUCTURAL_EFFECTS.contains(&id) && !has_params)
+    let params: Vec<&str> = effect
+        .get("paramList")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|p| str_of(p, "name"))
+        .collect();
+    if id == FX_CROP && params.iter().all(|n| CROP_PARAMS.contains(n)) {
+        return false;
+    }
+    !(STRUCTURAL_EFFECTS.contains(&id) && params.is_empty())
 }
 
 pub fn is_animation_chain(chain: &str) -> bool {
@@ -520,15 +591,29 @@ pub fn effect_kind(id: &str) -> String {
     format!("filmora:{id}")
 }
 
+/// Parameters of animation effects that encode the slot, not the look.
+pub const ANIMATION_META: &[&str] = &["AnimationScene", "AnimationType"];
+
 pub fn effect_of(chain: &str, e: &Value) -> EffectInstance {
     let id = str_of(e, "id").unwrap_or("");
+    let anim = is_animation_chain(chain);
+    let mut params = params_of(e);
+    let placement = if anim {
+        let scene = effect_param(e, "AnimationScene").and_then(|p| p.get("unValue")).and_then(Value::as_str);
+        for m in ANIMATION_META {
+            params.remove(*m);
+        }
+        scene.and_then(crate::props::scene_from)
+    } else {
+        None
+    };
     EffectInstance {
         id: str_of(e, "thisUId").map_or_else(new_id, str::to_string),
-        kind: effect_kind(id),
+        kind: if anim { crate::props::animation_kind(id) } else { effect_kind(id) },
         enabled: e.get("enable").and_then(Value::as_bool).unwrap_or(true),
-        params: params_of(e),
-        range: None,
-        placement: None,
+        params,
+        range: if anim { crate::props::ticks_range(e) } else { None },
+        placement,
         extra: marker(json!({ "uid": str_of(e, "thisUId"), "chain": chain, "display": str_of(e, "display") })),
     }
 }
@@ -543,7 +628,14 @@ pub fn params_of(e: &Value) -> BTreeMap<String, Param> {
             Some(v) if v.is_number() => jb_core::Value::Float(v.as_f64().unwrap_or(0.0)),
             _ => continue,
         };
-        out.insert(name.to_string(), Param::constant(value));
+        let keyframes = match &value {
+            jb_core::Value::Float(_) => crate::props::param_map(e, name)
+                .and_then(KfParam::parse)
+                .map(|k| crate::props::keyframes_from(&k, 1.0, 0.0))
+                .unwrap_or_default(),
+            _ => Vec::new(),
+        };
+        out.insert(name.to_string(), Param { value, keyframes });
     }
     out
 }
@@ -563,6 +655,12 @@ fn effects_of(c: &Value) -> (Vec<EffectInstance>, Vec<EffectInstance>) {
         }
     }
     (effects, animations)
+}
+
+/// Mute flag of a track: `mute`, or a hidden (`visible: false`) audio track.
+fn track_muted(t: &Value, kind: TrackKind) -> bool {
+    t.get("mute").and_then(Value::as_bool).unwrap_or(false)
+        || (kind == TrackKind::Audio && t.get("visible").and_then(Value::as_bool) == Some(false))
 }
 
 /// Human name of a transition/effect from its store resource record.
