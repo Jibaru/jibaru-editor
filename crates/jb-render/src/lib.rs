@@ -12,6 +12,7 @@
 //! See [`registry`] for the effect catalog and [`Renderer`] for the pipeline.
 
 pub mod aliases;
+pub mod aliases_lane4;
 pub mod fx;
 mod gpu;
 pub mod library;

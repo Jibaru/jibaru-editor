@@ -1,0 +1,143 @@
+//! Fitted color looks: 3D LUTs (17³) measured from input → output pixel
+//! pairs of reference exports (plain source frames against the same frames
+//! with the look applied), optionally followed by a low-resolution spatial
+//! gain/offset field (vignettes, light maps).
+//!
+//! The LUT data lives in `lane4/luts/<name>.lut` (17³ RGB triplets, u8,
+//! red varying fastest) and the optional field in `lane4/luts/<name>.field`
+//! (16×9 nodes at cell centres, gain block then offset block, RGB f32 little
+//! endian, bilinear in between: `out = gain(uv) · lut(in) + offset(uv)`).
+//! The LUT was solved by regularized least squares over flat-region pixel
+//! pairs of a test card and a natural scene, with a second-difference
+//! smoothness prior so colors outside the measured gamut extrapolate
+//! linearly. See `docs/fidelity-lane4.md` for the method and the measured
+//! error of every look.
+
+use crate::fx::Bind;
+use crate::fx::{info, param_accessors, AuxImage, FxCx, Pass, ShaderSrc, Uniforms};
+use crate::lut::Lut3d;
+use crate::registry::{Effect, FxInfo, FxIo, FxKind, ParamSpec as P, Registry};
+use crate::text::f32_to_f16;
+
+/// LUT resolution of every fitted look.
+pub const LUT_N: u32 = 17;
+/// Nodes of the spatial gain/offset field.
+pub const FIELD_W: u32 = 16;
+pub const FIELD_H: u32 = 9;
+
+/// One fitted look.
+pub struct LookSpec {
+    pub id: &'static str,
+    pub name: &'static str,
+    pub kind: FxKind,
+    pub category: &'static str,
+    pub description: &'static str,
+    /// 17³ RGB u8 triplets, red fastest (None: identity).
+    pub lut: Option<&'static [u8]>,
+    /// Spatial gain/offset field blob (see the module docs).
+    pub field: Option<&'static [u8]>,
+}
+
+const BODY: &str = r#"
+// Bilinear lookup of the field block starting at row `row0` (gain 0, offset 9).
+fn l4_field(uv: vec2f, row0: i32) -> vec3f {
+    let p = clamp(uv * vec2f(16.0, 9.0) - 0.5, vec2f(0.0), vec2f(15.0, 8.0));
+    let i = min(vec2i(floor(p)), vec2i(14, 7));
+    let f = p - vec2f(i);
+    let a = textureLoad(tx, vec2i(i.x, row0 + i.y), 0).rgb;
+    let b = textureLoad(tx, vec2i(i.x + 1, row0 + i.y), 0).rgb;
+    let c = textureLoad(tx, vec2i(i.x, row0 + i.y + 1), 0).rgb;
+    let d = textureLoad(tx, vec2i(i.x + 1, row0 + i.y + 1), 0).rgb;
+    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+}
+fn fx(uv: vec2f) -> vec4f {
+    let d = to_disp(sa(uv));
+    var c = clamp(d.rgb, vec3f(0.0), vec3f(1.0));
+    let n = u.e0.x;
+    if (n > 1.5) {
+        c = textureSampleLevel(tlut, smp, c * ((n - 1.0) / n) + 0.5 / n, 0.0).rgb;
+    }
+    if (u.e0.y > 0.5) {
+        c = clamp(c * l4_field(uv, 0) + l4_field(uv, 9), vec3f(0.0), vec3f(1.0));
+    }
+    let k = clamp(p_intensity() / 100.0, 0.0, 1.0);
+    return from_disp(vec4f(mix(d.rgb, c, k), d.a));
+}
+@fragment fn fs_main(in: VsOut) -> @location(0) vec4f { return fx(in.uv); }
+"#;
+
+const PARAMS: &[P] = &[P::float("intensity", "Intensity", 0.0, 100.0, 100.0).unit("%")];
+
+fn shader_src() -> &'static ShaderSrc {
+    static S: std::sync::OnceLock<ShaderSrc> = std::sync::OnceLock::new();
+    S.get_or_init(|| ShaderSrc::new("jb.l4.look", format!("{}\n{BODY}", param_accessors(PARAMS))))
+}
+
+/// Expands a u8 LUT blob into a [`Lut3d`].
+pub fn lut_from_bytes(bytes: &[u8]) -> Lut3d {
+    let n = LUT_N as usize;
+    assert_eq!(bytes.len(), n * n * n * 3, "fitted LUT size");
+    let data = bytes.chunks_exact(3).map(|c| [c[0] as f32 / 255.0, c[1] as f32 / 255.0, c[2] as f32 / 255.0]).collect();
+    Lut3d { size: LUT_N, data }
+}
+
+/// Field blob (gain block then offset block, RGB f32) -> RGBA16F image of
+/// 16 × 18 texels.
+pub fn field_image(bytes: &[u8]) -> AuxImage {
+    let n = (FIELD_W * FIELD_H * 2) as usize;
+    assert_eq!(bytes.len(), n * 12, "fitted field size");
+    let mut data = Vec::with_capacity(n * 8);
+    for t in bytes.chunks_exact(12) {
+        for k in 0..4 {
+            let v = if k < 3 { f32::from_le_bytes([t[k * 4], t[k * 4 + 1], t[k * 4 + 2], t[k * 4 + 3]]) } else { 1.0 };
+            data.extend_from_slice(&f32_to_f16(v).to_le_bytes());
+        }
+    }
+    AuxImage { width: FIELD_W, height: 2 * FIELD_H, depth: 1, format: wgpu::TextureFormat::Rgba16Float, data }
+}
+
+/// Records the look pass of `spec` from `a` into `out` with intensity 0..100.
+pub fn encode_look(cx: &mut FxCx<'_>, spec: &LookSpec, a: &crate::pool::Tex, out: &crate::pool::Tex, intensity: f32) {
+    let mut u = Uniforms::default();
+    u.p[0][0] = intensity;
+    let lut = spec.lut.map(|bytes| cx.aux_texture(&format!("l4lut:{}", spec.id), || lut_from_bytes(bytes).to_aux()));
+    u.e[0][0] = if lut.is_some() { LUT_N as f32 } else { 0.0 };
+    let field = spec.field.map(|bytes| cx.aux_texture(&format!("l4field:{}", spec.id), || field_image(bytes)));
+    u.e[0][1] = if field.is_some() { 1.0 } else { 0.0 };
+    let mut pass = Pass::full(shader_src(), out, u);
+    pass.a = Bind::Tex(a);
+    pass.lut = lut.as_ref();
+    if let Some(v) = &field {
+        pass.aux = Bind::View(v, [FIELD_W, 2 * FIELD_H]);
+    }
+    cx.draw(pass);
+}
+
+pub struct LookFx {
+    info: FxInfo,
+    spec: &'static LookSpec,
+}
+
+impl LookFx {
+    pub fn new(spec: &'static LookSpec) -> Self {
+        Self { info: info(spec.id, spec.name, spec.category, spec.kind, spec.description, PARAMS), spec }
+    }
+}
+
+impl Effect for LookFx {
+    fn info(&self) -> &FxInfo {
+        &self.info
+    }
+
+    fn encode(&self, cx: &mut FxCx<'_>, io: &FxIo<'_>) {
+        encode_look(cx, self.spec, io.a, io.out, io.params.get("intensity"));
+    }
+}
+
+include!("lane4/looks_table.rs");
+
+pub fn register(r: &mut Registry) {
+    for spec in LOOKS {
+        r.register(LookFx::new(spec));
+    }
+}

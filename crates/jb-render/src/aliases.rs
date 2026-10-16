@@ -55,6 +55,7 @@ pub fn register(r: &mut Registry) {
             r.alias(format!("filmora:{}", fid.to_ascii_uppercase()), to);
         }
     }
+    crate::aliases_lane4::register(r);
     // Every built-in ported from the agent-editor prototype is reachable by
     // its prototype id as `ae:<id>`.
     let ids: Vec<&'static str> = r.iter().map(|i| i.id).collect();

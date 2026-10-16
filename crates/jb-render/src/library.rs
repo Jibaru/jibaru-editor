@@ -284,6 +284,8 @@ pub const GROUPS: &[LibraryGroup] = &[
     g(F, "Lifestyle", &["jb.bosque", "jb.neon_noche", "jb.hora_azul", "jb.nordico", "jb.hielo", "jb.moody"]),
     g(F, "Retro", &["jb.vintage_70s", "jb.retro_90s", "jb.polaroid", "jb.sepia_suave"]),
     g(F, "Travel", &["jb.tropical", "jb.bosque", "jb.playa", "jb.neon_noche", "jb.nordico"]),
+    // Lane 4: fitted looks, camera effects and reveal transitions.
+    g(F, "Fitted Looks", crate::fx::lane4_all::looks::LIB_IDS),
 ];
 
 /// The groups listing `id`, with its position in each.
