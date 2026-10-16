@@ -304,6 +304,9 @@ pub struct AudioVoice {
     /// Equalizer band gains in dB (see `Equalizer::FREQUENCIES`).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub equalizer: Option<[f64; 10]>,
+    /// Noise reduction: maximum attenuation in dB (`AudioSettings::denoise_db`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub denoise_db: Option<f64>,
 }
 
 fn is_zero(v: &f64) -> bool {
@@ -398,6 +401,7 @@ fn collect_voices(
                                 .as_ref()
                                 .map(|e| e.bands)
                                 .filter(|b| b.iter().any(|g| *g != 0.0)),
+                            denoise_db: clip.audio.denoise_db.filter(|d| *d > 0.0),
                         });
                     }
                 }

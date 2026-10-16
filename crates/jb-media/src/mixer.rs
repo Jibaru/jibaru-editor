@@ -149,7 +149,18 @@ thread_local! {
 
 /// `n` processed frames of one voice starting at timeline sample `at`.
 fn voice_block(source: &dyn AudioSource, v: &AudioVoice, at: i64, n: usize, rate: u32) -> Result<Vec<f32>> {
-    let mut out = voice_raw(source, v, at, n, rate)?;
+    let mut out = match v.denoise_db {
+        Some(db) => {
+            // The denoiser reads the voice around `at` on its own frame grid.
+            let read = |t: i64, len: usize| -> Result<Vec<f32>> {
+                let shift = ((t - at) as f64 * v.rate.abs() * TICKS_PER_SECOND as f64 / rate as f64).round() as Ticks;
+                let st = if v.reverse { v.source_time - shift } else { v.source_time + shift };
+                voice_raw(source, &AudioVoice { source_time: st.max(0), ..v.clone() }, t, len, rate)
+            };
+            crate::denoise::denoise(&format!("{}:{}", v.clip_id, v.media_id), &read, at, n, db)?
+        }
+        None => voice_raw(source, v, at, n, rate)?,
+    };
     let Some(bands) = v.equalizer else { return Ok(out) };
     let cached = EQ_STATE.with(|s| s.borrow_mut().remove(&v.clip_id)).filter(|(next, b, _)| *next == at && *b == bands);
     let mut eq = match cached {

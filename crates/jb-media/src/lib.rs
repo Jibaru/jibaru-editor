@@ -18,6 +18,7 @@
 pub mod audio;
 pub mod cache;
 pub mod convert;
+mod denoise;
 pub mod dsp;
 pub mod encode;
 pub mod hw;

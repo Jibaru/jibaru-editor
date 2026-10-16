@@ -455,6 +455,9 @@ pub struct AudioSettings {
     pub normalize: Option<Normalization>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub equalizer: Option<Equalizer>,
+    /// Noise reduction (Filmora AI Denoise): maximum attenuation of noise in dB.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub denoise_db: Option<f64>,
 }
 
 impl Default for AudioSettings {
@@ -468,6 +471,7 @@ impl Default for AudioSettings {
             muted: false,
             normalize: None,
             equalizer: None,
+            denoise_db: None,
         }
     }
 }

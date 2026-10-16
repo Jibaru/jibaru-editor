@@ -578,6 +578,25 @@ pub fn audio_of(c: &Value) -> AudioSettings {
             a.equalizer = Some(Equalizer { preset: preset.to_string(), bands: b });
         }
     }
+    // AI Denoise: `CacheAlg` entry `AudioDenoiseCache` (status 1 = applied)
+    // with its attenuation limit in dB.
+    a.denoise_db = c
+        .get("CacheAlg")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .find(|e| str_of(e, "id") == Some("AudioDenoiseCache") && i64_of(e, "status") == Some(1))
+        .map(|e| {
+            e.get("params")
+                .and_then(Value::as_array)
+                .into_iter()
+                .flatten()
+                .find(|p| str_of(p, "name") == Some("AudioDenoiseAttenlimdb"))
+                .and_then(|p| p.get("fxParam"))
+                .and_then(|f| f.get("unValue"))
+                .and_then(Value::as_f64)
+                .unwrap_or(15.0)
+        });
     a
 }
 
