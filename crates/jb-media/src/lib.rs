@@ -31,6 +31,7 @@ pub mod shuttle;
 pub mod stabilize;
 pub mod stretch;
 pub mod video;
+pub mod voicefx;
 pub mod waveform;
 
 mod util;

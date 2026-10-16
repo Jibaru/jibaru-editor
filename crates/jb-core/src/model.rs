@@ -461,7 +461,20 @@ pub struct AudioSettings {
     /// Channel routing ("Audio Channels" in the audio panel).
     #[serde(default, skip_serializing_if = "is_default")]
     pub channels: ChannelMode,
+    /// Voice filter ("Voice Filters" in the audio panel), one of [`VOICE_FILTERS`].
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub voice_filter: Option<String>,
+    /// Hum removal: mains frequency in Hz (50 or 60) whose harmonics are notched out.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hum_removal: Option<f64>,
+    /// Hiss removal strength, 0..100.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hiss_removal: Option<f64>,
 }
+
+/// Voice filters accepted by `AudioSettings::voice_filter` / `set_voice_filter`.
+pub const VOICE_FILTERS: &[&str] =
+    &["telephone", "radio", "megaphone", "echo", "small_room", "big_room", "robot", "lofi", "underwater"];
 
 /// How a clip's stereo channels are routed to the output.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, schemars::JsonSchema)]
@@ -514,6 +527,9 @@ impl Default for AudioSettings {
             equalizer: None,
             denoise_db: None,
             channels: ChannelMode::Stereo,
+            voice_filter: None,
+            hum_removal: None,
+            hiss_removal: None,
         }
     }
 }

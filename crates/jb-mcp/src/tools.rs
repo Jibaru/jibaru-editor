@@ -133,7 +133,7 @@ pub fn tool_defs() -> Vec<ToolDef> {
           "Return a JSON Schema: `command` (input of execute_command), `project` (the project model returned by get_project detail=full) or `frame_plan` (output of evaluate_frame). Same content as resources jb://schema/{command,project,frame_plan}.",
           obj(json!({ "which": {"type": "string", "enum": ["command", "project", "frame_plan"]} }), &["which"]), true),
         d("list_presets", "List presets",
-          "Names and values accepted by the editing commands: speed ramp presets (set_speed_ramp), equalizer presets and bands (set_equalizer), normalization targets, blend modes, fit modes, animation kinds and placements (add_animation), keyframe parameter paths and interpolations (add_keyframe) and paste_attributes attributes.",
+          "Names and values accepted by the editing commands: speed ramp presets (set_speed_ramp), equalizer presets and bands (set_equalizer), voice filters (set_voice_filter), hum removal frequencies (set_audio_cleanup), audio channel modes, normalization targets, blend modes, fit modes, animation kinds and placements (add_animation), keyframe parameter paths and interpolations (add_keyframe) and paste_attributes attributes.",
           obj(json!({}), &[]), true),
         d("normalize_audio", "Normalize audio",
           "Filmora's Auto Normalization: measures the integrated loudness of a clip's audio (on a camera video clip, its linked audio clip) and sets `normalize` so it plays at `target_lufs` (Filmora offers -23, -16, -14 and -12). One undo step; returns the measured loudness.",
@@ -656,6 +656,7 @@ mod tests {
         assert_eq!(again.project.clip(&clip).unwrap().blend_mode, jb_core::BlendMode::Multiply);
         assert_eq!(again.project.main().markers[0].name, "x");
         assert!(st.call("list_presets", json!({})).unwrap()["speed_ramps"].as_array().unwrap().len() >= 6);
+        assert_eq!(st.call("list_presets", json!({})).unwrap()["voice_filters"].as_array().unwrap().len(), 9);
     }
 
     #[test]

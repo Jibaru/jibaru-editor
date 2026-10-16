@@ -381,6 +381,24 @@ pub enum Command {
         clip_id: Id,
         channels: ChannelMode,
     },
+    /// Voice filter: `telephone`, `radio`, `megaphone`, `echo`, `small_room`,
+    /// `big_room`, `robot`, `lofi`, `underwater`, or `null` to turn it off.
+    SetVoiceFilter {
+        clip_id: Id,
+        filter: Option<String>,
+    },
+    /// Audio cleanup. `hum_removal`: mains frequency (50 or 60 Hz) to notch
+    /// out with its harmonics; `hiss_removal`: strength 0..100. Omitted
+    /// fields are kept; `null` turns one off.
+    SetAudioCleanup {
+        clip_id: Id,
+        #[serde(default, deserialize_with = "double_option")]
+        #[schemars(with = "Option<f64>")]
+        hum_removal: Option<Option<f64>>,
+        #[serde(default, deserialize_with = "double_option")]
+        #[schemars(with = "Option<f64>")]
+        hiss_removal: Option<Option<f64>>,
+    },
     AddEffect {
         clip_id: Id,
         effect: EffectInstance,
@@ -749,6 +767,40 @@ pub fn apply(p: &mut Project, cmd: &Command) -> Result<()> {
             ops::with_audio(p, clip_id, |a| a.equalizer = eq.clone())?
         }
         C::SetAudioChannels { clip_id, channels } => ops::with_audio(p, clip_id, |a| a.channels = *channels)?,
+        C::SetVoiceFilter { clip_id, filter } => {
+            let f = match filter.as_deref().map(|f| f.trim().to_ascii_lowercase().replace([' ', '-'], "_")) {
+                None => None,
+                Some(f) if f.is_empty() || f == "none" || f == "off" => None,
+                Some(f) if VOICE_FILTERS.contains(&f.as_str()) => Some(f),
+                Some(f) => {
+                    return Err(CommandError::Invalid(format!(
+                        "unknown voice filter {f}; use one of {} or null",
+                        VOICE_FILTERS.join(", ")
+                    )))
+                }
+            };
+            ops::with_audio(p, clip_id, |a| a.voice_filter = f.clone())?
+        }
+        C::SetAudioCleanup { clip_id, hum_removal, hiss_removal } => {
+            if let Some(Some(hz)) = hum_removal {
+                if !(40.0..=70.0).contains(hz) {
+                    return Err(CommandError::Invalid("hum_removal is the mains frequency: 50 or 60 (Hz)".into()));
+                }
+            }
+            if let Some(Some(v)) = hiss_removal {
+                if !(0.0..=100.0).contains(v) {
+                    return Err(CommandError::Invalid("hiss_removal strength must be within 0..100".into()));
+                }
+            }
+            ops::with_audio(p, clip_id, |a| {
+                if let Some(h) = hum_removal {
+                    a.hum_removal = *h;
+                }
+                if let Some(h) = hiss_removal {
+                    a.hiss_removal = h.filter(|v| *v > 0.0);
+                }
+            })?
+        }
         C::SetEffectEnabled { clip_id, effect_id, enabled } => ops::with_clip(p, clip_id, |c| {
             let e = c
                 .effects

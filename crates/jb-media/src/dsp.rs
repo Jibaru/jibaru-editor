@@ -38,6 +38,19 @@ impl Biquad {
         )
     }
 
+    pub fn low_pass(sr: f64, f0: f64, q: f64) -> Self {
+        let w = std::f64::consts::TAU * (f0 / sr).min(0.49);
+        let (c, alpha) = (w.cos(), w.sin() / (2.0 * q));
+        Self::new((1.0 - c) / 2.0, 1.0 - c, (1.0 - c) / 2.0, 1.0 + alpha, -2.0 * c, 1.0 - alpha)
+    }
+
+    /// Notch (band-reject) at `f0` with quality `q`.
+    pub fn notch(sr: f64, f0: f64, q: f64) -> Self {
+        let w = std::f64::consts::TAU * (f0 / sr).min(0.49);
+        let (c, alpha) = (w.cos(), w.sin() / (2.0 * q));
+        Self::new(1.0, -2.0 * c, 1.0, 1.0 + alpha, -2.0 * c, 1.0 - alpha)
+    }
+
     pub fn high_pass(sr: f64, f0: f64, q: f64) -> Self {
         let w = std::f64::consts::TAU * f0 / sr;
         let (c, alpha) = (w.cos(), w.sin() / (2.0 * q));

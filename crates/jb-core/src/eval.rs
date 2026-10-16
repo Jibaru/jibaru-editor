@@ -331,6 +331,15 @@ pub struct AudioVoice {
     /// Channel routing.
     #[serde(skip_serializing_if = "is_stereo")]
     pub channels: crate::model::ChannelMode,
+    /// Voice filter (`AudioSettings::voice_filter`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub voice_filter: Option<String>,
+    /// Hum removal mains frequency in Hz.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hum_removal: Option<f64>,
+    /// Hiss removal strength 0..100.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hiss_removal: Option<f64>,
 }
 
 fn is_stereo(c: &crate::model::ChannelMode) -> bool {
@@ -431,6 +440,9 @@ fn collect_voices(
                                 .filter(|b| b.iter().any(|g| *g != 0.0)),
                             denoise_db: clip.audio.denoise_db.filter(|d| *d > 0.0),
                             channels: clip.audio.channels,
+                            voice_filter: clip.audio.voice_filter.clone(),
+                            hum_removal: clip.audio.hum_removal.filter(|f| *f > 0.0),
+                            hiss_removal: clip.audio.hiss_removal.filter(|v| *v > 0.0),
                         });
                     }
                 }

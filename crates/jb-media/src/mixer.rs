@@ -163,6 +163,7 @@ fn voice_block(source: &dyn AudioSource, v: &AudioVoice, at: i64, n: usize, rate
         None => voice_raw(source, v, at, n, rate)?,
     };
     v.channels.apply(&mut out);
+    voice_fx(source, v, at, rate, &mut out)?;
     let Some(bands) = v.equalizer else { return Ok(out) };
     let cached = EQ_STATE.with(|s| s.borrow_mut().remove(&v.clip_id)).filter(|(next, b, _)| *next == at && *b == bands);
     let mut eq = match cached {
@@ -191,6 +192,54 @@ fn voice_block(source: &dyn AudioSource, v: &AudioVoice, at: i64, n: usize, rate
         s.insert(v.clip_id.clone(), (at + n as i64, bands, eq));
     });
     Ok(out)
+}
+
+thread_local! {
+    /// Cleanup / voice filter state per clip: (next timeline sample, settings key, processor).
+    static FX_STATE: std::cell::RefCell<std::collections::HashMap<String, (i64, String, crate::voicefx::VoiceFx)>> =
+        Default::default();
+}
+
+/// Hum/hiss removal and the voice filter, stateful across contiguous blocks
+/// (after a seek the processor is warmed up on the audio just before `at`).
+fn voice_fx(source: &dyn AudioSource, v: &AudioVoice, at: i64, rate: u32, out: &mut [f32]) -> Result<()> {
+    if v.voice_filter.is_none() && v.hum_removal.is_none() && v.hiss_removal.is_none() {
+        return Ok(());
+    }
+    let key = format!("{:?}|{:?}|{:?}", v.voice_filter, v.hum_removal, v.hiss_removal);
+    let n = out.len() / CHANNELS;
+    let cached = FX_STATE.with(|s| s.borrow_mut().remove(&v.clip_id)).filter(|(next, k, _)| *next == at && *k == key);
+    let mut fx = match cached {
+        Some((_, _, fx)) => fx,
+        None => {
+            let Some(mut fx) =
+                crate::voicefx::VoiceFx::new(rate, v.voice_filter.as_deref(), v.hum_removal, v.hiss_removal)
+            else {
+                return Ok(());
+            };
+            let pre = crate::voicefx::VoiceFx::preroll(v.voice_filter.as_deref(), rate).min(at.max(0) as usize);
+            if pre > 0 {
+                let back = (v.rate.abs() * pre as f64 * TICKS_PER_SECOND as f64 / rate as f64) as Ticks;
+                let earlier = AudioVoice {
+                    source_time: if v.reverse { v.source_time + back } else { (v.source_time - back).max(0) },
+                    ..v.clone()
+                };
+                let mut warm = voice_raw(source, &earlier, at - pre as i64, pre, rate)?;
+                v.channels.apply(&mut warm);
+                fx.process(&mut warm);
+            }
+            fx
+        }
+    };
+    fx.process(out);
+    FX_STATE.with(|s| {
+        let mut s = s.borrow_mut();
+        if s.len() > 256 {
+            s.clear();
+        }
+        s.insert(v.clip_id.clone(), (at + n as i64, key, fx));
+    });
+    Ok(())
 }
 
 /// `n` output frames of one voice, resampled when its rate is not 1.
@@ -328,6 +377,22 @@ mod tests {
         assert!((got + 14.0).abs() < 0.5, "{got}");
         p.clip_mut("c").unwrap().audio.equalizer = Equalizer::preset("low_bass");
         assert!(mix(&p, p.main(), 48000, 4800, &Tone(0.5)).is_ok());
+    }
+
+    #[test]
+    fn voice_filters_apply_in_the_mix_and_join_across_blocks() {
+        let mut p = project(1.0, true, 0.0);
+        let dry = mix(&p, p.main(), 48000, 9600, &Tone(0.5)).unwrap();
+        p.clip_mut("c").unwrap().audio.voice_filter = Some("telephone".into());
+        p.clip_mut("c").unwrap().audio.hum_removal = Some(50.0);
+        let whole = mix(&p, p.main(), 48000, 9600, &Tone(0.5)).unwrap();
+        assert!(whole.iter().zip(&dry).any(|(a, b)| (a - b).abs() > 0.01));
+        // The same span in two calls (contiguous) matches one call.
+        let a = mix(&p, p.main(), 48000, 4800, &Tone(0.5)).unwrap();
+        let b = mix(&p, p.main(), 52800, 4800, &Tone(0.5)).unwrap();
+        let joined: Vec<f32> = a.into_iter().chain(b).collect();
+        let err = joined.iter().zip(&whole).map(|(x, y)| (x - y).abs()).fold(0f32, f32::max);
+        assert!(err < 1e-4, "{err}");
     }
 
     /// Signal only on the left channel.

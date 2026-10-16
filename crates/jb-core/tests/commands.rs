@@ -444,6 +444,22 @@ fn panel_commands() {
     run(h, json!({"op": "set_audio_channels", "clip_id": "c", "channels": "left"}));
     assert_eq!(get(h, "c").audio.channels, ChannelMode::Left);
 
+    run(h, json!({"op": "set_voice_filter", "clip_id": "c", "filter": "Big Room"}));
+    assert_eq!(get(h, "c").audio.voice_filter.as_deref(), Some("big_room"));
+    fails(h, json!({"op": "set_voice_filter", "clip_id": "c", "filter": "kazoo"}));
+    run(h, json!({"op": "set_voice_filter", "clip_id": "c", "filter": null}));
+    assert_eq!(get(h, "c").audio.voice_filter, None);
+    run(h, json!({"op": "set_audio_cleanup", "clip_id": "c", "hum_removal": 60, "hiss_removal": 40}));
+    assert_eq!((get(h, "c").audio.hum_removal, get(h, "c").audio.hiss_removal), (Some(60.0), Some(40.0)));
+    run(h, json!({"op": "set_audio_cleanup", "clip_id": "c", "hum_removal": null}));
+    assert_eq!((get(h, "c").audio.hum_removal, get(h, "c").audio.hiss_removal), (None, Some(40.0)));
+    fails(h, json!({"op": "set_audio_cleanup", "clip_id": "c", "hum_removal": 400}));
+    fails(h, json!({"op": "set_audio_cleanup", "clip_id": "c", "hiss_removal": 120}));
+    let v = jb_core::eval::audio_voices(&h.project, h.project.main(), get(h, "c").start);
+    if let Some(v) = v.iter().find(|v| v.clip_id == "c") {
+        assert_eq!(v.hiss_removal, Some(40.0));
+    }
+
     run(h, json!({"op": "set_project_settings", "width": 1080, "height": 1920}));
     assert_eq!((h.project.settings.width, h.project.settings.height), (1080, 1920));
     assert_eq!(h.project.settings.frame_rate, Rational::new(30, 1));
