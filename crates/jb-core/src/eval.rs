@@ -285,8 +285,13 @@ fn evaluate_at_depth(project: &Project, seq: &Sequence, t: Ticks, depth: usize) 
         if handled {
             continue;
         }
-        if let Some(clip) = clips.iter().find(|c| c.contains(t)) {
-            if let Some(l) = layer_for(project, clip, t, depth) {
+        // Clips whose bounds fall between frames show from the nearest frame:
+        // the one containing `t + half a frame` (Filmora; a retimed clip
+        // ending 0.26 frame into a frame is already gone on that frame).
+        let probe = t + project.settings.frame_rate.frame_duration() / 2;
+        let clip = clips.iter().find(|c| c.contains(probe));
+        if let Some(clip) = clip {
+            if let Some(l) = layer_for(project, clip, t.clamp(clip.start, clip.end - 1), depth) {
                 layers.push(l);
             }
         }
