@@ -215,7 +215,7 @@ export async function load() {
 }
 
 /** Save / Don't Save / Cancel before discarding unsaved changes. False means cancel. */
-async function confirmDiscard(): Promise<boolean> {
+export async function confirmDiscard(): Promise<boolean> {
   const snap = state.snap
   if (!snap?.dirty || !backend.engine) return true
   const r = await backend.engine.askUnsaved(snap.project.name)

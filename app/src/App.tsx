@@ -10,6 +10,8 @@ import { useLibDrag } from './drag'
 import { importMedia, load, setState, useEditor } from './store'
 import { Timeline } from './timeline/Timeline'
 import { ContextMenu } from './ui/ContextMenu'
+import { UpdateNotice } from './components/UpdateNotice'
+import { startUpdateChecks } from './updates'
 import { Splitter } from './ui/Splitter'
 
 const clampW = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v))
@@ -27,6 +29,7 @@ export default function App() {
 
   useEffect(() => {
     load()
+    startUpdateChecks()
     return installShortcuts()
   }, [])
 
@@ -68,6 +71,7 @@ export default function App() {
       </div>
       {menu && <ContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={() => setState({ menu: null })} />}
       {exportOpen && <ExportDialog />}
+      <UpdateNotice />
       {toast && <div key={toast.id} className={`toast ${toast.kind}`}>{toast.text}</div>}
       {drag && (
         <div className="drag-ghost" style={{ left: drag.x + 10, top: drag.y + 10 }}>

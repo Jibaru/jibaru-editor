@@ -504,6 +504,23 @@ fn quit_app(app: AppHandle) {
     app.exit(0);
 }
 
+/// Lets the next exit through without the unsaved-changes prompt: the
+/// updater relaunches (macOS) or quits for the installer (Windows) after the
+/// frontend already asked about unsaved changes.
+#[tauri::command]
+fn allow_exit(app: AppHandle) {
+    app.state::<Services>().force_close.store(true, Ordering::SeqCst);
+}
+
+/// Sets the check mark of a native menu item (macOS menu bar; no-op elsewhere).
+#[tauri::command]
+fn set_menu_checked(app: AppHandle, id: String, checked: bool) {
+    #[cfg(target_os = "macos")]
+    menu::set_checked(&app, &id, checked);
+    #[cfg(not(target_os = "macos"))]
+    let _ = (app, id, checked);
+}
+
 #[tauri::command]
 fn autosave_dir(app: AppHandle) -> String {
     app.state::<Services>().autosave_dir.to_string_lossy().into_owned()
@@ -683,6 +700,8 @@ fn main() {
     let session = Session::new(state::empty_project("Untitled", state::default_settings()), None);
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .manage(AppState(Mutex::new(session)))
         .setup(|app| {
             #[cfg(target_os = "macos")]
@@ -795,6 +814,8 @@ fn main() {
             save_snapshot,
             open_url,
             quit_app,
+            allow_exit,
+            set_menu_checked,
             autosave_dir,
             automation_log
         ])

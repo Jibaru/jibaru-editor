@@ -1,6 +1,7 @@
 import { menuBar, nativeMenuBar, runMenuAction } from '../actions'
 import { backend } from '../backend'
 import { openMenu, saveProject, setLayout, setState, toast, useEditor } from '../store'
+import { checkForUpdates, currentVersion } from '../updates'
 import {
   IcApps,
   IcChevronDown,
@@ -85,7 +86,8 @@ export function TitleBar() {
         <button className="ticon" title="Cloud backup is not available in Jibaru Editor" disabled><IcCloud size={18} /></button>
         <button className="ticon" title="Help and documentation" onClick={() => link(`${REPO}#readme`)}><IcHeadset size={18} /></button>
         <button className="ticon" title="More" onClick={e => menuAt(e, [
-          { label: 'About Jibaru Editor', action: () => toast('Jibaru Editor 0.1.0 · Apache-2.0 · Rust engine, Tauri + React UI') },
+          { label: 'About Jibaru Editor', action: () => currentVersion().then(v => toast(`Jibaru Editor ${v} · Apache-2.0 · Rust engine, Tauri + React UI`)) },
+          { label: 'Check for Updates...', action: () => checkForUpdates(true) },
           { label: 'Keyboard Shortcuts', action: () => runMenuAction('help.shortcuts') },
           { label: 'Jibaru Editor on GitHub', action: () => link(REPO) },
         ])}><IcApps size={18} /></button>

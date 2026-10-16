@@ -3,7 +3,7 @@
 //! Paste and Select All are the system items so text fields keep working;
 //! the webview handles them for timeline clips through DOM clipboard events.
 
-use tauri::menu::{AboutMetadata, Menu, MenuItem, PredefinedMenuItem, Submenu};
+use tauri::menu::{AboutMetadata, CheckMenuItem, Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::{AppHandle, Emitter, Runtime};
 
 pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
@@ -100,6 +100,9 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
             &PredefinedMenuItem::fullscreen(app, None)?,
         ],
     )?;
+    // The frontend owns this setting and syncs the check mark at startup.
+    let auto_updates =
+        CheckMenuItem::with_id(app, "help.auto_updates", "Check for Updates Automatically", true, true, None::<&str>)?;
     let help = Submenu::with_items(
         app,
         "Help",
@@ -109,6 +112,9 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
             &PredefinedMenuItem::separator(app)?,
             &item("help.website", "Jibaru Editor on GitHub", None)?,
             &item("help.feedback", "Report an Issue", None)?,
+            &PredefinedMenuItem::separator(app)?,
+            &item("help.check_updates", "Check for Updates...", None)?,
+            &auto_updates,
         ],
     )?;
     Menu::with_items(app, &[&app_menu, &file, &edit, &tools, &view, &help])
@@ -116,4 +122,13 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
 
 pub fn forward<R: Runtime>(app: &AppHandle<R>, id: &str) {
     let _ = app.emit("menu", id.to_string());
+}
+
+/// Sets the check mark of a checkable menu item.
+pub fn set_checked<R: Runtime>(app: &AppHandle<R>, id: &str, checked: bool) {
+    if let Some(item) = app.menu().and_then(|m| m.get(id)) {
+        if let Some(check) = item.as_check_menuitem() {
+            let _ = check.set_checked(checked);
+        }
+    }
 }

@@ -34,6 +34,7 @@ import {
 import { backend } from './backend'
 import { chromaKeySelection, detachAudio, freezeFrame, stabilizeSelection, toggleMute } from './edit'
 import { sep, type MenuItem } from './ui/ContextMenu'
+import { autoCheckEnabled, checkForUpdates, setAutoCheck } from './updates'
 
 const isMac = navigator.platform.toLowerCase().includes('mac') || navigator.userAgent.includes('Mac')
 export const mod = isMac ? '⌘' : 'Ctrl+'
@@ -146,6 +147,9 @@ export function menuBar(): { name: string; items: () => MenuItem[] }[] {
         sep,
         { label: 'Jibaru Editor on GitHub', action: () => openLink(REPO) },
         { label: 'Report an Issue', action: () => openLink(`${REPO}/issues`) },
+        sep,
+        { label: 'Check for Updates...', action: () => checkForUpdates(true) },
+        { label: 'Check for Updates Automatically', checked: autoCheckEnabled(), action: () => setAutoCheck(!autoCheckEnabled()) },
       ]
       },
     },
@@ -192,6 +196,8 @@ const MENU_ACTIONS: Record<string, () => unknown> = {
   'help.shortcuts': () => toast(SHORTCUTS),
   'help.website': () => openLink(REPO),
   'help.feedback': () => openLink(`${REPO}/issues`),
+  'help.check_updates': () => checkForUpdates(true),
+  'help.auto_updates': () => setAutoCheck(!autoCheckEnabled()),
 }
 
 const isTyping = () => !!(document.activeElement as HTMLElement | null)?.closest?.('input, textarea, [contenteditable="true"]')

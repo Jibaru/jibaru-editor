@@ -39,5 +39,13 @@
     "category": "Video",
     "shortDescription": "Open-source video editor",
     "copyright": "Apache-2.0"
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDA1RTUzQzhBRUNEQzc2MzAKUldRd2R0enNpanpsQmUwSVZGU0Nqa0htaVI3cHBYOXN5NWI1UzBVN0RsUmt0SUcrNktOR3BhcXEK",
+      "endpoints": ["https://github.com/Jibaru/jibaru-editor/releases/latest/download/latest.json"],
+      "requireSignedVersion": true,
+      "windows": { "installMode": "passive" }
+    }
   }
 }
