@@ -238,3 +238,51 @@ pub fn fx_previews(out: &Path, filter: &str, force: bool) -> JbResult<Value> {
         "layout": CARD_LAYOUT,
     }))
 }
+
+/// Renders the sample-footage player preview of `item` (a registry id or
+/// `title:<json>`) as 30 fps JPEG frames `height` pixels tall into `out`.
+pub fn fx_player_frames(item: &str, height: u32, out: &Path) -> JbResult<Value> {
+    use jb_render::preview::{sample_preview, PreviewItem, SampleSource};
+    let item = match item.strip_prefix("title:") {
+        Some(json) => PreviewItem::Title(
+            serde_json::from_str(json).map_err(|e| JbError::invalid(format!("bad title JSON: {e}")))?,
+        ),
+        None => PreviewItem::Fx(item.to_string()),
+    };
+    let reg = jb_render::Registry::builtin();
+    let pp = sample_preview(&reg, &item, 1920, 1080).ok_or_else(|| JbError::invalid("unknown library item"))?;
+    let h = height.clamp(36, 2160) & !1;
+    let w = (h * 16 / 9) & !1;
+    let mut r = gpu_renderer(w, h, true)?;
+    let samples = SampleSource::new();
+    std::fs::create_dir_all(out).map_err(|e| JbError::invalid(format!("{}: {e}", out.display())))?;
+    let fr = pp.project.settings.frame_rate;
+    let frames = fr.frame_at(pp.duration);
+    let started = std::time::Instant::now();
+    for i in 0..frames {
+        let t = fr.frame_start(i);
+        let plan = jb_core::eval::evaluate(&pp.project, pp.project.main(), t);
+        let f = r.render(&pp.project, &plan, &samples);
+        let rgb: Vec<u8> = f
+            .data
+            .chunks(f.stride)
+            .take(f.height as usize)
+            .flat_map(|row| row[..f.width as usize * 4].chunks_exact(4).flat_map(|p| [p[0], p[1], p[2]]))
+            .collect();
+        let path = out.join(format!("{i:03}.jpg"));
+        let mut bytes = Vec::new();
+        image::codecs::jpeg::JpegEncoder::new_with_quality(&mut bytes, 88)
+            .encode(&rgb, f.width, f.height, image::ExtendedColorType::Rgb8)
+            .map_err(|e| JbError::invalid(format!("jpeg: {e}")))?;
+        std::fs::write(&path, bytes).map_err(|e| JbError::invalid(format!("{}: {e}", path.display())))?;
+    }
+    Ok(serde_json::json!({
+        "dir": out,
+        "frames": frames,
+        "width": w,
+        "height": h,
+        "fps": 30,
+        "duration": pp.duration,
+        "seconds": (started.elapsed().as_secs_f64() * 100.0).round() / 100.0,
+    }))
+}

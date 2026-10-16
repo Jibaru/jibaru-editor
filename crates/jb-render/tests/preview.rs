@@ -40,6 +40,44 @@ fn sample_footage_moves_and_differs_between_scenes() {
     assert!(avg(&b0.data, 0) > avg(&b0.data, 2));
 }
 
+/// The scenes are resolution independent: a 1080p frame is the same
+/// picture as a small one, with finer detail (not an upscale).
+#[test]
+fn sample_footage_is_drawn_at_the_requested_size() {
+    let s = SampleSource::new();
+    for id in [SAMPLE_A, SAMPLE_B] {
+        let big = s.frame(id, TICKS_PER_SECOND / 2, Some((1920, 1080))).unwrap().unwrap();
+        let small = s.frame(id, TICKS_PER_SECOND / 2, Some((480, 270))).unwrap().unwrap();
+        assert_eq!((big.width, big.height, small.width, small.height), (1920, 1080, 480, 270));
+        // Box-shrink the big frame 4x: it matches the small one.
+        let mut shrunk = vec![0u8; 480 * 270 * 4];
+        let mut fine = 0.0f64;
+        for y in 0..270 {
+            for x in 0..480 {
+                for c in 0..3 {
+                    let px = |dx: usize, dy: usize| big.data[((y * 4 + dy) * 1920 + x * 4 + dx) * 4 + c] as f64;
+                    let mut sum = 0.0;
+                    for dy in 0..4 {
+                        for dx in 0..4 {
+                            sum += px(dx, dy);
+                        }
+                    }
+                    let mean = sum / 16.0;
+                    shrunk[(y * 480 + x) * 4 + c] = mean.round() as u8;
+                    // Detail inside the 4x4 block, beyond film grain.
+                    let (l, r) = ((px(0, 0) + px(1, 0)) / 2.0, (px(2, 0) + px(3, 0)) / 2.0);
+                    fine += (l - r).abs();
+                }
+                shrunk[(y * 480 + x) * 4 + 3] = 255;
+            }
+        }
+        let d = mean_abs_diff(&shrunk, &small.data);
+        assert!(d < 6.0, "{id}: 1080p and 270p frames differ by {d:.2}");
+        let fine = fine / (480.0 * 270.0 * 3.0);
+        assert!(fine > 1.5, "{id}: no sub-block detail at 1080p ({fine:.2})");
+    }
+}
+
 #[test]
 fn every_registry_item_has_a_preview_project() {
     let reg = Registry::builtin();

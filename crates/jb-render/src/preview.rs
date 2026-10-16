@@ -67,6 +67,15 @@ pub const CARD_LAYOUT: SpriteLayout = SpriteLayout { frame_w: 256, frame_h: 144,
 const JPEG_QUALITY: u8 = 70;
 
 // ---------- Procedural sample footage ----------
+//
+// Both scenes are functions of normalized coordinates (`u` across, in frame
+// widths; `v` down, in frame heights), so they are drawn at whatever size
+// the renderer asks for. Detail comes from 2D value noise whose octave count
+// grows with the resolution (down to ~2 px features), and edges are
+// antialiased analytically, so a 1080p player frame is as crisp as a card.
+// The still parts are drawn once per size into panoramas the camera pans
+// across; per frame only the moving parts (clouds, water, birds) and a
+// light film grain are added.
 
 /// Panorama width in frame widths: the camera pans across it.
 const PANO_W: f32 = 1.45;
@@ -86,19 +95,84 @@ fn scale(c: [f32; 3], k: f32) -> [f32; 3] {
     [c[0] * k, c[1] * k, c[2] * k]
 }
 
-/// Smooth 1D noise in about -1..1 (sum of detuned sines).
-fn fbm(x: f32, seed: f32) -> f32 {
-    let (mut v, mut a, mut f) = (0.0, 0.55, 1.0);
-    for i in 0..4 {
-        let fi = i as f32;
-        v += a * (0.6 * (x * f + seed * 1.7 + fi * 3.1).sin() + 0.4 * (x * f * 2.31 + seed * 0.9 + fi).sin());
-        a *= 0.5;
-        f *= 2.03;
-    }
-    v
+/// Integer hash to 0..1.
+fn hash2(ix: i32, iy: i32, seed: u32) -> f32 {
+    let mut h =
+        (ix as u32).wrapping_mul(0x8da6_b343) ^ (iy as u32).wrapping_mul(0xd816_3841) ^ seed.wrapping_mul(0xcb1a_b31f);
+    h ^= h >> 13;
+    h = h.wrapping_mul(0x5bd1_e995);
+    h ^= h >> 15;
+    (h & 0xff_ffff) as f32 / 16_777_215.0
 }
 
-/// A precomputed still panorama: RGB plus a mask byte (scene specific).
+/// Smooth 2D value noise in -1..1.
+fn vnoise(x: f32, y: f32, seed: u32) -> f32 {
+    let (xf, yf) = (x.floor(), y.floor());
+    let (fx, fy) = (x - xf, y - yf);
+    let ux = fx * fx * fx * (fx * (fx * 6.0 - 15.0) + 10.0);
+    let uy = fy * fy * fy * (fy * (fy * 6.0 - 15.0) + 10.0);
+    let (i, j) = (xf as i32, yf as i32);
+    let a = hash2(i, j, seed);
+    let b = hash2(i + 1, j, seed);
+    let c = hash2(i, j + 1, seed);
+    let d = hash2(i + 1, j + 1, seed);
+    (a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy) * 2.0 - 1.0
+}
+
+/// Fractal noise (about -1..1): `oct` octaves, each twice the frequency of
+/// the previous one (rotated, so the lattice does not show).
+fn fbm2(x: f32, y: f32, seed: u32, oct: u32) -> f32 {
+    let (mut v, mut a, mut x, mut y) = (0.0, 0.5, x, y);
+    for i in 0..oct {
+        v += a * vnoise(x, y, seed.wrapping_add(i * 7919));
+        let (nx, ny) = (x * 1.6 - y * 1.2, x * 1.2 + y * 1.6);
+        x = nx + 17.3;
+        y = ny + 9.1;
+        a *= 0.5;
+    }
+    v / (1.0 - 0.5f32.powi(oct as i32))
+}
+
+/// Ridged fractal noise in 0..1: sharp crests, like eroded rock.
+fn ridged(x: f32, y: f32, seed: u32, oct: u32) -> f32 {
+    let (mut v, mut a, mut norm, mut x, mut y) = (0.0, 0.5, 0.0, x, y);
+    for i in 0..oct {
+        let n = 1.0 - vnoise(x, y, seed.wrapping_add(i * 7919)).abs();
+        v += a * n * n;
+        norm += a;
+        let (nx, ny) = (x * 1.6 - y * 1.2, x * 1.2 + y * 1.6);
+        x = nx + 17.3;
+        y = ny + 9.1;
+        a *= 0.5;
+    }
+    v / norm
+}
+
+/// The output resolution, as the scene functions need it.
+#[derive(Clone, Copy)]
+struct Res {
+    /// Width / height.
+    aspect: f32,
+    /// One pixel in `v` units (1 / height).
+    px: f32,
+}
+
+impl Res {
+    fn new(w: usize, h: usize) -> Self {
+        Self { aspect: w as f32 / h as f32, px: 1.0 / h as f32 }
+    }
+    /// Octaves of noise starting at `f` cycles per frame height, until
+    /// features are about 2 px.
+    fn oct(&self, f: f32) -> u32 {
+        ((1.0 / (self.px * 2.5 * f)).log2().ceil().max(1.0) as u32).min(9)
+    }
+    /// Antialiased coverage of `d > 0`, `d` a signed distance in `v` units.
+    fn cover(&self, d: f32) -> f32 {
+        smoothstep(-self.px * 0.8, self.px * 0.8, d)
+    }
+}
+
+/// A precomputed still panorama: RGB plus a scene-specific mask byte.
 struct Pano {
     w: usize,
     h: usize,
@@ -106,10 +180,14 @@ struct Pano {
 }
 
 impl Pano {
-    fn build(w: usize, h: usize, f: impl Fn(f32, f32) -> ([f32; 3], f32) + Sync) -> Self {
+    /// Draws `f(u, v)` for the rows whose `v` is in `rows` (others stay 0).
+    fn build(w: usize, h: usize, rows: std::ops::Range<f32>, f: impl Fn(f32, f32) -> ([f32; 3], f32) + Sync) -> Self {
         let mut px = vec![[0u8; 4]; w * h];
         par_rows(&mut px, w, |y, row| {
             let v = (y as f32 + 0.5) / h as f32;
+            if !rows.contains(&v) {
+                return;
+            }
             for (x, p) in row.iter_mut().enumerate() {
                 let u = (x as f32 + 0.5) / w as f32 * PANO_W;
                 let (c, m) = f(u, v);
@@ -130,247 +208,437 @@ impl Pano {
         let ch = |i: usize| (a[i] as f32 * (1.0 - k) + b[i] as f32 * k) / 255.0;
         ([ch(0), ch(1), ch(2)], ch(3))
     }
+
+    fn row_of(&self, v: f32) -> usize {
+        ((v.max(0.0) * self.h as f32) as usize).min(self.h - 1)
+    }
 }
 
 fn to8(v: f32) -> u8 {
     (v.clamp(0.0, 1.0) * 255.0 + 0.5) as u8
 }
 
-/// Runs `f(y, row)` over the rows of `buf` on all cores.
+/// Runs `f(y, row)` over the rows of `buf` on all cores (in small bands
+/// handed out on demand, since some rows cost more than others).
 fn par_rows<T: Send>(buf: &mut [T], w: usize, f: impl Fn(usize, &mut [T]) + Sync) {
     let rows = buf.len() / w.max(1);
     let n = std::thread::available_parallelism().map_or(4, |n| n.get()).clamp(1, 16).min(rows.max(1));
-    let per = rows.div_ceil(n);
+    let band = rows.div_ceil(n * 6).max(1);
+    let bands: Vec<Mutex<(usize, &mut [T])>> =
+        buf.chunks_mut(band * w).enumerate().map(|(i, c)| Mutex::new((i * band, c))).collect();
+    let next = std::sync::atomic::AtomicUsize::new(0);
     std::thread::scope(|s| {
-        for (i, chunk) in buf.chunks_mut(per * w).enumerate() {
-            let f = &f;
+        for _ in 0..n {
+            let (f, next, bands) = (&f, &next, &bands);
             s.spawn(move || {
-                for (j, row) in chunk.chunks_mut(w).enumerate() {
-                    f(i * per + j, row);
+                while let Some(b) = bands.get(next.fetch_add(1, std::sync::atomic::Ordering::Relaxed)) {
+                    let mut b = b.lock().unwrap_or_else(|e| e.into_inner());
+                    let y0 = b.0;
+                    for (j, row) in b.1.chunks_mut(w).enumerate() {
+                        f(y0 + j, row);
+                    }
                 }
             });
         }
     });
 }
 
-const A_HORIZON: f32 = 0.64;
+// ----- Scene A: a mountain lake on a clear morning -----
 
-/// Scene A above the horizon: sky, sun and three mountain ridges. The mask
-/// is 1 for sky.
-fn scene_a_land(u: f32, v: f32, aspect: f32) -> ([f32; 3], f32) {
-    let hz = A_HORIZON;
-    let mut c = mix([0.17, 0.37, 0.68], [0.8, 0.9, 0.96], (v / hz).clamp(0.0, 1.0).powf(1.4));
-    let d = (((u - 0.98) * aspect).powi(2) + (v - 0.17).powi(2)).sqrt();
-    c = mix(c, [1.0, 0.96, 0.84], (0.5 * (-d * 7.0).exp()).min(1.0));
-    if d < 0.045 {
-        c = [1.0, 0.98, 0.92];
+const A_HORIZON: f32 = 0.64;
+const A_SUN: (f32, f32) = (0.98, 0.16);
+
+fn a_sky(u: f32, v: f32, r: &Res) -> [f32; 3] {
+    let x = u * r.aspect;
+    let t = (v / A_HORIZON).clamp(0.0, 1.0);
+    let mut c = mix([0.09, 0.25, 0.55], [0.68, 0.81, 0.93], t.powf(1.3));
+    c = scale(c, 1.0 + 0.025 * fbm2(x * 1.3, v * 2.5, 11, 3));
+    let d = (((u - A_SUN.0) * r.aspect).powi(2) + (v - A_SUN.1).powi(2)).sqrt();
+    c = mix(c, [1.0, 0.95, 0.84], (0.5 * (-d * 5.5).exp() + 0.35 * (-d * 22.0).exp()).min(1.0));
+    mix(c, [1.0, 0.99, 0.95], r.cover(0.036 - d))
+}
+
+/// Skyline of the snowy range (height above its base, 0..~1).
+fn a_peaks(u: f32, r: &Res) -> f32 {
+    let mut m = 0.0f32;
+    for (c, w, k) in [(0.3, 0.32, 1.0), (0.78, 0.26, 0.8), (1.2, 0.34, 0.95), (1.55, 0.3, 0.7)] {
+        m = m.max(k * (1.0 - ((u - c) / w).abs()).max(0.0).powf(1.3));
     }
+    let x = u * r.aspect;
+    0.8 * m + 0.38 * (ridged(x * 1.7, 0.37, 3, r.oct(1.7)) - 0.45)
+}
+
+/// Rock relief of the range: gullies running down the faces.
+fn a_rock(x: f32, v: f32, r: &Res) -> f32 {
+    ridged(x * 6.0, v * 2.6, 5, r.oct(6.0))
+}
+
+/// One row of conifers at `(x, v)`: coverage, which side of the tree
+/// (-1 shaded .. 1 lit) and a per-tree random value.
+fn a_trees(x: f32, v: f32, r: &Res, spacing: f32, base: f32, height: f32, seed: u32) -> (f32, f32, f32) {
+    let k0 = (x / spacing).floor() as i32;
+    let mut best = (0.0f32, 0.0f32, 0.0f32);
+    for k in k0 - 2..=k0 + 2 {
+        let rnd = hash2(k, 0, seed);
+        let cx = (k as f32 + 0.5 + (hash2(k, 1, seed) - 0.5) * 0.6) * spacing;
+        let hk = height * (0.6 + 0.6 * rnd);
+        let foot = base + 0.012 * vnoise(cx * 3.0, 0.5, seed + 9);
+        let tip = foot - hk;
+        let half = spacing * (0.55 + 0.35 * hash2(k, 2, seed));
+        let dx = (x - cx).abs();
+        // Layered branches: the outline widens in steps toward the foot.
+        let s = ((v - tip) / hk).clamp(0.0, 1.0);
+        let tiers = 1.0 - 0.18 * (s * 5.0).fract();
+        let edge = half * s * tiers;
+        let slope = hk / half;
+        let d = (edge - dx) * slope / (1.0 + slope * slope).sqrt();
+        let cov = r.cover(d.min(v - tip)) * r.cover(foot + 0.05 - v);
+        if cov > best.0 {
+            best = (cov, ((x - cx) / half).clamp(-1.0, 1.0), rnd);
+        }
+    }
+    best
+}
+
+/// Scene A above the horizon. Mask: sky coverage.
+fn a_land(u: f32, v: f32, r: &Res) -> ([f32; 3], f32) {
+    let x = u * r.aspect;
+    let mut c = a_sky(u, v, r);
     let mut sky = 1.0;
-    // Snowy peaks: the skyline is the highest of a few jagged cones.
-    let peaks = |u: f32| {
-        let mut m = 0.0f32;
-        for (c, w, k) in [(0.3, 0.32, 1.0), (0.78, 0.26, 0.8), (1.2, 0.34, 0.95), (1.55, 0.3, 0.7)] {
-            m = m.max(k * (1.0 - ((u - c) / w).abs()).max(0.0).powf(1.3));
-        }
-        m + 0.025 * fbm(u * 14.0, 1.0) + 0.012 * fbm(u * 37.0, 7.0)
-    };
-    let p = peaks(u);
+    let haze = [0.66, 0.76, 0.88];
+    // Distant hazy range.
+    let hf = 0.475 - 0.08 * (0.5 + 0.5 * fbm2(x * 1.7, 0.9, 8, r.oct(1.7)));
+    let k = r.cover(v - hf);
+    if k > 0.0 {
+        let far = mix([0.47, 0.57, 0.72], haze, 0.35 + 0.1 * fbm2(x * 9.0, v * 9.0, 9, r.oct(9.0)));
+        c = mix(c, far, k);
+        sky *= 1.0 - k;
+    }
+    // The snowy range, lit from the right (the sun).
+    let p = a_peaks(u, r);
     let h1 = 0.5 - 0.33 * p;
-    if v > h1 {
-        sky = 0.0;
-        // Light from the right (the sun): faces rising to the right are in shade.
-        let lit = peaks(u + 0.004) > p;
-        let base = if lit { [0.6, 0.68, 0.82] } else { [0.36, 0.45, 0.62] };
-        let depth = ((v - h1) / 0.25).min(1.0);
-        c = mix(base, [0.42, 0.52, 0.68], depth);
-        let snow_line = 0.33 + 0.02 * fbm(u * 23.0, 4.0);
-        if v < snow_line && v < h1 + 0.09 {
-            c = if lit { [0.96, 0.97, 0.99] } else { [0.72, 0.78, 0.88] };
+    let k = r.cover(v - h1);
+    if k > 0.0 {
+        let e = 0.003;
+        // Faces descending to the right face the sun.
+        let face = -(a_peaks(u + e, r) - a_peaks(u - e, r)) / (2.0 * e * r.aspect) * 0.33;
+        let ex = 1.5 * r.px;
+        let s0 = a_rock(x, v, r);
+        let gx = (a_rock(x + ex, v, r) - a_rock(x - ex, v, r)) / (2.0 * ex);
+        let light = smoothstep(-1.0, 1.0, face * 1.8 + gx * 0.12);
+        let grain = 1.0 + 0.16 * fbm2(x * 40.0, v * 40.0, 6, r.oct(40.0));
+        let rock = scale(mix([0.15, 0.17, 0.25], [0.5, 0.48, 0.52], light), grain * (0.8 + 0.4 * s0));
+        let below = v - h1;
+        let snow = smoothstep(0.17, 0.07, below + 0.12 * (s0 - 0.5) + 0.04 * fbm2(x * 14.0, v * 14.0, 7, r.oct(14.0)))
+            * smoothstep(0.46, 0.4, v);
+        let snowc = mix([0.5, 0.6, 0.78], [0.98, 0.98, 1.0], smoothstep(0.25, 0.75, light));
+        let mut m = mix(rock, snowc, snow);
+        m = mix(m, haze, 0.1 + 0.55 * smoothstep(0.36, 0.53, v));
+        c = mix(c, m, k);
+        sky *= 1.0 - k;
+    }
+    // Wooded hills.
+    let h2 = 0.515 + 0.03 * fbm2(x * 3.5, 2.5, 2, r.oct(3.5));
+    let k = r.cover(v - h2);
+    if k > 0.0 {
+        // Treetops seen from afar: a bumpy canopy texture.
+        let n = fbm2(x * 150.0, v * 110.0, 12, r.oct(150.0));
+        let m = fbm2(x * 9.0, v * 9.0, 13, 3);
+        let hills = mix([0.22, 0.36, 0.38], [0.1, 0.21, 0.2], smoothstep(h2, h2 + 0.07, v));
+        c = mix(c, scale(hills, 1.0 + 0.22 * n + 0.1 * m), k);
+        sky *= 1.0 - k;
+    }
+    // Two rows of conifers along the shore; the back row is smaller and hazier.
+    for (sp, base, ht, seed, dark, hz) in [(0.011, 0.6, 0.035, 31, 1.0, 0.25), (0.019, 0.643, 0.065, 37, 0.7, 0.0)] {
+        let (cov, side, rnd) = a_trees(x, v, r, sp, base, ht, seed);
+        if cov > 0.0 {
+            let g = mix([0.07, 0.18, 0.13], [0.13, 0.27, 0.18], rnd);
+            let lit = 0.75 + 0.45 * smoothstep(-0.2, 0.9, side);
+            let n = 1.0 + 0.2 * fbm2(x * 140.0, v * 140.0, seed + 1, r.oct(140.0));
+            let t = scale(g, lit * n * dark);
+            c = mix(c, mix(t, haze, hz), cov);
+            sky *= 1.0 - cov;
         }
     }
-    let h2 = 0.5 + 0.04 * fbm(u * 4.0, 2.5);
-    if v > h2 {
-        sky = 0.0;
-        c = mix([0.26, 0.4, 0.5], [0.18, 0.3, 0.36], ((v - h2) / 0.1).min(1.0));
-    }
-    // Forest along the shore, with soft tree tips.
-    let tri = ((u * 55.0).fract() - 0.5).abs() * 2.0;
-    let h3 = 0.575 + 0.02 * fbm(u * 6.5, 5.0) + 0.02 * tri * tri;
-    if v > h3 {
-        sky = 0.0;
-        c = mix([0.12, 0.25, 0.18], [0.06, 0.14, 0.1], ((v - h3) / 0.06).min(1.0));
+    // Shoreline.
+    let k = r.cover(v - (A_HORIZON - 0.005));
+    if k > 0.0 {
+        c = mix(c, [0.08, 0.1, 0.09], k);
+        sky *= 1.0 - k;
     }
     (c, sky)
 }
 
-/// Scene A panorama: land above the horizon, its reflection in the lake below.
-/// Mask: 1 = sky, 0.5 = reflected sky, 0 = anything else.
-fn scene_a(u: f32, v: f32, aspect: f32) -> ([f32; 3], f32) {
+/// Scene A panorama: land above the horizon, its (slightly blurred)
+/// reflection in the lake below. Mask: sky coverage (reflected, in the lake).
+fn scene_a(u: f32, v: f32, r: &Res) -> ([f32; 3], f32) {
     let hz = A_HORIZON;
     if v < hz {
-        return scene_a_land(u, v, aspect);
+        return a_land(u, v, r);
     }
-    let rv = hz - (v - hz) * 1.15;
-    let (c, sky) = scene_a_land(u, rv.max(0.0), aspect);
     let depth = (v - hz) / (1.0 - hz);
-    let c = mix(scale(c, 0.68), [0.05, 0.16, 0.24], 0.25 + depth * 0.45);
-    (c, sky * 0.5)
+    let rv = hz - (v - hz) * 1.05;
+    let blur = 0.002 + depth * 0.008;
+    let (c1, s1) = a_land(u, (rv - blur).max(0.0), r);
+    let (c2, s2) = a_land(u, (rv + blur).max(0.0), r);
+    let refl = mix(c1, c2, 0.5);
+    let c = mix(scale(refl, 0.74), [0.03, 0.12, 0.19], 0.15 + depth * 0.55);
+    (c, (s1 + s2) * 0.5)
 }
 
-const B_HORIZON: f32 = 0.6;
+/// Scene A clouds (they drift over the panorama): color and alpha.
+fn a_clouds(u: f32, v: f32, r: &Res) -> ([f32; 3], f32) {
+    let x = u * r.aspect;
+    let sun = (((u - A_SUN.0) * r.aspect).powi(2) + (v - A_SUN.1).powi(2)).sqrt();
+    let band = smoothstep(0.01, 0.08, v) * smoothstep(0.34, 0.2, v) * smoothstep(0.06, 0.32, sun);
+    if band <= 0.0 {
+        return ([0.0; 3], 0.0);
+    }
+    let oct = r.oct(2.4);
+    let dens = |x: f32, v: f32| fbm2(x * 2.0, v * 4.5, 21, oct) + 0.6 * band - 0.55;
+    let d = dens(x, v);
+    let a = smoothstep(0.0, 0.14, d) * band;
+    if a <= 0.0 {
+        return ([0.0; 3], 0.0);
+    }
+    // Brighter where the cloud thins toward the sun (up and to the right).
+    let toward = dens(x + 0.02, v - 0.025);
+    let light = smoothstep(-0.2, 0.15, d - toward + 0.04);
+    let c = mix([0.55, 0.62, 0.75], [1.0, 1.0, 1.0], light);
+    (c, a * 0.97)
+}
 
-fn palm(u: f32, v: f32, aspect: f32, base_u: f32, base_v: f32, height: f32) -> bool {
-    // Leaning trunk.
-    let top_v = base_v - height;
-    if v > top_v && v < base_v {
-        let s = (base_v - v) / height;
-        let xc = base_u + 0.05 * height * 2.5 * s * s;
-        if ((u - xc) * aspect).abs() < 0.012 * height * 2.5 * (1.2 - 0.5 * s) {
-            return true;
+// ----- Scene B: a tropical sunset over the sea -----
+
+const B_HORIZON: f32 = 0.6;
+/// Sun center (u, v) and radius.
+const B_SUN: (f32, f32, f32) = (0.78, B_HORIZON - 0.03, 0.1);
+
+fn b_sky(u: f32, v: f32, r: &Res) -> [f32; 3] {
+    let t = (v / B_HORIZON).clamp(0.0, 1.0);
+    let stops: [(f32, [f32; 3]); 4] =
+        [(0.0, [0.13, 0.07, 0.3]), (0.42, [0.58, 0.2, 0.46]), (0.72, [0.96, 0.43, 0.38]), (1.0, [1.0, 0.76, 0.43])];
+    let mut c = stops[0].1;
+    for w in stops.windows(2) {
+        if t >= w[0].0 {
+            c = mix(w[0].1, w[1].1, smoothstep(0.0, 1.0, (t - w[0].0) / (w[1].0 - w[0].0)));
         }
     }
-    // Drooping fronds from the top.
-    let top_u = base_u + 0.05 * height * 2.5;
+    let d = (((u - B_SUN.0) * r.aspect).powi(2) + (v - B_SUN.1).powi(2)).sqrt();
+    c = mix(c, [1.0, 0.85, 0.55], (0.55 * (-d * 4.0).exp() + 0.3 * (-d * 14.0).exp()).min(1.0));
+    let disk = mix([1.0, 0.97, 0.78], [1.0, 0.72, 0.38], smoothstep(B_SUN.1 - B_SUN.2, B_HORIZON, v));
+    mix(c, disk, r.cover(B_SUN.2 - d))
+}
+
+/// Coverage of a palm tree standing at (`base_u`, `base_v`).
+fn palm(u: f32, v: f32, r: &Res, base_u: f32, base_v: f32, height: f32) -> f32 {
+    let a = r.aspect;
+    let top_v = base_v - height;
+    let top_u = base_u + 0.125 * height;
     let len = height * 0.55;
-    if ((u - top_u) * aspect).abs() > len * 1.2 || (v - top_v).abs() > len {
-        return false;
+    let mut cov = 0.0f32;
+    // Leaning, tapering trunk.
+    if v > top_v - r.px && v < base_v {
+        let s = (base_v - v) / height;
+        let xc = base_u + 0.125 * height * s * s;
+        let half = 0.03 * height * (1.2 - 0.5 * s);
+        cov = cov.max(r.cover(half - ((u - xc) * a).abs()));
     }
+    if ((u - top_u) * a).abs() > len * 1.3 || (v - top_v).abs() > len * 1.1 {
+        return cov;
+    }
+    // Drooping fronds: a tapering rib with leaflets hanging from it.
+    let seg = |px: f32, py: f32, (ax, ay): (f32, f32), (bx, by): (f32, f32)| {
+        let (vx, vy) = (bx - ax, by - ay);
+        let t = (((px - ax) * vx + (py - ay) * vy) / (vx * vx + vy * vy).max(1e-12)).clamp(0.0, 1.0);
+        ((px - ax - vx * t).powi(2) + (py - ay - vy * t).powi(2)).sqrt()
+    };
+    let (qx, qy) = (u * a, v);
+    let mut d = f32::MAX;
     for i in 0..7 {
         let th = -2.9 + i as f32 * 0.95;
         let (dx, dy) = (th.cos(), th.sin() * 0.55);
-        for k in 1..=28 {
-            let s = k as f32 / 28.0;
-            let px = top_u * aspect + dx * len * s;
-            let py = top_v + dy * len * s + 0.55 * len * s * s;
-            let r = 0.016 * height * 2.5 * (1.0 - 0.75 * s) + 0.003;
-            if (u * aspect - px).powi(2) + (v - py).powi(2) < r * r {
-                return true;
+        let at = |s: f32| (top_u * a + dx * len * s, top_v + dy * len * s + 0.55 * len * s * s);
+        let mut prev = at(0.0);
+        for k in 1..=32 {
+            let s = k as f32 / 32.0;
+            let p = at(s);
+            let w = 0.012 * height * (1.0 - 0.8 * s) + 0.0015;
+            d = d.min(seg(qx, qy, prev, p) - w);
+            // Leaflets on both sides, drooping, shorter toward the tip.
+            let ll = 0.12 * height * (1.0 - 0.75 * s) * (0.8 + 0.4 * hash2(i, k, 77));
+            let (tx, ty) = (p.0 - prev.0, p.1 - prev.1);
+            let tl = (tx * tx + ty * ty).sqrt().max(1e-6);
+            let (nx, ny) = (-ty / tl, tx / tl);
+            for side in [-1.0f32, 1.0] {
+                let end = (p.0 + (nx * side * 0.8 + tx / tl * 0.3) * ll, p.1 + (ny * side * 0.8 + 0.6) * ll);
+                d = d.min(seg(qx, qy, p, end) - 0.009 * height * (1.0 - 0.5 * s) - 0.0008);
+            }
+            prev = p;
+        }
+    }
+    cov.max(r.cover(-d))
+}
+
+/// Scene B panorama. Mask: sky coverage above the horizon; below it the
+/// wave value (0.05..1) of open water, 0 on land.
+fn scene_b(u: f32, v: f32, r: &Res) -> ([f32; 3], f32) {
+    let hz = B_HORIZON;
+    let x = u * r.aspect;
+    let (mut c, mut mask) = if v < hz {
+        (b_sky(u, v, r), 1.0)
+    } else {
+        let t = ((v - hz) / (1.0 - hz)).powf(0.6);
+        let base = mix([0.74, 0.37, 0.42], [0.08, 0.04, 0.16], t);
+        // Perspective waves: finer and flatter toward the horizon.
+        let z = 1.0 / (v - hz + 0.012);
+        let n = fbm2(x * z * 0.9, z * 1.8, 41, 5);
+        let wave = (0.5 + 0.5 * n).clamp(0.05, 1.0);
+        let c = scale(base, 0.82 + 0.36 * wave);
+        // The sky's warm glow reflected near the horizon.
+        let c = mix(c, [1.0, 0.62, 0.45], 0.35 * (-(v - hz) * 25.0).exp());
+        (c, wave)
+    };
+    // Far islands.
+    let far = hz - 0.04 * (-((u - 0.58) / 0.1).powi(2)).exp() * (1.0 + 0.2 * fbm2(x * 12.0, 0.3, 4, r.oct(12.0)));
+    let k = r.cover(v - far) * r.cover(hz - v);
+    if k > 0.0 {
+        c = mix(c, [0.4, 0.15, 0.32], k);
+        mask *= 1.0 - k;
+    }
+    // Headlands with palms, in silhouette.
+    let hill = 0.83 - 0.16 * (-((u - 0.2) / 0.2).powi(2)).exp() - 0.1 * (-((u - 1.32) / 0.14).powi(2)).exp()
+        + 0.008 * fbm2(x * 18.0, 0.7, 3, r.oct(18.0));
+    let k = r.cover(v - hill).max(palm(u, v, r, 0.3, 0.76, 0.42)).max(palm(u, v, r, 1.27, 0.8, 0.3));
+    if k > 0.0 {
+        let sil = mix([0.13, 0.05, 0.14], [0.05, 0.02, 0.07], smoothstep(0.5, 0.9, v));
+        c = mix(c, sil, k);
+        mask *= 1.0 - k;
+    }
+    (c, mask)
+}
+
+/// Scene B clouds: long streaks lit from below by the setting sun.
+fn b_clouds(u: f32, v: f32, r: &Res) -> ([f32; 3], f32) {
+    let x = u * r.aspect;
+    let band = smoothstep(0.04, 0.14, v) * smoothstep(0.52, 0.36, v);
+    if band <= 0.0 {
+        return ([0.0; 3], 0.0);
+    }
+    let n = fbm2(x * 1.1, v * 10.0, 31, r.oct(10.0));
+    let a = smoothstep(0.0, 0.4, n + 0.3 * band - 0.18) * band * 0.9;
+    if a <= 0.0 {
+        return ([0.0; 3], 0.0);
+    }
+    let d = (((u - B_SUN.0) * r.aspect).powi(2) + (v - B_SUN.1).powi(2)).sqrt();
+    let under = smoothstep(0.1, 0.5, v) * (0.35 + 0.65 * (-d * 2.5).exp());
+    let c = mix([0.34, 0.12, 0.32], [1.0, 0.6, 0.42], under * (0.7 + 0.3 * n));
+    (c, a)
+}
+
+/// The still layers of a scene at one size: panorama and clouds.
+struct Scene {
+    land: Pano,
+    clouds: Pano,
+}
+
+impl Scene {
+    fn build(scene: u8, w: u32, h: u32) -> Self {
+        let r = Res::new(w as usize, h as usize);
+        let pw = (w as f32 * PANO_W).ceil() as usize;
+        let h = h as usize;
+        if scene == 0 {
+            Scene {
+                land: Pano::build(pw, h, 0.0..2.0, |u, v| scene_a(u, v, &r)),
+                clouds: Pano::build(pw, h, 0.0..A_HORIZON, |u, v| a_clouds(u, v, &r)),
+            }
+        } else {
+            Scene {
+                land: Pano::build(pw, h, 0.0..2.0, |u, v| scene_b(u, v, &r)),
+                clouds: Pano::build(pw, h, 0.0..B_HORIZON, |u, v| b_clouds(u, v, &r)),
             }
         }
     }
-    false
 }
 
-/// Scene B panorama: sunset sky, sun on the horizon, sea, island
-/// silhouettes and palms. Mask: strength of the sun glint on the water.
-fn scene_b(u: f32, v: f32, aspect: f32) -> ([f32; 3], f32) {
-    let hz = B_HORIZON;
-    let sun_u = 0.78;
-    let mut glint = 0.0;
-    let mut c = if v < hz {
-        let t = v / hz;
-        let c = if t < 0.55 {
-            mix([0.22, 0.1, 0.38], [0.86, 0.32, 0.45], t / 0.55)
-        } else {
-            mix([0.86, 0.32, 0.45], [1.0, 0.74, 0.38], (t - 0.55) / 0.45)
-        };
-        let d = (((u - sun_u) * aspect).powi(2) + (v - (hz - 0.03)).powi(2)).sqrt();
-        let c = mix(c, [1.0, 0.86, 0.55], (0.6 * (-d * 5.0).exp()).min(1.0));
-        if d < 0.11 {
-            mix([1.0, 0.95, 0.7], [1.0, 0.8, 0.45], (v - (hz - 0.14)) / 0.14)
-        } else {
-            c
-        }
-    } else {
-        let t = ((v - hz) / (1.0 - hz)).powf(0.7);
-        let w = 0.04 + (v - hz) * 0.5;
-        glint = smoothstep(w, 0.0, (u - sun_u).abs());
-        mix([0.6, 0.28, 0.4], [0.12, 0.06, 0.2], t)
-    };
-    // Islands.
-    let hill = 0.83 - 0.16 * (-((u - 0.2) / 0.2).powi(2)).exp() - 0.1 * (-((u - 1.32) / 0.14).powi(2)).exp();
-    let far = hz - 0.035 * (-((u - 0.58) / 0.12).powi(2)).exp();
-    if v > far && v < hz + 0.004 && u > 0.46 && u < 0.7 {
-        c = [0.36, 0.14, 0.3];
-        glint = 0.0;
-    }
-    if v > hill + 0.01 * fbm(u * 20.0, 3.0) || palm(u, v, aspect, 0.3, 0.76, 0.42) || palm(u, v, aspect, 1.27, 0.8, 0.3)
-    {
-        c = [0.09, 0.03, 0.1];
-        glint = 0.0;
-    }
-    (c, glint)
-}
-
-/// Draws one frame of a scene from its panorama.
-fn scene_frame(scene: u8, pano: &Pano, w: u32, h: u32, secs: f32) -> VideoFrame {
+/// Draws one frame of a scene from its still layers.
+fn scene_frame(scene: u8, layers: &Scene, w: u32, h: u32, secs: f32) -> VideoFrame {
     let t = secs.clamp(0.0, MAX_SECONDS);
     let (w, h) = (w as usize, h as usize);
-    let aspect = w as f32 / h as f32;
+    let r = Res::new(w, h);
+    let (pano, clouds) = (&layers.land, &layers.clouds);
     let px_per_u = pano.w as f32 / PANO_W;
     // Pan offset in frame widths.
     let pan = if scene == 0 { 0.02 + 0.035 * t } else { 0.4 - 0.032 * t };
+    let grain_seed = (secs * 30.0).round() as u32;
+    // Film grain is a full-size detail; small frames (cards) get little.
+    let grain = 0.028 * (h as f32 / 1080.0).clamp(0.15, 1.0);
     let mut data = vec![0u8; w * h * 4];
     par_rows(&mut data, w * 4, |y, row| {
         let v = (y as f32 + 0.5) / h as f32;
-        let py = ((v * pano.h as f32) as usize).min(pano.h - 1);
+        let py = pano.row_of(v);
         for x in 0..w {
             let fu = (x as f32 + 0.5) / w as f32;
             let u = fu + pan;
-            let c = if scene == 0 {
-                let mut sx = u * px_per_u;
+            let mut c = if scene == 0 {
                 let lake = v > A_HORIZON;
+                let mut sx = u * px_per_u;
+                let z = 1.0 / (v - A_HORIZON + 0.03);
                 if lake {
-                    sx += (v * 260.0 - t * 4.0 + u * 9.0).sin() * (v - A_HORIZON) * 0.012 * px_per_u;
+                    let wob = (z * 38.0 - t * 2.6 + u * 7.0).sin() * 0.6 + (z * 91.0 + t * 4.1 + u * 23.0).sin() * 0.4;
+                    sx += wob * (v - A_HORIZON) * 0.018 * px_per_u;
                 }
-                let (mut c, m) = pano.at(sx, py);
-                if m > 0.2 {
-                    // Clouds drift faster than the pan (parallax).
-                    let cv = if lake { A_HORIZON - (v - A_HORIZON) * 1.15 } else { v };
-                    let cu = u + 0.03 * t;
-                    let mut a = 0.0f32;
-                    for (k, (x0, y0, rx, ry)) in [
-                        (0.12, 0.11, 0.13, 0.07),
-                        (0.5, 0.2, 0.1, 0.05),
-                        (0.88, 0.09, 0.17, 0.08),
-                        (1.3, 0.15, 0.12, 0.06),
-                    ]
-                    .iter()
-                    .enumerate()
-                    {
-                        // Three puffs over a flat base.
-                        let dx = (cu - x0) / rx;
-                        let dy = (cv - y0) / ry;
-                        if dx.abs() > 1.6 || dy > 0.45 {
-                            continue;
-                        }
-                        let s = 0.15 * (k as f32);
-                        for (ox, oy, r) in [(-0.55, 0.15, 0.62), (0.0, -0.1, 0.9), (0.6 + s, 0.2, 0.6)] {
-                            let (px, py) = ((dx - ox) / r, (dy - oy) / r);
-                            a = a.max(1.0 - (px * px + py * py));
-                        }
-                    }
-                    let a = smoothstep(0.0, 0.7, a) * if lake { 0.45 } else { 0.85 };
-                    c = mix(c, if lake { [0.55, 0.62, 0.68] } else { [0.97, 0.97, 0.99] }, a);
+                let (mut c, sky) = pano.at(sx, py);
+                if sky > 0.0 {
+                    // Clouds drift faster than the pan (parallax), mirrored in the lake.
+                    let cv = if lake { A_HORIZON - (v - A_HORIZON) * 1.05 } else { v };
+                    let (cc, a) = clouds.at(sx + 0.03 * t * px_per_u, clouds.row_of(cv));
+                    let cc = if lake { mix(scale(cc, 0.7), [0.03, 0.12, 0.19], 0.3) } else { cc };
+                    c = mix(c, cc, a * sky * if lake { 0.75 } else { 1.0 });
                 }
                 if lake {
-                    c = scale(c, 1.0 + 0.07 * (v * 420.0 + t * 6.0 + (u * 30.0).sin() * 2.0).sin());
+                    c = scale(c, 1.0 + 0.06 * (z * 60.0 + t * 5.0 + (u * 30.0).sin() * 2.0).sin());
                 }
                 c
             } else {
-                let (mut c, g) = pano.at(u * px_per_u, py);
-                if g > 0.0 {
-                    let s = 0.5 + 0.5 * (v * 520.0 + t * 7.0 + (u * 40.0 + t * 3.0).sin() * 2.0).sin();
-                    c = mix(c, [1.0, 0.86, 0.56], g * s * 0.75);
+                let sea = v > B_HORIZON;
+                let mut sx = u * px_per_u;
+                if sea {
+                    sx += (v * 300.0 + t * 2.0).sin() * (v - B_HORIZON) * 0.01 * px_per_u;
+                }
+                let (mut c, m) = pano.at(sx, py);
+                if !sea && m > 0.0 {
+                    let (cc, a) = clouds.at(sx + 0.015 * t * px_per_u, clouds.row_of(v));
+                    c = mix(c, cc, a * m);
+                } else if sea && m > 0.0 {
+                    // The sun's glitter path: wave crests catch the light.
+                    let wpath = 0.03 + (v - B_HORIZON) * 0.45;
+                    let g = smoothstep(wpath, 0.0, (u - B_SUN.0).abs());
+                    let s = smoothstep(0.55, 0.85, m + 0.18 * (t * 5.0 + u * 90.0 + v * 260.0).sin());
+                    c = mix(c, [1.0, 0.86, 0.56], g * s * 0.85);
                 }
                 // Three birds gliding left.
                 if v < 0.45 {
                     for (k, (y0, sp)) in [(0.2, 0.05), (0.26, 0.045), (0.16, 0.055)].iter().enumerate() {
                         let bx = 0.95 - sp * t - k as f32 * 0.07;
                         let flap = 0.5 + 0.5 * (t * 9.0 + k as f32 * 2.0).sin();
-                        let dx = (fu - bx) * aspect;
-                        let dy = v - y0;
+                        let dx = ((fu - bx) * r.aspect).abs();
                         let wing = 0.022;
-                        if dx.abs() < wing {
-                            let yy = -dx.abs() * (0.25 + 0.6 * flap);
-                            if (dy - yy).abs() < 0.0035 {
-                                c = [0.15, 0.05, 0.12];
-                            }
+                        if dx < wing + r.px {
+                            let yy = -dx * (0.25 + 0.6 * flap);
+                            let thick = 0.0035 * (1.0 - 0.6 * dx / wing);
+                            let k = r.cover(thick - (v - y0 - yy).abs()) * r.cover(wing - dx);
+                            c = mix(c, [0.15, 0.05, 0.12], k);
                         }
                     }
                 }
                 c
             };
+            // Lens vignette and a light film grain.
+            let (dx, dy) = (fu - 0.5, v - 0.5);
+            let vig = 1.0 - 0.44 * (dx * dx + dy * dy);
+            let g = (hash2(x as i32, y as i32, grain_seed) - 0.5) * grain;
+            c = [c[0] * vig + g, c[1] * vig + g, c[2] * vig + g];
             let i = x * 4;
             row[i] = to8(c[0]);
             row[i + 1] = to8(c[1]);
@@ -396,7 +664,7 @@ type FrameKey = (u8, i64, u32, u32);
 /// Frames are drawn at 30 fps steps at the size the renderer asks for
 /// (16:9, 960x540 by default) and a few are kept for reuse.
 pub struct SampleSource {
-    panos: Mutex<HashMap<(u8, u32, u32), Arc<Pano>>>,
+    panos: Mutex<HashMap<(u8, u32, u32), Arc<Scene>>>,
     frames: Mutex<VecDeque<(FrameKey, VideoFrame)>>,
 }
 
@@ -438,18 +706,7 @@ impl SampleSource {
             if panos.len() > 8 {
                 panos.clear();
             }
-            panos
-                .entry((scene, w, h))
-                .or_insert_with(|| {
-                    let aspect = w as f32 / h as f32;
-                    let pw = (w as f32 * PANO_W).ceil() as usize;
-                    Arc::new(if scene == 0 {
-                        Pano::build(pw, h as usize, |u, v| scene_a(u, v, aspect))
-                    } else {
-                        Pano::build(pw, h as usize, |u, v| scene_b(u, v, aspect))
-                    })
-                })
-                .clone()
+            panos.entry((scene, w, h)).or_insert_with(|| Arc::new(Scene::build(scene, w, h))).clone()
         };
         let f = scene_frame(scene, &pano, w, h, q as f32 / 30.0);
         let mut frames = self.frames.lock().unwrap_or_else(|e| e.into_inner());

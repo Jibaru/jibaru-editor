@@ -201,6 +201,17 @@ enum FxCmd {
         #[arg(long)]
         force: bool,
     },
+    /// Render the player preview of one library item on the sample footage,
+    /// frame by frame (30 fps JPEGs `000.jpg`, `001.jpg`, ...), at the
+    /// height of a player quality (1080, 540, 360).
+    PlayerFrames {
+        /// Registry id (`jb.dissolve`), or `title:<TitleData JSON>`.
+        item: String,
+        #[arg(long, default_value_t = 540)]
+        height: u32,
+        #[arg(long, short)]
+        output: PathBuf,
+    },
 }
 
 /// Successful output: JSON data plus a human rendering.
@@ -458,6 +469,9 @@ fn run(cmd: Cmd) -> JbResult<Out> {
         }
         Cmd::Presets => Ok(Out::json(jb_cli::presets())),
         Cmd::Fx { cmd: FxCmd::Coverage { file } } => Ok(Out::json(integrations::fx_coverage(&file)?)),
+        Cmd::Fx { cmd: FxCmd::PlayerFrames { item, height, output } } => {
+            Ok(Out::json(integrations::fx_player_frames(&item, height, &output)?))
+        }
         Cmd::Fx { cmd: FxCmd::Previews { output, filter, force } } => {
             Ok(Out::json(integrations::fx_previews(&output, &filter, force)?))
         }

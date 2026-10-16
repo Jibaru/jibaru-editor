@@ -14,6 +14,7 @@
 pub mod aliases;
 pub mod fx;
 mod gpu;
+pub mod library;
 pub mod lut;
 pub mod pool;
 pub mod preview;
