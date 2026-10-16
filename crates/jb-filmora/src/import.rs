@@ -427,7 +427,8 @@ pub fn speed_of(c: &Value, dur: Ticks) -> (Ticks, Speed) {
     let offset_end = f64_of(sp, "offsetEnd").unwrap_or(offset);
     let source_in = secs_to_ticks(offset);
     speed.reverse = sp.get("reverse").and_then(Value::as_bool).unwrap_or(false);
-    speed.maintain_pitch = sp.get("keepPitch").and_then(Value::as_bool).unwrap_or(true);
+    // Without the flag pitch follows speed, as Jibaru rendered these clips before.
+    speed.maintain_pitch = sp.get("keepPitch").and_then(Value::as_bool).unwrap_or(false);
     if c.get("freezeFrame").and_then(Value::as_bool) == Some(true) {
         speed.freeze = true;
         return (source_in, speed);

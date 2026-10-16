@@ -18,6 +18,7 @@
 pub mod audio;
 pub mod cache;
 pub mod convert;
+pub mod dsp;
 pub mod encode;
 pub mod hw;
 pub mod image;
@@ -25,6 +26,7 @@ pub mod mixer;
 pub mod pool;
 pub mod probe;
 pub mod proxy;
+pub mod stretch;
 pub mod video;
 pub mod waveform;
 

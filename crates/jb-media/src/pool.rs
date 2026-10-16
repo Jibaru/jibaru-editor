@@ -277,13 +277,7 @@ impl MediaPool {
         Ok(frame)
     }
 
-    fn checkout_video(
-        &self,
-        key: &str,
-        path: &Path,
-        t: Ticks,
-        max_size: Option<(u32, u32)>,
-    ) -> Result<VideoCheckout> {
+    fn checkout_video(&self, key: &str, path: &Path, t: Ticks, max_size: Option<(u32, u32)>) -> Result<VideoCheckout> {
         {
             let mut st = self.state.lock().unwrap();
             let now = self.tick();

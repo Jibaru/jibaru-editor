@@ -436,7 +436,7 @@ corresponding property was edited, so unedited files stay byte-identical.
 | Clip disabled | clip `"enable": false`. | unverified |
 | Track lock / hide / mute | track `locked`, `visible` (false = hidden video track or muted audio track), `mute`. | `locked`/`visible` seen in serialization 17; `mute` unverified |
 | Speed ramp | `speedParam` keys at source seconds (`offset + position × span`) with the rate; `speed.rampPreset` names the preset. Presets (rate over % of the source range): Montage, Hero moment, Bullet time, Jumper, Flash in, Flash out, from `configs/Speed`. | curve values verified; storage inferred |
-| Maintain pitch | `speed.keepPitch`. | unverified |
+| Maintain pitch | `speed.keepPitch`; absent = pitch follows speed (how Jibaru rendered imports before). | unverified |
 | Freeze frame | clip `"freezeFrame": true`, `offsetEnd = offset`. | unverified |
 | Balance (pan) | `audio/effect/volume` `Balance`, −100 … 100. | unverified |
 | Pitch | `audio/effect/pitch` `Pitch` (semitones) in `BasicFollow`. | unverified |

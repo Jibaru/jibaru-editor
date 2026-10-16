@@ -690,7 +690,7 @@ impl<'a> Exporter<'a> {
             if preset.is_some() || v["speed"].get("rampPreset").is_some() {
                 put(&mut v["speed"], "rampPreset", json!(preset.unwrap_or_default()));
             }
-            if !new.speed.maintain_pitch || v["speed"].get("keepPitch").is_some() {
+            if new.speed.maintain_pitch || v["speed"].get("keepPitch").is_some() {
                 put(&mut v["speed"], "keepPitch", json!(new.speed.maintain_pitch));
             }
             if new.speed.freeze || v.get("freezeFrame").is_some() {

@@ -104,7 +104,7 @@ fn speed_change_resamples_audio() {
             "start": 0, "end": TICKS_PER_SECOND})],
     );
     let mut clip = media_clip("s", "tone", 0, TICKS_PER_SECOND);
-    clip["speed"] = serde_json::json!({"rate": 2.0});
+    clip["speed"] = serde_json::json!({"rate": 2.0, "maintain_pitch": false});
     clip["audio"] = serde_json::json!({"gain_db": {"value": {"type": "float", "value": -6.0206}},
         "pan": {"value": {"type": "float", "value": 0.0}}, "fade_in": 0, "fade_out": 0});
     add_track(&mut p, TrackKind::Audio, vec![clip]);

@@ -162,7 +162,12 @@ impl VideoDecoder {
         }
     }
 
-    fn frame_at_inner(&mut self, t: Ticks, max_size: Option<(u32, u32)>, mode: DecodeMode) -> Result<Option<VideoFrame>> {
+    fn frame_at_inner(
+        &mut self,
+        t: Ticks,
+        max_size: Option<(u32, u32)>,
+        mode: DecodeMode,
+    ) -> Result<Option<VideoFrame>> {
         let t = t.max(0) + FRAME_SNAP;
         if let Some(last) = &self.last_output {
             let same_size = self.last_output_size == max_size;
