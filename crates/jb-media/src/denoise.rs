@@ -32,6 +32,14 @@ const PROFILE_SPAN: usize = 8 * 44_100;
 fn beta() -> f32 {
     std::env::var("JB_DENOISE_BETA").ok().and_then(|v| v.parse().ok()).unwrap_or(3.0)
 }
+/// Output gain (dB) of denoised voices: Filmora's denoised speech is a few
+/// dB quieter than the input even where speech dominates (−2.5 dB on
+/// average over 20 windows of Proyecto 2026-08-01, pre-gain levels −40 to
+/// −20 dBFS).
+/// `JB_DENOISE_GAIN` overrides it for calibration.
+fn makeup_db() -> f32 {
+    std::env::var("JB_DENOISE_GAIN").ok().and_then(|v| v.parse().ok()).unwrap_or(-2.5)
+}
 fn percentile() -> f32 {
     std::env::var("JB_DENOISE_PCT").ok().and_then(|v| v.parse().ok()).unwrap_or(0.5)
 }
@@ -174,6 +182,7 @@ fn process_chunk(fft: &Fft, read: &Reader<'_>, noise: &[f32], c0: i64, floor: f3
 /// sample `at`. `read(at, len)` returns the voice's raw stereo samples.
 pub(crate) fn denoise(key: &str, read: &Reader<'_>, at: i64, n: usize, limit_db: f64) -> Result<Vec<f32>> {
     let floor = 10f32.powf(-(limit_db as f32) / 20.0);
+    let gain = 10f32.powf(makeup_db() / 20.0);
     FFT.with(|fft| {
         STATE.with(|st| {
             let mut st = st.borrow_mut();
@@ -196,7 +205,7 @@ pub(crate) fn denoise(key: &str, read: &Reader<'_>, at: i64, n: usize, limit_db:
                 }
                 let from = (pos - c0) as usize;
                 let take = (CHUNK - from).min((at + n as i64 - pos) as usize);
-                out.extend_from_slice(&s.chunk[from * CHANNELS..(from + take) * CHANNELS]);
+                out.extend(s.chunk[from * CHANNELS..(from + take) * CHANNELS].iter().map(|v| v * gain));
                 pos += take as i64;
             }
             Ok(out)
@@ -232,7 +241,7 @@ mod tests {
     fn stationary_noise_is_attenuated_to_the_limit() {
         let out = run(false, "noise");
         let input: Vec<f32> = (44_100..88_200).map(|t| signal(t, false)).collect();
-        let db = 20.0 * (rms(&out) / rms(&input)).log10();
+        let db = 20.0 * (rms(&out) / rms(&input)).log10() - makeup_db();
         assert!(db < -10.0 && db > -16.0, "attenuation {db} dB");
     }
 
@@ -242,7 +251,7 @@ mod tests {
         // Timeline samples 58800..73500 hold the tone (away from its edges).
         let seg = &out[(14_700 + 2048) * 2..(29_400 - 2048) * 2];
         let input: Vec<f32> = (58_800 + 2048..73_500 - 2048).flat_map(|t| [signal(t, true); 2]).collect();
-        let db = 20.0 * (rms(seg) / rms(&input)).log10();
+        let db = 20.0 * (rms(seg) / rms(&input)).log10() - makeup_db();
         assert!(db > -1.5, "tone level change {db} dB");
     }
 }
