@@ -61,7 +61,7 @@ fn exports_video_and_audio_end_to_end() {
     let mut p = project(320, 240);
     add_media(&mut p, "m", &index_clip());
     add_track(&mut p, TrackKind::Video, vec![media_clip("a", "m", 0, 2 * TICKS_PER_SECOND)]);
-    let out = dir().join("export-basic.mp4");
+    let out = out("export-basic.mp4");
     let mut calls = 0;
     let report = run_export(&p, &ExportSettings::new(&out), &mut |pr| {
         calls += 1;
@@ -90,6 +90,7 @@ fn exports_video_and_audio_end_to_end() {
     let mut a = AudioDecoder::open(&out, 48_000).unwrap();
     let mid = a.read(TICKS_PER_SECOND, 4800).unwrap();
     assert!((rms(&mid) - 0.088).abs() < 0.02, "{}", rms(&mid));
+    cleanup(&out);
 }
 
 #[test]
@@ -107,7 +108,7 @@ fn speed_change_resamples_audio() {
     clip["audio"] = serde_json::json!({"gain_db": {"value": {"type": "float", "value": -6.0206}},
         "pan": {"value": {"type": "float", "value": 0.0}}, "fade_in": 0, "fade_out": 0});
     add_track(&mut p, TrackKind::Audio, vec![clip]);
-    let out = dir().join("export-speed.mp4");
+    let out = out("export-speed.mp4");
     run_export(&p, &ExportSettings::new(&out), &mut |_| true).unwrap();
 
     let samples = jb_media::audio::decode_all(&out, 48_000).unwrap();
@@ -124,6 +125,7 @@ fn speed_change_resamples_audio() {
     // Red canvas.
     let f = VideoDecoder::open(&out, true).unwrap().frame_at(0, None, DecodeMode::Accurate).unwrap().unwrap();
     assert!((mean_luma(&f) - 63.0).abs() < 4.0, "{}", mean_luma(&f));
+    cleanup(&out);
 }
 
 #[test]
@@ -131,7 +133,7 @@ fn exports_a_range() {
     let mut p = project(320, 240);
     add_media(&mut p, "m", &index_clip());
     add_track(&mut p, TrackKind::Video, vec![media_clip("a", "m", 0, 2 * TICKS_PER_SECOND)]);
-    let out = dir().join("export-range.mp4");
+    let out = out("export-range.mp4");
     let mut s = ExportSettings::new(&out);
     s.range = Some((TICKS_PER_SECOND * 2 / 5, TICKS_PER_SECOND * 6 / 5));
     s.audio = false;
@@ -141,6 +143,7 @@ fn exports_a_range() {
     assert!(!info.has_audio);
     let f = VideoDecoder::open(&out, true).unwrap().frame_at(0, None, DecodeMode::Accurate).unwrap().unwrap();
     assert!((index_from_luma(mean_luma(&f)) - 10).abs() <= 1);
+    cleanup(&out);
 }
 
 #[test]
@@ -148,7 +151,7 @@ fn cancel_removes_partial_output() {
     let mut p = project(320, 240);
     add_media(&mut p, "m", &index_clip());
     add_track(&mut p, TrackKind::Video, vec![media_clip("a", "m", 0, 2 * TICKS_PER_SECOND)]);
-    let out = dir().join("export-cancel.mp4");
+    let out = out("export-cancel.mp4");
     let err = run_export(&p, &ExportSettings::new(&out), &mut |pr| pr.frame < 5).unwrap_err();
     assert!(err.to_string().contains("cancel"), "{err}");
     assert!(!out.exists());
@@ -160,7 +163,7 @@ fn software_encoder_fallback_works() {
     let mut p = project(320, 240);
     add_media(&mut p, "m", &index_clip());
     add_track(&mut p, TrackKind::Video, vec![media_clip("a", "m", 0, TICKS_PER_SECOND)]);
-    let out = dir().join("export-sw.mp4");
+    let out = out("export-sw.mp4");
     let mut s = ExportSettings::new(&out);
     s.hardware = false;
     let r = run_export(&p, &s, &mut |_| true).unwrap();
@@ -168,4 +171,5 @@ fn software_encoder_fallback_works() {
     assert!(r.encoder == "libopenh264" || r.encoder == "mpeg4", "{}", r.encoder);
     let f = VideoDecoder::open(&out, false).unwrap().frame_at(Rational::new(FPS, 1).frame_start(12), None, DecodeMode::Accurate);
     assert!((index_from_luma(mean_luma(&f.unwrap().unwrap())) - 12).abs() <= 1);
+    cleanup(&out);
 }

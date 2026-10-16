@@ -153,7 +153,7 @@ fn pool_alternating_times_use_two_decoders() {
 
 #[test]
 fn images_load_as_rgba_with_max_size() {
-    let p = dir().join("still.png");
+    let p = out("still.png");
     let img = image::RgbaImage::from_pixel(400, 200, image::Rgba([10, 200, 30, 255]));
     img.save(&p).unwrap();
     let info = jb_media::probe_info(&p).unwrap();
@@ -167,6 +167,7 @@ fn images_load_as_rgba_with_max_size() {
     assert_eq!(&f.data[0..4], &[10, 200, 30, 255]);
     let full = pool.frame("img", 0, None).unwrap().unwrap();
     assert_eq!(full.width, 400);
+    cleanup(&p);
 }
 
 fn rms(s: &[f32]) -> f64 {
@@ -195,7 +196,7 @@ fn audio_is_resampled_and_sample_accurate() {
 
 #[test]
 fn thumbnails_and_waveform_are_cached_on_disk() {
-    let cache = MediaCache::new(dir().join("cache")).unwrap();
+    let cache = MediaCache::new(out("cache")).unwrap();
     let thumbs = cache.filmstrip(&index_clip(), &[0, TICKS_PER_SECOND, TICKS_PER_SECOND / 2], 60).unwrap();
     assert_eq!(thumbs.len(), 3);
     for t in &thumbs {
@@ -217,12 +218,13 @@ fn thumbnails_and_waveform_are_cached_on_disk() {
     )
     .unwrap();
     assert_eq!(reloaded.min.len(), w.min.len());
+    cleanup(cache.dir());
 }
 
 #[test]
 fn proxy_keeps_frame_timing() {
     let src = index_clip_large();
-    let dst = dir().join("proxy.mp4");
+    let dst = out("proxy.mp4");
     let report =
         jb_media::generate_proxy(&src, &dst, &ProxyOptions { height: 240, ..Default::default() }, &mut |_| true)
             .unwrap();
@@ -240,18 +242,21 @@ fn proxy_keeps_frame_timing() {
         assert_eq!(fa.pts, fb.pts, "frame {i}");
         assert!((index_from_luma(mean_luma(&fb)) - i).abs() <= 1, "frame {i}");
     }
+    cleanup(&dst);
 }
 
 #[test]
 fn pool_uses_proxy_for_previews_only() {
     let src = index_clip_large();
-    let dst = dir().join("proxy-pool.mp4");
+    let dst = out("proxy-pool.mp4");
     jb_media::generate_proxy(&src, &dst, &ProxyOptions { height: 240, ..Default::default() }, &mut |_| true).unwrap();
     let pool = MediaPool::new(PoolConfig::default());
     pool.add("m", &src);
-    pool.set_proxy("m", Some(dst));
+    pool.set_proxy("m", Some(dst.clone()));
     let preview = pool.frame("m", RATE.frame_start(5), Some((1000, 1000))).unwrap().unwrap();
     assert_eq!(preview.width, 320, "proxy resolution");
     let full = pool.frame("m", RATE.frame_start(5), None).unwrap().unwrap();
     assert_eq!(full.width, 640, "original for export");
+    pool.clear();
+    cleanup(&dst);
 }

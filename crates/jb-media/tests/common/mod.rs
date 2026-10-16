@@ -13,10 +13,26 @@ pub const FRAMES: i64 = 50;
 pub fn dir() -> &'static Path {
     static DIR: OnceLock<PathBuf> = OnceLock::new();
     DIR.get_or_init(|| {
-        let d = std::env::temp_dir().join(format!("jb-media-tests-{}", std::process::id()));
+        // A fixed location so repeated runs reuse the generated clips
+        // instead of piling up directories. Clips are written atomically.
+        let d = std::env::temp_dir().join("jb-media-tests");
         std::fs::create_dir_all(&d).unwrap();
         d
     })
+}
+
+/// A per-process output path (several worktrees may run tests at once).
+/// Tests remove their outputs with [`cleanup`] when they pass.
+pub fn out(name: &str) -> PathBuf {
+    dir().join(format!("out-{}-{name}", std::process::id()))
+}
+
+pub fn cleanup(p: &Path) {
+    if p.is_dir() {
+        let _ = std::fs::remove_dir_all(p);
+    } else {
+        let _ = std::fs::remove_file(p);
+    }
 }
 
 pub fn ffmpeg(args: &[&str]) {
@@ -47,7 +63,7 @@ fn cached(name: &str, make: impl FnOnce(&str)) -> PathBuf {
     let _g = LOCK.lock().unwrap();
     let p = dir().join(name);
     if !p.exists() {
-        let tmp = dir().join(format!("tmp-{name}"));
+        let tmp = dir().join(format!("tmp-{}-{name}", std::process::id()));
         make(tmp.to_str().unwrap());
         std::fs::rename(&tmp, &p).unwrap();
     }
@@ -106,7 +122,7 @@ pub fn index_clip_hevc() -> Option<PathBuf> {
         return Some(p);
     }
     let vf = format!("color=c=black:s=640x480:r={FPS}:d=2,{INDEX_LUMA}");
-    let tmp = dir().join(format!("tmp-{name}"));
+    let tmp = dir().join(format!("tmp-{}-{name}", std::process::id()));
     let st = Command::new("ffmpeg")
         .args(["-y", "-v", "error", "-nostdin", "-f", "lavfi", "-i", &vf, "-c:v", enc, "-b:v", "8M", "-g", "25"])
         .args(["-tag:v", "hvc1", "-f", "mp4"])
