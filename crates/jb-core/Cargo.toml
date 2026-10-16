@@ -12,3 +12,6 @@ thiserror.workspace = true
 uuid.workspace = true
 anyhow.workspace = true
 schemars = "1"
+
+[dev-dependencies]
+schemars = "1"

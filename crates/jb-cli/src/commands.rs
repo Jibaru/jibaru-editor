@@ -31,7 +31,12 @@ pub fn normalize(v: &mut Value) {
                 fill(a, name);
             }
         }
-        "add_clip" => {
+        "add_marker" | "update_marker" => {
+            if let Some(m) = obj.get_mut("marker") {
+                fill(m, None);
+            }
+        }
+        "add_clip" | "insert_clip" | "overwrite_clip" => {
             if let Some(c) = obj.get_mut("clip") {
                 fill(c, Some("Clip".into()));
             }

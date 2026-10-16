@@ -66,6 +66,7 @@ pub fn title_from_script(script: &Value, transform_scale_y: Option<f64>) -> Titl
         stroke,
         shadow,
         background,
+        ..Default::default()
     }
 }
 

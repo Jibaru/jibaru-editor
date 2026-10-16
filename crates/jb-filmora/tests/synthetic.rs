@@ -200,6 +200,7 @@ fn edits_are_patched_in_place() {
         enabled: true,
         params: [("radius".to_string(), Param::float(12.0))].into(),
         range: None,
+        placement: None,
         extra: Extra::Null,
     };
     let mut tr = a.transition_out.clone().unwrap();
@@ -330,6 +331,7 @@ fn new_clips_get_filmora_shaped_json() {
         stroke: None,
         shadow: None,
         background: None,
+        ..Default::default()
     };
     h.execute(&Command::AddClip {
         track_id: new_track,

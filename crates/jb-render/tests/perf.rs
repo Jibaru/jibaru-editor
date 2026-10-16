@@ -32,7 +32,11 @@ impl FrameSource for Alternating {
 fn plan(t: Ticks) -> FramePlan {
     let mut base = media_layer("a");
     base.content = LayerContent::Media { media_id: "a".into(), source_time: t };
-    base.effects.push(effect("jb.color.adjust", 0.5, &[("contrast", Value::Float(20.0)), ("saturation", Value::Float(15.0))]));
+    base.effects.push(effect(
+        "jb.color.adjust",
+        0.5,
+        &[("contrast", Value::Float(20.0)), ("saturation", Value::Float(15.0))],
+    ));
     let mut pip = media_layer("b");
     pip.content = LayerContent::Media { media_id: "b".into(), source_time: t };
     pip.transform.scale = [0.45, 0.45];
@@ -52,6 +56,7 @@ fn plan(t: Ticks) -> FramePlan {
         stroke: Some(jb_core::Stroke { color: [0.0, 0.0, 0.0, 1.0], width: 0.004 }),
         shadow: Some(jb_core::Shadow { color: [0.0, 0.0, 0.0, 0.6], offset: [0.004, 0.004], blur: 0.004 }),
         background: None,
+        ..Default::default()
     });
     FramePlan { time: t, layers: vec![base, pip, title] }
 }
@@ -71,7 +76,7 @@ fn compose_4k_three_layers_two_effects() {
     let src = Alternating { frames: vec![("a".into(), mk(pattern_a)), ("b".into(), mk(pattern_b))] };
     let project = project(w, h);
     let step = 333_667; // one 29.97 fps frame
-    // Warm up (pipeline compilation, pool allocation, font loading).
+                        // Warm up (pipeline compilation, pool allocation, font loading).
     for i in 0..3 {
         r.render_to_texture(&project, &plan(i * step), &src);
     }

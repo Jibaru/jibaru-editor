@@ -172,6 +172,7 @@ impl<'a> Ctx<'a> {
                 muted: false,
                 hidden: false,
                 clips,
+                height: None,
                 extra: marker(json!({ "timeline": tl_id, "index": index })),
             });
         }
@@ -179,6 +180,7 @@ impl<'a> Ctx<'a> {
             id: sequence_id(tl_id),
             name: if main { "Main".into() } else { format!("Timeline {tl_id}") },
             tracks,
+            markers: Vec::new(),
             extra: marker(json!({ "timelineId": tl_id })),
         }
     }
@@ -245,7 +247,9 @@ impl<'a> Ctx<'a> {
             animations: Vec::new(),
             transition_out: None,
             link_group: None,
+            group: None,
             disabled: false,
+            markers: Vec::new(),
             extra: marker(json!({ "uid": uid, "type": ty })),
         };
         let (source_in, speed) = speed_of(c, end - start);
@@ -524,6 +528,7 @@ pub fn effect_of(chain: &str, e: &Value) -> EffectInstance {
         enabled: e.get("enable").and_then(Value::as_bool).unwrap_or(true),
         params: params_of(e),
         range: None,
+        placement: None,
         extra: marker(json!({ "uid": str_of(e, "thisUId"), "chain": chain, "display": str_of(e, "display") })),
     }
 }
@@ -600,6 +605,7 @@ pub fn pre_transition_of(t: &Value, clip_start: Ticks) -> EffectInstance {
         enabled: true,
         params: BTreeMap::new(),
         range: Some(((begin - clip_start).max(0), (end - clip_start).max(0))),
+        placement: None,
         extra: marker(json!({
             "uid": str_of(t, "thisUId"), "role": "preTransition",
             "display": str_of(t, "display"), "name": resource_name(t)

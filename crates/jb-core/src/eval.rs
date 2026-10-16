@@ -75,6 +75,9 @@ pub struct ActiveTransition {
 
 /// Maps a clip-local timeline time to a source time, honoring speed.
 pub fn source_time(clip: &Clip, local: Ticks) -> Ticks {
+    if clip.speed.freeze {
+        return clip.source_in;
+    }
     let elapsed = match &clip.speed.ramp {
         Some(ramp) => integrate_rate(ramp, local),
         None => (local as f64 * clip.speed.rate).round() as Ticks,
@@ -90,15 +93,47 @@ pub fn source_time(clip: &Clip, local: Ticks) -> Ticks {
     }
 }
 
-/// Integrates a rate curve from 0 to `t` (trapezoidal, ~1 ms steps).
-fn integrate_rate(rate: &Param, t: Ticks) -> Ticks {
-    const STEP: Ticks = 10_000;
+/// Integrates a rate curve from 0 to `t`: exact for linear and hold
+/// segments, Simpson's rule for eased ones.
+pub fn integrate_rate(rate: &Param, t: Ticks) -> Ticks {
+    use crate::param::Interpolation;
+    if t <= 0 {
+        return 0;
+    }
+    let kfs = &rate.keyframes;
+    if kfs.is_empty() {
+        return (rate.sample_f64(0) * t as f64).round() as Ticks;
+    }
+    let (first, last) = (kfs[0].time, kfs[kfs.len() - 1].time);
+    let mut cuts: Vec<Ticks> = vec![0];
+    cuts.extend(kfs.iter().map(|k| k.time).filter(|&x| x > 0 && x < t));
+    cuts.push(t);
     let mut acc = 0.0;
-    let mut x = 0;
-    while x < t {
-        let dx = STEP.min(t - x);
-        acc += 0.5 * (rate.sample_f64(x) + rate.sample_f64(x + dx)) * dx as f64;
-        x += dx;
+    for w in cuts.windows(2) {
+        let (a, b) = (w[0], w[1]);
+        if b <= a {
+            continue;
+        }
+        let dx = (b - a) as f64;
+        let interp = kfs.iter().rev().find(|k| k.time <= a).map(|k| k.interpolation);
+        acc += if a < first || a >= last {
+            rate.sample_f64(a) * dx
+        } else {
+            match interp {
+                Some(Interpolation::Linear) => 0.5 * (rate.sample_f64(a) + rate.sample_f64(b)) * dx,
+                Some(Interpolation::Hold) => rate.sample_f64(a) * dx,
+                _ => {
+                    const N: i64 = 16;
+                    let h = dx / N as f64;
+                    let f = |i: i64| rate.sample_f64(a + ((b - a) * i) / N);
+                    let mut s = f(0) + f(N);
+                    for i in 1..N {
+                        s += f(i) * if i % 2 == 1 { 4.0 } else { 2.0 };
+                    }
+                    s * h / 3.0
+                }
+            }
+        };
     }
     acc.round() as Ticks
 }
@@ -228,6 +263,21 @@ pub struct AudioVoice {
     pub rate: f64,
     pub gain: f64,
     pub pan: f64,
+    /// Plays the source backwards.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub reverse: bool,
+    /// Keep the original pitch when `rate != 1` (time-stretch instead of resample).
+    pub maintain_pitch: bool,
+    /// Pitch shift in semitones on top of any speed change.
+    #[serde(skip_serializing_if = "is_zero")]
+    pub pitch: f64,
+    /// Equalizer band gains in dB (see `Equalizer::FREQUENCIES`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub equalizer: Option<[f64; 10]>,
+}
+
+fn is_zero(v: &f64) -> bool {
+    *v == 0.0
 }
 
 /// Linear gain for a clip at clip-local time, including fades.
@@ -235,7 +285,8 @@ pub fn clip_gain(clip: &Clip, local: Ticks) -> f64 {
     if clip.audio.muted {
         return 0.0;
     }
-    let mut g = 10f64.powf(clip.audio.gain_db.sample_f64(local) / 20.0);
+    let norm = clip.audio.normalize.map_or(0.0, |n| n.gain_db());
+    let mut g = 10f64.powf((clip.audio.gain_db.sample_f64(local) + norm) / 20.0);
     if clip.audio.fade_in > 0 && local < clip.audio.fade_in {
         g *= local as f64 / clip.audio.fade_in as f64;
     }
@@ -266,7 +317,7 @@ fn collect_voices(
         return;
     }
     for track in seq.tracks.iter().filter(|tr| !tr.muted) {
-        for clip in track.clips.iter().filter(|c| !c.disabled && c.contains(t)) {
+        for clip in track.clips.iter().filter(|c| !c.disabled && !c.speed.freeze && c.contains(t)) {
             let local = t - clip.start;
             let g = gain * clip_gain(clip, local);
             let r = rate * clip.speed.ramp.as_ref().map_or(clip.speed.rate, |p| p.sample_f64(local));
@@ -282,6 +333,15 @@ fn collect_voices(
                             rate: r,
                             gain: g,
                             pan: clip.audio.pan.sample_f64(local),
+                            reverse: clip.speed.reverse,
+                            maintain_pitch: clip.speed.maintain_pitch,
+                            pitch: clip.audio.pitch,
+                            equalizer: clip
+                                .audio
+                                .equalizer
+                                .as_ref()
+                                .map(|e| e.bands)
+                                .filter(|b| b.iter().any(|g| *g != 0.0)),
                         });
                     }
                 }

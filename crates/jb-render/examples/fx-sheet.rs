@@ -38,6 +38,7 @@ fn write_titles(
         stroke: None,
         shadow: None,
         background: None,
+        ..Default::default()
     };
     let styles = [
         base.clone(),

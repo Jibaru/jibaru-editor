@@ -163,6 +163,7 @@ fn title(text: &str) -> jb_core::TitleData {
         stroke: None,
         shadow: None,
         background: None,
+        ..Default::default()
     }
 }
 

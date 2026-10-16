@@ -2,13 +2,16 @@
 //! the undoable command bus shared by the UI, the CLI and agents.
 
 pub mod command;
+pub mod edit;
 pub mod eval;
 pub mod frame;
 pub mod model;
+mod ops;
 pub mod param;
+pub mod speed;
 pub mod time;
 
-pub use command::{apply, Command, CommandError, History};
+pub use command::{apply, ClipAttribute, Command, CommandError, Edge, History, TitleAnimation};
 pub use frame::{FrameSource, PixelFormat, VideoFrame};
 pub use model::*;
 pub use param::{Interpolation, Keyframe, Param, Value};

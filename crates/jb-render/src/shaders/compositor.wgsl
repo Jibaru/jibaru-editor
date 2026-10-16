@@ -185,6 +185,25 @@ fn blend_ch(mode: i32, b: vec3f, s: vec3f) -> vec3f {
         case 10: { return abs(b - s); }
         case 11: { return b + s - 2.0 * b * s; }
         case 12: { return min(b + s, vec3f(1.0)); }
+        case 13: { return max(b + s - 1.0, vec3f(0.0)); } // linear burn
+        case 14: { // darker color
+            return select(b, s, dot(s, vec3f(0.299, 0.587, 0.114)) < dot(b, vec3f(0.299, 0.587, 0.114)));
+        }
+        case 15: { // lighter color
+            return select(b, s, dot(s, vec3f(0.299, 0.587, 0.114)) > dot(b, vec3f(0.299, 0.587, 0.114)));
+        }
+        case 16: { // vivid light
+            let burn = 1.0 - min(vec3f(1.0), (1.0 - b) / max(2.0 * s, vec3f(1e-5)));
+            let dodge = min(vec3f(1.0), b / max(2.0 * (1.0 - s), vec3f(1e-5)));
+            return select(dodge, burn, s <= vec3f(0.5));
+        }
+        case 17: { return clamp(b + 2.0 * s - 1.0, vec3f(0.0), vec3f(1.0)); } // linear light
+        case 18: { // pin light
+            return select(max(b, 2.0 * s - 1.0), min(b, 2.0 * s), s <= vec3f(0.5));
+        }
+        case 19: { return select(vec3f(0.0), vec3f(1.0), b + s >= vec3f(1.0)); } // hard mix
+        case 20: { return max(b - s, vec3f(0.0)); } // subtract
+        case 21: { return min(b / max(s, vec3f(1e-5)), vec3f(1.0)); } // divide
         default: { return s; }
     }
 }

@@ -84,8 +84,35 @@ pub struct Sequence {
     pub name: String,
     /// Tracks in compositing order: index 0 is the bottom-most track.
     pub tracks: Vec<Track>,
+    /// Timeline markers; `time` is in sequence time.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub markers: Vec<Marker>,
     #[serde(default, skip_serializing_if = "is_null")]
     pub extra: Extra,
+}
+
+/// A named point (or range, when `duration > 0`) on a sequence or clip.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+pub struct Marker {
+    pub id: Id,
+    /// Sequence time for sequence markers, clip-local time for clip markers.
+    pub time: Ticks,
+    #[serde(default)]
+    pub duration: Ticks,
+    #[serde(default)]
+    pub name: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub comment: String,
+    /// Linear RGBA.
+    #[serde(default = "marker_color")]
+    pub color: [f64; 4],
+    #[serde(default, skip_serializing_if = "is_null")]
+    pub extra: Extra,
+}
+
+/// Filmora's default marker color.
+pub fn marker_color() -> [f64; 4] {
+    [0.0, 206.0 / 255.0, 208.0 / 255.0, 1.0]
 }
 
 impl Sequence {
@@ -114,6 +141,9 @@ pub struct Track {
     pub hidden: bool,
     /// Clips sorted by `start`, never overlapping.
     pub clips: Vec<Clip>,
+    /// Display height in the timeline (UI pixels); `None` = default.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub height: Option<u32>,
     #[serde(default, skip_serializing_if = "is_null")]
     pub extra: Extra,
 }
@@ -139,6 +169,7 @@ pub enum ClipSource {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(default)]
 pub struct TitleData {
     pub text: String,
     pub font_family: String,
@@ -157,6 +188,51 @@ pub struct TitleData {
     pub shadow: Option<Shadow>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub background: Option<[f64; 4]>,
+    #[serde(default, skip_serializing_if = "is_default")]
+    pub alignment: TextAlignment,
+    /// Extra space between characters, as a fraction of the font size.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub letter_spacing: f64,
+    /// Extra space between lines, as a fraction of the font size.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub line_spacing: f64,
+}
+
+impl Default for TitleData {
+    fn default() -> Self {
+        Self {
+            text: String::new(),
+            font_family: "Arial".into(),
+            font_size: 0.048,
+            color: [1.0; 4],
+            position: [0.5, 0.5],
+            bold: false,
+            italic: false,
+            stroke: None,
+            shadow: None,
+            background: None,
+            alignment: TextAlignment::Center,
+            letter_spacing: 0.0,
+            line_spacing: 0.0,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum TextAlignment {
+    Left,
+    #[default]
+    Center,
+    Right,
+}
+
+fn is_default<T: Default + PartialEq>(v: &T) -> bool {
+    *v == T::default()
+}
+
+fn is_zero(v: &f64) -> bool {
+    *v == 0.0
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -205,8 +281,14 @@ pub struct Clip {
     /// Clips sharing a link group move and trim together (e.g. camera video + its audio).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub link_group: Option<Id>,
+    /// Clips sharing a group move together (Filmora "Group").
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub group: Option<Id>,
     #[serde(default)]
     pub disabled: bool,
+    /// Clip markers; `time` is clip-local.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub markers: Vec<Marker>,
     #[serde(default, skip_serializing_if = "is_null")]
     pub extra: Extra,
 }
@@ -231,11 +313,39 @@ pub struct Speed {
     pub rate: f64,
     #[serde(default)]
     pub reverse: bool,
-    /// Speed ramping: rate keyframes over clip-local time. Overrides `rate`.
+    /// Speed ramping: rate keyframes over clip-local time. Overrides `rate`
+    /// (which then holds the average rate).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ramp: Option<Param>,
+    /// The speed curve `ramp` was built from, in Filmora's terms (rate over
+    /// the normalized source range). Kept so the curve survives round trips.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub curve: Option<SpeedCurve>,
+    /// Freeze frame: the clip shows the frame at `source_in` for its whole
+    /// duration and is silent.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub freeze: bool,
     #[serde(default = "yes")]
     pub maintain_pitch: bool,
+}
+
+/// A speed ramp: playback rate as a function of the position in the clip's
+/// source range, like Filmora's speed ramping panel.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+pub struct SpeedCurve {
+    /// Preset name (`montage`, `hero_moment`, `bullet_time`, `jumper`,
+    /// `flash_in`, `flash_out`) or `custom`.
+    pub preset: String,
+    /// Control points sorted by `position`, linearly interpolated.
+    pub points: Vec<SpeedPoint>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+pub struct SpeedPoint {
+    /// Position in the source range, 0..=1.
+    pub position: f64,
+    /// Playback rate at that position (> 0).
+    pub speed: f64,
 }
 
 fn yes() -> bool {
@@ -244,7 +354,7 @@ fn yes() -> bool {
 
 impl Default for Speed {
     fn default() -> Self {
-        Self { rate: 1.0, reverse: false, ramp: None, maintain_pitch: true }
+        Self { rate: 1.0, reverse: false, ramp: None, curve: None, freeze: false, maintain_pitch: true }
     }
 }
 
@@ -314,7 +424,17 @@ pub enum BlendMode {
     SoftLight,
     Difference,
     Exclusion,
+    /// Linear dodge.
     Add,
+    LinearBurn,
+    DarkerColor,
+    LighterColor,
+    VividLight,
+    LinearLight,
+    PinLight,
+    HardMix,
+    Subtract,
+    Divide,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -330,11 +450,92 @@ pub struct AudioSettings {
     pub pitch: f64,
     #[serde(default)]
     pub muted: bool,
+    /// Auto normalization (loudness matching).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub normalize: Option<Normalization>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub equalizer: Option<Equalizer>,
 }
 
 impl Default for AudioSettings {
     fn default() -> Self {
-        Self { gain_db: Param::float(0.0), pan: Param::float(0.0), fade_in: 0, fade_out: 0, pitch: 0.0, muted: false }
+        Self {
+            gain_db: Param::float(0.0),
+            pan: Param::float(0.0),
+            fade_in: 0,
+            fade_out: 0,
+            pitch: 0.0,
+            muted: false,
+            normalize: None,
+            equalizer: None,
+        }
+    }
+}
+
+/// Loudness normalization of a clip to a target integrated loudness.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+pub struct Normalization {
+    /// Target in LUFS. Filmora offers -23 (EBU R128), -16, -14 and -12.
+    pub target_lufs: f64,
+    /// Measured integrated loudness of the clip's source range, in LUFS.
+    /// Filled in by tools that can decode media; until then no gain is applied.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub measured_lufs: Option<f64>,
+}
+
+impl Normalization {
+    /// Gain in dB that brings the measured loudness to the target (0 when unmeasured).
+    pub fn gain_db(&self) -> f64 {
+        self.measured_lufs.filter(|m| m.is_finite()).map_or(0.0, |m| (self.target_lufs - m).clamp(-40.0, 40.0))
+    }
+}
+
+/// Ten-band graphic equalizer (31 Hz .. 16 kHz octave bands), like Filmora's.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+pub struct Equalizer {
+    /// Preset name (see `Equalizer::PRESETS`) or `custom`.
+    pub preset: String,
+    /// Gain per band in dB (-12..12), lowest band first.
+    pub bands: [f64; 10],
+}
+
+impl Equalizer {
+    /// Center frequencies of the bands in Hz.
+    pub const FREQUENCIES: [f64; 10] = [31.0, 62.0, 125.0, 250.0, 500.0, 1000.0, 2000.0, 4000.0, 8000.0, 16000.0];
+
+    /// Built-in presets, named after Filmora's equalizer menu. The band
+    /// values are our own voicings of each style.
+    pub const PRESETS: &'static [(&'static str, [f64; 10])] = &[
+        ("default", [0.0; 10]),
+        ("classical", [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -4.0, -4.0, -4.0, -6.0]),
+        ("low_bass", [6.0, 5.0, 4.0, 2.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
+        ("techno", [5.0, 4.0, 0.0, -3.0, -2.0, 0.0, 3.0, 5.0, 5.0, 4.0]),
+        ("rock", [5.0, 3.0, -3.0, -5.0, -2.0, 2.0, 5.0, 6.0, 6.0, 6.0]),
+        ("pop", [-1.0, 3.0, 4.0, 5.0, 3.0, 0.0, -1.0, -1.0, -1.0, -1.0]),
+        ("acoustic", [4.0, 4.0, 3.0, 1.0, 2.0, 2.0, 3.0, 3.0, 3.0, 2.0]),
+        ("country", [2.0, 2.0, 1.0, 0.0, -1.0, 0.0, 2.0, 3.0, 3.0, 3.0]),
+        ("dance", [6.0, 5.0, 2.0, 0.0, 0.0, -3.0, -4.0, -4.0, 0.0, 0.0]),
+        ("electronic", [4.0, 3.0, 1.0, 0.0, -2.0, 2.0, 1.0, 1.0, 3.0, 4.0]),
+        ("folk", [3.0, 2.0, 0.0, -1.0, 0.0, 2.0, 3.0, 3.0, 2.0, 1.0]),
+        ("hip_hop", [5.0, 4.0, 1.0, 3.0, -1.0, -1.0, 1.0, -1.0, 2.0, 3.0]),
+        ("jazz", [4.0, 3.0, 1.0, 2.0, -2.0, -2.0, 0.0, 1.0, 3.0, 4.0]),
+        ("metal", [4.0, 5.0, 5.0, 2.0, 0.0, 1.0, 3.0, 4.0, 3.0, 2.0]),
+        ("rnb", [3.0, 7.0, 6.0, 1.0, -2.0, -1.0, 2.0, 3.0, 3.0, 4.0]),
+        ("soft", [3.0, 1.0, 0.0, -1.0, 0.0, 2.0, 4.0, 5.0, 6.0, 7.0]),
+        ("speech", [-3.0, -2.0, 0.0, 2.0, 4.0, 4.0, 3.0, 2.0, 0.0, -2.0]),
+    ];
+
+    /// A preset by name (case and separators are ignored: "Hip-Hop" = "hip_hop").
+    pub fn preset(name: &str) -> Option<Self> {
+        let key = name.trim().to_ascii_lowercase().replace([' ', '-', '&'], "_");
+        let key = match key.as_str() {
+            "r_b" | "r_and_b" | "randb" => "rnb",
+            "hiphop" => "hip_hop",
+            "lowbass" => "low_bass",
+            "none" | "flat" => "default",
+            k => k,
+        };
+        Self::PRESETS.iter().find(|(n, _)| *n == key).map(|(n, b)| Self { preset: n.to_string(), bands: *b })
     }
 }
 
@@ -353,8 +554,26 @@ pub struct EffectInstance {
     /// Optional clip-local active range (animations, timed effects).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub range: Option<(Ticks, Ticks)>,
+    /// For entry/exit animations: the slot the animation occupies. Its
+    /// `range` follows the clip edges when the clip is trimmed or retimed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub placement: Option<AnimationPlacement>,
     #[serde(default, skip_serializing_if = "is_null")]
     pub extra: Extra,
+}
+
+/// Slots of Filmora's "Animation" tab.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum AnimationPlacement {
+    /// Entry animation, from the clip start.
+    In,
+    /// Exit animation, ending at the clip end.
+    Out,
+    /// Repeats over the whole clip.
+    Loop,
+    /// One animation spanning the whole clip (Filmora "Combo").
+    Combo,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -385,7 +604,8 @@ pub enum TransitionAlignment {
 
 impl Project {
     pub fn new(name: impl Into<String>, settings: ProjectSettings) -> Self {
-        let seq = Sequence { id: new_id(), name: "Main".into(), tracks: Vec::new(), extra: Extra::Null };
+        let seq =
+            Sequence { id: new_id(), name: "Main".into(), tracks: Vec::new(), markers: Vec::new(), extra: Extra::Null };
         Self {
             id: new_id(),
             name: name.into(),

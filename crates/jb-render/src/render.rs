@@ -362,6 +362,15 @@ fn blend_code(m: BlendMode) -> u32 {
         BlendMode::Difference => 10,
         BlendMode::Exclusion => 11,
         BlendMode::Add => 12,
+        BlendMode::LinearBurn => 13,
+        BlendMode::DarkerColor => 14,
+        BlendMode::LighterColor => 15,
+        BlendMode::VividLight => 16,
+        BlendMode::LinearLight => 17,
+        BlendMode::PinLight => 18,
+        BlendMode::HardMix => 19,
+        BlendMode::Subtract => 20,
+        BlendMode::Divide => 21,
     }
 }
 
