@@ -22,7 +22,9 @@ cargo run --release -p jb-cli --example fidelity -- PROJECT.wfp REF.mp4 \
 
 It renders the range with the production path (`jb_export::export`, no
 camera proxies), decodes both videos with the same FFmpeg conversion, aligns
-them (±4 frames search; every window reported here aligned at 0), and prints
+them (±4 frames search; use `--search 0` for whole-project exports, whose
+frame count matches ours: a window whose content is off by one frame can
+otherwise align at ±1 and hide it), and prints
 per-frame mean absolute difference (MAD, 0–255 over RGB) and PSNR, signed
 channel bias, a tone table, per-second MAD, and audio RMS envelopes in 50 ms
 windows (mean |ΔdB| over windows above −50 dBFS, and lag). `DIR/sheet.png`
@@ -41,107 +43,133 @@ and wherever an effect amplifies noise (exposure).
 
 ## Results
 
-MAD mean / max over the window at 960×540 unless noted; audio is mean |ΔdB|.
+MAD mean / max over the window at 960×540 (alignment fixed at 0 with
+`--search 0`: every whole-project export has our frame count) unless noted;
+audio is mean |ΔdB|. "First pass" is the state before the first round of
+fixes, "Before" the state after it (the previous version of this report),
+"After" the current one.
 
-| Item | Window | Before | After | Fix |
-|---|---|---|---|---|
-| Duration / frame count | whole projects | 51340, 30343, 22053, 44158 frames | identical | — |
-| Video levels (plain footage) | 4 projects | 2.4–2.8 (ours +2.9 R, +1.0 G, +2.7 B) | 1.1–1.6 (bias < 0.3) | output level offset |
-| Source frame on tick-truncated in-points | Proyecto 32.7–40.1 s | 1 frame late (6.1 at 320 px) | aligned, 1.4 | decoder frame snap |
-| Range renders off the frame grid | any `--range 1212s-…` | half-frame phase error | on grid | export |
-| Fast Zoom | Proyecto 38–43 s | 1.98 / 31.3 | 1.33 / 3.5 | refit |
-| Fast Zoom | Fenix 1213–1218 s | 3.03 / 40.5 | 1.44 / 3.3 | refit |
-| Fast Zoom, 0.73 s long | Proyecto 793.5–797 s | 2.89 / 75 | 2.89 / 75 | gap (one frame) |
-| Fast Wipe Left | Fenix 1256–1261 s | 2.32 / 29.8 | 1.82 / 14.8 | refit |
-| Fast Wipe Left | Fenix 1286–1291 s | 1.98 / 24.2 | 1.88 / 12.8 | refit |
-| Fade (between photos + end of timeline) | Proyecto 995–1012.4 s | 13.4 / 115 | 1.36 / 4.6 | refit + end transition |
-| Fade at end of timeline | Fenix 1708–1713 s | 16.7 / 55 | 1.38 / 2.5 | end transition |
-| Basic title, centered | Proyecto 0–2.5 s | text 4.2% narrow, PSNR 26.4 | bbox exact (1043 vs 1042 px at 1080p), PSNR 31.3 | glyph ratio |
-| Basic title, lower third | Fenix 134–137 s | 4% narrow | bbox ±1 px, 0.49 | glyph ratio |
-| Sticker clip boundaries | Fenix 980–982.7 s | 1.87 / 7.0 | 1.74 / 2.1 | frame times |
-| Photo 1600×897 (near 16:9) | Proyecto 1008.6–1010 s | 3.56 | 1.64 | fit snaps to fill |
-| AdjustColor exposure 45 | Colombia 1 300–303 s | 21.8 | 1.76 | exposure curve |
-| AdjustColor exposure 46 | Colombia 1 306–309 s | 18.2 | 1.84 | exposure curve |
-| AdjustColor exposure 60 | Colombia 1 390–393 s | 23.2 | 2.75 | exposure curve |
-| AdjustColor exposure 92 | Colombia 1 600–603 s | 22.3 | 4.02 | exposure curve |
-| AdjustColor exposure 100 | Colombia 1 312–315 / 365–368 s | 33.5 / 33.9 | 5.6 / 6.4 | exposure curve (partial) |
-| AutoEnhance | Colombia 1 | — | — | disabled in the project (`enable: false`), not rendered by either |
-| Speed 10× (five clips) | Colombia 2 492.5–499 s (320 px) | 25.7 | 4.4 | retimed in-point |
-| Speed 5× / 15× / 3× | Colombia 2 254–266 s, Colombia 1 270–274.5 s | 3.6 / 2.0 / — | 2.3 / 1.8 / 2.6 | retimed in-point |
-| Slide (store pack) | Colombia 1 94–99 s | 8.8 / 50 | 8.8 / 50 | gap |
-| Film Burn Transition 02 | Colombia 2 311–316 s | 8.0 / 48 | 8.0 / 48 | gap |
-| Audio fade (cross-cut) | Fenix 1256–1261 s | 1.10 dB (5.6 dB at the cut) | 0.08 dB | mixer |
-| Audio, plain clips | all projects | 0.1–0.2 dB | 0.1–0.2 dB | — |
-| Audio, AI Denoise clips | Proyecto 12–32 / 41–49 / 76–115 / 141–160 s | 8.7 / 9.1 / 9.5 / 8.3 dB | 4.6 / 3.4 / 4.8 / 7.6 dB | denoiser |
+| Item | Window | First pass | Before | After | Fix |
+|---|---|---|---|---|---|
+| Duration / frame count | whole projects | 51340, 30343, 22053, 44158 frames | identical | identical | — |
+| Whole project, 320×180 | Fenix / Proyecto / Colombia 1 / Colombia 2 | — | 2.03 / 2.38 / 2.72 / 4.16 (max 56 / 150 / 49 / 84) | 2.02 / 2.38 / 2.67 / 3.58 (max 4.5 / 74 / 7.1 / 47) | see below |
+| Video levels (plain footage) | 4 projects | 2.4–2.8 | 1.1–1.6 | 1.1–1.6 | output level offset |
+| Slide (store pack) | Colombia 1 94–99 s | 8.8 / 50 | 8.8 / 50 | 2.31 / 7.8 | per-frame fit |
+| Film Burn Transition 02 | Colombia 2 311–316 s | 8.0 / 48 | 8.0 / 48 | 2.57 / 8.9 | per-frame fit |
+| Fast Wipe Left | Fenix 1256–1261 s | 2.32 / 29.8 | 1.82 / 14.8 | 1.50 / 3.3 | refit |
+| Fast Wipe Left | Fenix 1286–1291 s | 1.98 / 24.2 | 1.88 / 12.8 | 1.60 / 3.0 | refit |
+| Fast Zoom, cut 0.67 tick after a frame | Proyecto 533–536 s | — | 2.51 / 52.7 | 1.93 / 4.3 | boundary snap |
+| Fast Zoom, 0.73 s long | Proyecto 793.5–797 s | 2.89 / 75 | 2.89 / 75 | 2.88 / 75 | gap (one frame) |
+| Fast Zoom | Proyecto 38–43 s / Fenix 1213–1218 s | 1.98 / 3.03 | 1.33 / 1.44 | 1.33 / 1.44 | — |
+| Fade (photos + end of timeline) | Proyecto 995–1012.4 s | 13.4 / 115 | 1.36 / 4.6 | 1.33 / 4.9 | — |
+| Last fade to black | Colombia 1 731–735.8 s | — | 1.77 / 2.96 | 0.79 / 1.44 | split level offset |
+| Portrait JPEGs | Proyecto 998.6–1001.2 s | — | 0.82 | 0.73 | no input offset on stills |
+| Photo 1600×897 | Proyecto 1008.6–1010 s | 3.56 | 1.64 | 1.37 | no input offset on stills |
+| AdjustColor exposure 45 / 46 | Colombia 1 300–303 / 306–309 s | 21.8 / 18.2 | 1.76 / 1.84 | 1.69 / 1.76 | — |
+| AdjustColor exposure 60 | Colombia 1 390–393 s | 23.2 | 2.75 | 2.21 | exposure gain above 50 |
+| AdjustColor exposure 92 | Colombia 1 600–603 s | 22.3 | 4.02 | 2.24 | exposure gain above 50 |
+| AdjustColor exposure 100 | Colombia 1 312–315 / 365–368 s | 33.5 / 33.9 | 5.60 / 6.37 | 3.19 / 3.71 | exposure gain above 50 |
+| Clip starting 1 tick after a frame | Proyecto 298–300.5 s | — | max 150 (black frame, 320 px) | 1.33 / 2.8 | boundary snap |
+| Cut 2.3 ticks after a frame | Fenix 1053–1056 s | — | max 56 (320 px) | 1.76 / 2.1 | boundary slack |
+| 3× clip ending 0.26 frame into a frame | Colombia 1 274–276 s | — | max 49 (320 px) | 1.42 / 2.0 | nearest-frame bounds |
+| 10× clip ending 0.2 frame into a frame | Colombia 2 633.5–636 s | — | max 65 (320 px) | 7.50 / 11.3 | nearest-frame bounds |
+| 1× clips after retimed ones (in-points between source frames) | Colombia 2 541–581 s | — | 10.8 (535–560 s, 320 px) | 4.43 (545–548 s) | nearest source frame |
+| Speed 3× / 5× / 15× | Colombia 1 270–274.5 s, Colombia 2 254–266 s | — / 3.6 / 2.0 | 2.60 / 2.30 / 1.73 | 2.23 / 2.30 / 1.73 | — |
+| Speed 10× | Colombia 2 492.5–499 / 532–541 s | 25.7 (320 px) | 7.55 / 9.57 | 7.55 / 9.57 | — |
+| Basic titles | Proyecto 0–2.5 s / Fenix 134–137 s | PSNR 26.4 / 4% narrow | 0.73 / 0.49 | 0.73 / 0.49 | — |
+| Audio, plain clips | all projects | 0.1–0.2 dB | 0.1–0.2 dB | 0.1–0.2 dB | — |
+| Audio, AI Denoise clips | Proyecto 12–32 / 41–49 / 141–160 s | 8.7 / 9.1 / 8.3 dB | 4.58 / 3.37 / 7.64 dB | 3.69 / 2.95 / 8.08 dB | makeup gain |
+| Audio, AI Denoise, aligned | 20 windows of Proyecto | — | 3.39 dB (ours +1.95) | 3.23 dB (ours −0.02) | makeup gain |
 
 ## What was fixed
 
-- **Output levels** (`jb-render`, `RenderOptions::output_bias`). Filmora's
-  output is darker than an exact BT.709 conversion by about −1.6 Y, −0.6 Cb,
-  −0.85 Cr code values at every level, i.e. RGB (−2.9, −1.05, −2.69). It is
-  applied after compositing: whites pushed up by exposure land at ~252, and
-  still images match too. Tests render with exact levels.
-- **Frame timing** (`jb-media`, `jb-export`). Source times within 1 ms of a
-  frame start select that frame (Filmora writes frame-grid in-points
-  truncated to ticks; the previous frame was shown on some clips). Range
-  renders start on the sequence frame grid and frames are sampled at their
-  exact start rounded to the nearest tick, the rounding Filmora uses for
-  clip bounds.
-- **Transitions out of the last clip** (`jb-core`): Filmora projects end with
-  a Fade on the last clip; it now fades into nothing instead of being
-  ignored.
-- **Fast Zoom**: no blur; the scale is `1 + 0.3·exp(−60·|p − 0.5|)` (1.30 on
-  the first frame of the incoming clip, 1.11/1.04/1.01 one to three frames
-  away), the cut at the midpoint.
-- **Fast Wipe Left/Right/Up/Down**: two frames on each side of the midpoint;
-  offset 0.14·3.2^(2−f) frame widths and box blur ±0.07·5^(2−f) for `f`
-  frames from the cut.
-- **Fade**: display-space gain `smoothstep(0, 0.475, |p − 0.5|)`.
-- **Basic titles** (`jb-filmora`): glyph size 0.752 of the text box height
-  (was 0.72).
-- **Fit mode**: sources within 1% of the canvas aspect fill it (Filmora
-  stretches a 1600×897 photo to 16:9).
-- **AdjustColor exposure** (`jb.filmora.adjust_color` → `jb.filmora.exposure`):
-  display-space `y = 1 − (1 − x)^k`, `k = 1 + 0.01256·s^1.244`; the other
-  sliders still go through `jb.color.adjust`.
-- **Retimed clips** (`jb-filmora` import): Filmora plays a retimed clip from
-  its retimed in-point (`offset / rate`) rounded to a timeline frame, counted
-  from the clip's first frame; at 10× that is up to 4 source frames earlier
-  than `speed.offset`.
-- **Audio transitions** (`jb-core` voices): Filmora's audio fade ramps the
-  outgoing clip 1 → 0.5 until the cut and the incoming one 0.5 → 1 from the
-  cut, without overlap; the mixer ignored transitions before.
-- **AI Denoise** (`AudioSettings::denoise_db`, `jb-media` denoiser): imported
-  from `CacheAlg`/`AudioDenoiseCache` (attenuation limit 10 or 15 dB) and
-  rendered by spectral power subtraction against a per-clip noise spectrum
-  (median power, ×3), floored at the limit.
-- **Harness audio**: decoded audio is padded to its first timestamp; without
-  it AAC priming trimmed by the edit list showed up as a 23 ms lag.
+First round (previous report): output level offset, frame-grid timing,
+transitions out of the last clip, Fast Zoom, Fast Wipe, Fade, Basic title
+glyph ratio, fill for near-16:9 photos, the AdjustColor exposure curve,
+retimed in-points, audio transitions and AI Denoise import/rendering, and
+the harness' audio padding. This round:
+
+- **Slide** (`jb.pan_slide`, store `Slide_771515`): not a pan. Every frame
+  of each side is the clip mapped through a uv-space zoom + rotation +
+  shift `src = c + (a0, b0) + k R(φ) (uv − c)` with mirrored repeat and a
+  box motion blur along `(bx, by)`; the outgoing clip zooms in to ~1.07 and
+  tilts to 3.6° before whipping right, the incoming one lands at 1.10 /
+  5.0° shifted left and settles with an ease-out. The parameters are fitted
+  per frame of the export (per-frame residual 2–6 MAD at 480 px, against
+  ~18 for the best scale + offset) and tabulated in `SLIDE_FIT`.
+- **Film Burn Transition 02**: procedural, fitted per frame: a radial zoom
+  blur about a moving centre followed by a per-channel display-space affine
+  `g·c + o0 + o1·(u − 0.5)` whose horizontal term carries the warm leak and
+  the brown burn, plus drawn sprocket holes while it washes out
+  (`BURN_FIT`). No Filmora asset is used.
+- **Fast Wipe**: offsets 0.147 / 0.52 / 0.94 frame at 2 / 1 / 0 frames from
+  the cut, mirrored repeat (not wrap) and a gaussian smear with sigma 0.32 ×
+  the offset (the fitted kernel; box and one-sided kernels fit worse).
+- **Level offset split** (`RenderOptions::input_bias`): part of Filmora's
+  offset happens at video decode (−0.8, +0.51, −0.9), the rest after
+  compositing (−2.1, −1.56, −1.79); the decode part is amplified by an
+  exposure boost and faded with the clip, and still images do not get it.
+  Fitted on the exposure 60–100 clips; plain footage is unchanged.
+- **Exposure above 50**: the curve stops steepening at 50 (`k = 2.55`) and
+  the slider scales the input instead, `g = 1 + 0.0145 (s − 50)`, so
+  highlights clip (at x ≈ 0.58 for 100).
+- **Clip bounds** (`jb-core` evaluation): a clip shows on the frames whose
+  time plus half a frame it contains (bounds between frames round to the
+  nearest frame), boundaries up to 100 ticks after a frame time count as at
+  it (Filmora writes bounds a few ticks off the grid), and source time
+  counts from the frame nearest to the clip's start.
+- **Source frame** (`jb-media`): the decoder shows the source frame nearest
+  to the requested time, not the one containing it (in-points between
+  source frames after speed edits were a frame late from 0.5 frame on).
+  This replaces the 1 ms snap, which the pool applied twice.
+- **AI Denoise**: denoised voices get a −2.5 dB makeup gain (Filmora's
+  denoised speech is quieter than the input even where speech dominates).
+- **Export**: an unchanged retimed in-point keeps the project's
+  `speed.offset` (the importer snaps it to the frame grid).
+
+## Full-project scan
+
+Every project was compared over its whole length at 320×180
+(`--range 0s-END --size 320x180 --search 0`, all 148 k frames); 1 s windows
+above MAD 4–6 or with a frame above 3× that were inspected. Found and fixed
+this way: the black frame at Proyecto 299.27 s, the stale frames at Fenix
+1054.69 s, Colombia 1 274.78 s and Colombia 2 634.71 s (clip bounds), and
+the one-frame lag of every clip after a retimed one in Colombia 2 (541–581,
+635–655, 897–909 s). What remains above the floor:
+
+- Colombia 2's first frame of each 10× clip that follows a 1× clip (492.19,
+  631.80, 874.24, 891.42 s; MAD 32–47 on that frame): Filmora shows the
+  source frame at `speed.offset` there (3–4 source frames later than the
+  rounded retimed in-point it uses from the next frame on). Our clip model
+  has one linear source mapping per clip, so this is not reproduced.
+- The 0.73 s Fast Zoom frame at Proyecto 795.23 s (below).
+- Colombia 1 510–560 s and Colombia 2 high-detail foliage (775, 800 s):
+  1 s means of 6–8 at 320 px with no bias; exposure-100 footage and 4K
+  foliage amplify encoder noise (see Noise floor).
 
 ## Remaining gaps
 
-- **Slide** (store `Slide_771515`) and **Film Burn Transition 02**: the
-  incoming clip in Filmora's Slide is scaled ~1.1–1.3 and shifted, but no
-  affine fit of the clean frames explains it (residual MAD ~18), so the
-  motion is probably not a plain scale/offset; Film Burn is an overlay-based
-  look we approximate. Both are used once in the corpus.
 - **Fast Zoom of 0.73 s** (Proyecto 795.2 s): Filmora shows the outgoing
-  clip on the frame where the clip boundary and the transition midpoint
-  coincide; with 2 s Fast Zooms it shows the incoming one. One frame.
-- **Fast Wipe**: the two smeared frames on each side of the cut remain at
-  MAD 9–15 (the smear's exact kernel is not identified).
-- **Exposure ≥ 90**: 4–6 MAD; Filmora's curve clips harder near white than
-  the fitted family at high values (a soft-clipped gain fits s = 92–100
-  better but s = 45–60 worse).
-- **AI Denoise** is an approximation of a neural denoiser: levels are within
-  3–5 dB on most clips but the envelope differs in detail, and Filmora's
-  denoised audio of some clips (Proyecto 141–161 s, Colombia 1 312 s) is
-  delayed by 70 ms, which we do not reproduce.
-- **Near black**: during the last fade to black our output is ~2 levels
-  darker than Filmora (the level offset clips at 0 where Filmora's does not).
-- **Portrait JPEGs** (Proyecto 997–1007 s): mean level within 0.8, but
-  shadows are ~7 levels darker and midtones ~2 lighter than Filmora's,
-  suggesting a different JPEG/ICC decode; not investigated.
-- **Detailed footage**: bright foliage at 4K (Colombia 2 319–321 s) stays at
-  MAD ~5.7 with no measurable bias; likely encoder noise, not a rendering
-  difference.
+  clip at full zoom on the frame starting 1 tick after the cut, where 2 s
+  Fast Zooms show the incoming one; the rule behind it (the transition's
+  odd tick length, 7340667) was not found. One frame.
+- **First frame of 10× clips after 1× clips** (Colombia 2, four frames):
+  see the scan above.
+- **Speed 10×** windows stay at 7.5–9.6: at 10× consecutive frames differ a
+  lot, so one source frame of difference on some frames costs a lot; the
+  rounding of Filmora's retimed mapping is only known for the first frame.
+- **Exposure 100** still 3.2–3.7 (exposure 92 at 2.2): the shape of the
+  shoulder below the clip point differs slightly by clip (per-clip optimum
+  k 2.3–2.7, g 1.7–1.9).
+- **Slide / Film Burn** are tabulated fits of one export each (2 s, center);
+  other durations scale in progress, which is unverified. Their worst frames
+  (7.8 / 8.9) are on the cut frames.
+- **AI Denoise** is still an approximation of a neural denoiser (aligned
+  mean |ΔdB| 3.2 over 20 windows): Filmora attenuates speech and noise
+  differently per clip. Its output is delayed by 70 ms on 26 of 39 denoised
+  clips of Proyecto (and most of Colombia 1's), with the same media,
+  strength and settings as the undelayed ones; no rule in the project data
+  explains which, so it is not reproduced (where it applies, the harness
+  reports 3–4 dB more than the aligned difference).
+- **Detailed footage**: bright foliage at 4K stays at MAD ~5–7 with no
+  measurable bias; likely encoder noise.
