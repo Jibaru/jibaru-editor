@@ -2324,7 +2324,11 @@ dependencies = [
 name = "jb-export"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "jb-core",
+ "jb-media",
+ "libc",
+ "serde_json",
 ]
 
 [[package]]
