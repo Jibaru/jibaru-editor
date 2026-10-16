@@ -231,10 +231,7 @@ fn fx(uv: vec2f) -> vec4f {
             "Distortion",
             Effect,
             "Animated wavy distortion like a reflection on water. Filmora equivalent: Ripple / Wave.",
-            &[
-                P::float("amplitude", "Amplitude", 1.0, 100.0, 20.0),
-                P::float("speed", "Speed", 0.0, 100.0, 40.0),
-            ],
+            &[P::float("amplitude", "Amplitude", 1.0, 100.0, 20.0), P::float("speed", "Speed", 0.0, 100.0, 40.0)],
         ),
         r#"
 fn fx(uv: vec2f) -> vec4f {
@@ -424,10 +421,7 @@ fn fx(uv: vec2f) -> vec4f {
             "Artistic",
             Effect,
             "Unsharp mask that crisps details and edges. Filmora equivalent: Sharpen.",
-            &[
-                P::float("amount", "Amount", 0.0, 100.0, 50.0),
-                P::float("radius", "Radius", 0.5, 10.0, 1.5).unit("px"),
-            ],
+            &[P::float("amount", "Amount", 0.0, 100.0, 50.0), P::float("radius", "Radius", 0.5, 10.0, 1.5).unit("px")],
         ),
         &[r#"
 @fragment fn fs_main(in: VsOut) -> @location(0) vec4f {

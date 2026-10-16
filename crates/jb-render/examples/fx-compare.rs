@@ -74,7 +74,8 @@ fn main() -> anyhow::Result<()> {
         count = args[i + 1].parse()?;
         args.drain(i..i + 2);
     }
-    let [reference, kind, out] = <[String; 3]>::try_from(args).map_err(|_| anyhow::anyhow!("usage: REF KIND OUT.png"))?;
+    let [reference, kind, out] =
+        <[String; 3]>::try_from(args).map_err(|_| anyhow::anyhow!("usage: REF KIND OUT.png"))?;
     let (w, h) = (256u32, 144u32);
     let (frames, fps) = decode_all(&reference, w, h)?;
     anyhow::ensure!(frames.len() > 2, "reference has no frames");
@@ -102,7 +103,8 @@ fn main() -> anyhow::Result<()> {
     let first = (t0 * fps).floor().max(0.0) as usize;
     let last = ((t1 * fps).ceil() as usize).min(frames.len() - 1);
     let step = ((last - first) as f64 / count as f64).max(1.0);
-    let picks: Vec<usize> = (0..count).map(|i| first + (i as f64 * step).round() as usize).filter(|i| *i <= last).collect();
+    let picks: Vec<usize> =
+        (0..count).map(|i| first + (i as f64 * step).round() as usize).filter(|i| *i <= last).collect();
     let cols = picks.len() as u32;
     let sheet_w = cols * w;
     let mut sheet = vec![0u8; (sheet_w * h * 2 * 4) as usize];

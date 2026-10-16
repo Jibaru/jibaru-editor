@@ -125,26 +125,86 @@ const BLUR_PARAM: ParamSpec = ParamSpec::float("blur", "Motion blur", 0.0, 2.0, 
 pub fn register(r: &mut Registry) {
     // ------------------------------------------------------------ Push
     for (id, name, desc, dx, dy) in [
-        ("jb.push_left", "Push Left", "The new clip enters from the right and pushes the old one out to the left. Filmora: Push Left.", -1, 0),
-        ("jb.push_right", "Push Right", "The new clip enters from the left and pushes the old one out to the right. Filmora: Push Right.", 1, 0),
-        ("jb.push_up", "Push Up", "The new clip rises from the bottom and pushes the old one up. Filmora: Push Up.", 0, -1),
-        ("jb.push_down", "Push Down", "The new clip drops from the top and pushes the old one down. Filmora: Push Down.", 0, 1),
+        (
+            "jb.push_left",
+            "Push Left",
+            "The new clip enters from the right and pushes the old one out to the left. Filmora: Push Left.",
+            -1,
+            0,
+        ),
+        (
+            "jb.push_right",
+            "Push Right",
+            "The new clip enters from the left and pushes the old one out to the right. Filmora: Push Right.",
+            1,
+            0,
+        ),
+        (
+            "jb.push_up",
+            "Push Up",
+            "The new clip rises from the bottom and pushes the old one up. Filmora: Push Up.",
+            0,
+            -1,
+        ),
+        (
+            "jb.push_down",
+            "Push Down",
+            "The new clip drops from the top and pushes the old one down. Filmora: Push Down.",
+            0,
+            1,
+        ),
     ] {
         shader(r, info(id, name, "Motion", Transition, desc, &[]), push_body(dx, dy));
     }
     // ------------------------------------------------------------ Slide over
     for (id, name, desc, sx, sy) in [
-        ("jb.slide_from_left", "Slide Right", "The new clip slides in from the left over the old one, which darkens. Filmora: Slide Right.", -1, 0),
-        ("jb.slide_from_top", "Slide Down", "The new clip slides down from the top and covers the old one. Filmora: Slide Down.", 0, -1),
-        ("jb.slide_from_bottom", "Slide Up", "The new clip slides up from the bottom and covers the old one. Filmora: Slide Up.", 0, 1),
+        (
+            "jb.slide_from_left",
+            "Slide Right",
+            "The new clip slides in from the left over the old one, which darkens. Filmora: Slide Right.",
+            -1,
+            0,
+        ),
+        (
+            "jb.slide_from_top",
+            "Slide Down",
+            "The new clip slides down from the top and covers the old one. Filmora: Slide Down.",
+            0,
+            -1,
+        ),
+        (
+            "jb.slide_from_bottom",
+            "Slide Up",
+            "The new clip slides up from the bottom and covers the old one. Filmora: Slide Up.",
+            0,
+            1,
+        ),
     ] {
         shader(r, info(id, name, "Motion", Transition, desc, &[]), slide_body(sx, sy));
     }
     // ------------------------------------------------------------ Whip pan
     for (id, name, desc, dx, dy) in [
-        ("jb.whip_right", "Whip Pan Right", "Fast camera pan to the right with motion blur. Filmora: Whip Pan / Fast Wipe Right.", 1, 0),
-        ("jb.whip_up", "Whip Pan Up", "Fast vertical camera pan upwards with motion blur. Filmora: Whip Pan Up / Fast Wipe Up.", 0, -1),
-        ("jb.whip_down", "Whip Pan Down", "Fast vertical camera pan downwards with motion blur. Filmora: Whip Pan Down / Fast Wipe Down.", 0, 1),
+        (
+            "jb.whip_right",
+            "Whip Pan Right",
+            "Fast camera pan to the right with motion blur. Filmora: Whip Pan / Fast Wipe Right.",
+            1,
+            0,
+        ),
+        (
+            "jb.whip_up",
+            "Whip Pan Up",
+            "Fast vertical camera pan upwards with motion blur. Filmora: Whip Pan Up / Fast Wipe Up.",
+            0,
+            -1,
+        ),
+        (
+            "jb.whip_down",
+            "Whip Pan Down",
+            "Fast vertical camera pan downwards with motion blur. Filmora: Whip Pan Down / Fast Wipe Down.",
+            0,
+            1,
+        ),
     ] {
         shader(r, info(id, name, "Motion", Transition, desc, &[BLUR_PARAM]), whip_body(dx, dy));
     }

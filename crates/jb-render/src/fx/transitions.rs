@@ -70,29 +70,6 @@ fn zoom_blur(use_b: bool, uv: vec2f, s: f32, amt: f32) -> vec4f {
 }
 "#;
 
-/// Horizontal gaussian motion blur of A or B offset by `off` (uv) and scaled
-/// by `s`, sigma in uv widths; sampling wraps around like a pan.
-pub(crate) const HBLUR: &str = r#"
-fn hsample(use_b: bool, q: vec2f) -> vec4f {
-    let w = vec2f(fract(q.x), clamp(q.y, 0.0, 1.0));
-    return select(sa(w), sb(w), use_b);
-}
-fn hblur(use_b: bool, uv: vec2f, off: vec2f, s: f32, sigma: f32) -> vec4f {
-    let base = zoom_uv(uv, s, vec2f(0.5)) - off;
-    if (sigma <= 1e-4) { return hsample(use_b, base); }
-    let j = hash12(uv * u.size) - 0.5;
-    var acc = vec4f(0.0);
-    var ws = 0.0;
-    for (var i = 0; i < 40; i = i + 1) {
-        let x = (f32(i) + j - 19.5) / 10.0; // -2..2 sigma
-        let w = exp(-0.5 * x * x);
-        acc = acc + w * hsample(use_b, base + vec2f(x * sigma, 0.0));
-        ws = ws + w;
-    }
-    return acc / ws;
-}
-"#;
-
 /// Fast wipe along `dir` (the direction the outgoing clip leaves towards),
 /// fitted frame by frame on Filmora's exports of Fast Wipe Left: the effect
 /// spans two frames on each side of the cut at the midpoint. With `f`
@@ -243,7 +220,11 @@ fn fx(uv: vec2f) -> vec4f {
             "The clip fades to white and the next one appears out of the white. Filmora: Dip to White.",
             &[],
         ),
-        lift_cut_body(&[(0.0, 0.0), (0.25, 0.65), (0.5, 1.0)], &[(0.0, 1.0), (0.5, 1.0), (0.75, 0.65), (1.0, 0.0)], [1.0; 3]),
+        lift_cut_body(
+            &[(0.0, 0.0), (0.25, 0.65), (0.5, 1.0)],
+            &[(0.0, 1.0), (0.5, 1.0), (0.75, 0.65), (1.0, 0.0)],
+            [1.0; 3],
+        ),
     );
     shader(
         r,
@@ -270,14 +251,17 @@ fn fx(uv: vec2f) -> vec4f {
              (1.30, 1.11, 1.04, 1.01 one, two and three frames away at 2 s), without blur.",
             &[ParamSpec::float("zoom", "Zoom", 1.0, 3.0, 1.3), ParamSpec::float("blur", "Blur", 0.0, 2.0, 0.0)],
         ),
-        body(&format!("{ZOOM_BLUR}{}", r#"
+        body(&format!(
+            "{ZOOM_BLUR}{}",
+            r#"
 fn fx(uv: vec2f) -> vec4f {
     let p = prog();
     let k = exp(-60.0 * abs(p - 0.5));
     let s = 1.0 + (p_zoom() - 1.0) * k;
     return zoom_blur(p >= 0.5, uv, s, 0.12 * p_blur() * k);
 }
-"#)),
+"#
+        )),
     );
     shader(
         r,

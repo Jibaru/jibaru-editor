@@ -193,7 +193,14 @@ fn fx(uv: vec2f) -> vec4f {
     );
     shader(
         r,
-        info("jb.negativo", "Invert", "Retro", Effect, "Inverts the colors like a photographic negative. Filmora equivalent: Invert.", &[]),
+        info(
+            "jb.negativo",
+            "Invert",
+            "Retro",
+            Effect,
+            "Inverts the colors like a photographic negative. Filmora equivalent: Invert.",
+            &[],
+        ),
         r#"
 fn fx(uv: vec2f) -> vec4f {
     let s = to_disp(sa(uv));
@@ -502,7 +509,10 @@ fn fx(uv: vec2f) -> vec4f {
             "Frames",
             Effect,
             "Rounded corners over black, or with a white border. Filmora equivalent: Rounded Frame.",
-            &[ParamSpec::float("radius", "Radius", 0.0, 100.0, 40.0), ParamSpec::boolean("white", "White border", false)],
+            &[
+                ParamSpec::float("radius", "Radius", 0.0, 100.0, 40.0),
+                ParamSpec::boolean("white", "White border", false),
+            ],
         ),
         r#"
 fn fx(uv: vec2f) -> vec4f {
