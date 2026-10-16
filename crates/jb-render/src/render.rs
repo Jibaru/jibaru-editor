@@ -8,7 +8,7 @@
 //! canvas-sized textures and blend those. Adjustment layers run their effects
 //! over a copy of everything below them.
 
-use crate::fx::{AuxImage, Bind, Blend, Dummies, FxCx, Pass, Pipelines, ShaderSrc, Uniforms, PRELUDE};
+use crate::fx::{panel, AuxImage, Bind, Blend, Dummies, FxCx, Pass, Pipelines, ShaderSrc, Uniforms, PRELUDE};
 use crate::pool::{Tex, TexturePool, UniformArena};
 use crate::registry::{AnimState, FxIo, FxKind, ParamValues, Registry};
 use crate::text::TextEngine;
@@ -501,7 +501,7 @@ impl<'a> Frame<'a> {
             return;
         }
         if let Some(p) = self.prepare(layer, depth) {
-            self.composite_prepared(accum, &p, layer.blend_mode);
+            self.composite_layer(accum, layer, &p, layer.blend_mode);
         }
     }
 
@@ -511,9 +511,95 @@ impl<'a> Frame<'a> {
         let t = self.cx.temp(w, h);
         self.clear(&t, [0.0; 4]);
         if let Some(p) = self.prepare(layer, depth) {
-            self.composite_prepared(&t, &p, BlendMode::Normal);
+            self.composite_layer(&t, layer, &p, BlendMode::Normal);
         }
         t
+    }
+
+    /// Parameters of the first canvas-space module `id` on the layer.
+    fn canvas_module(&self, layer: &Layer, id: &str) -> Option<ParamValues> {
+        layer.effects.iter().find_map(|e| {
+            let fx = self.registry.get(&e.kind)?;
+            (fx.info().id == id).then(|| ParamValues::resolve(fx.info(), &e.params))
+        })
+    }
+
+    /// Draws a prepared layer with its canvas-space modules (background fill
+    /// and drop shadow) underneath it.
+    fn composite_layer(&mut self, accum: &Tex, layer: &Layer, p: &Prepared, mode: BlendMode) {
+        if let Some(bg) = self.canvas_module(layer, panel::BACKGROUND) {
+            self.draw_background(accum, p, &bg);
+        }
+        if let Some(sh) = self.canvas_module(layer, panel::SHADOW) {
+            self.draw_shadow(accum, p, &sh);
+        }
+        self.composite_prepared(accum, p, mode);
+    }
+
+    /// Displayed half size of a prepared layer, in canvas pixels.
+    fn displayed_half(p: &Prepared) -> [f32; 2] {
+        let s = &p.state;
+        [p.fitted[0] * 0.5 * s.scale[0].abs() as f32, p.fitted[1] * 0.5 * s.scale[1].abs() as f32]
+    }
+
+    fn draw_background(&mut self, accum: &Tex, p: &Prepared, params: &ParamValues) {
+        let c = self.canvas_f();
+        let opacity = p.state.opacity.clamp(0.0, 1.0) as f32;
+        if opacity <= 0.0 {
+            return;
+        }
+        if params.get("mode").round() >= 1.0 {
+            let col = params.slot("color").unwrap_or([0.0, 0.0, 0.0, 1.0]);
+            let mut u = Uniforms::default();
+            u.e[0] = [col[0], col[1], col[2], col[3] * opacity];
+            let mut pass = Pass::full(&panel::canvas_shaders().fill, accum, u);
+            pass.load = true;
+            pass.blend = Blend::Over;
+            self.cx.draw(pass);
+            return;
+        }
+        let hd = Self::displayed_half(p);
+        if hd[0] < 0.01 || hd[1] < 0.01 {
+            return;
+        }
+        let cover = (c[0] / (2.0 * hd[0])).max(c[1] / (2.0 * hd[1]));
+        let half = [hd[0] * cover, hd[1] * cover];
+        let sigma_canvas = params.get("blur") / 100.0 * 60.0 * c[1] / 1080.0;
+        let sigma = sigma_canvas * p.tex.height as f32 / (2.0 * half[1]);
+        let blurred = self.cx.blur(&p.tex, sigma, sigma);
+        self.composite(accum, &blurred, [c[0] * 0.5, c[1] * 0.5], half, 0.0, opacity, BlendMode::Normal);
+    }
+
+    fn draw_shadow(&mut self, accum: &Tex, p: &Prepared, params: &ParamValues) {
+        let c = self.canvas_f();
+        let s = &p.state;
+        let opacity = s.opacity.clamp(0.0, 1.0) as f32;
+        let hd = Self::displayed_half(p);
+        if opacity <= 0.0 || hd[0] < 0.01 || hd[1] < 0.01 {
+            return;
+        }
+        let k1080 = c[1] / 1080.0;
+        // Texture pixels per canvas pixel.
+        let k = p.tex.height as f32 / (2.0 * hd[1]);
+        let sigma = (params.get("blur") * 0.5 * k1080 * k).max(0.0);
+        let pad = (3.0 * sigma).ceil() + 2.0;
+        let (tw, th) = (p.tex.width as f32, p.tex.height as f32);
+        let sil = self.cx.temp((tw + 2.0 * pad) as u32, (th + 2.0 * pad) as u32);
+        let col = params.slot("color").unwrap_or([0.0, 0.0, 0.0, 1.0]);
+        let mut u = Uniforms::default();
+        u.e[0] = [pad, pad, 0.0, 0.0];
+        u.e[1] = col;
+        u.e[2] = [(params.get("opacity") / 100.0).clamp(0.0, 1.0), 0.0, 0.0, 0.0];
+        self.cx.run(&panel::canvas_shaders().silhouette, &p.tex, None, &sil, u);
+        let blurred = self.cx.blur(&sil, sigma, sigma);
+        let half = [hd[0] * (tw + 2.0 * pad) / tw, hd[1] * (th + 2.0 * pad) / th];
+        let a = params.get("angle").to_radians();
+        let dist = params.get("distance") * k1080;
+        let center = [
+            c[0] * (0.5 + s.position[0] as f32) + dist * a.cos(),
+            c[1] * (0.5 + s.position[1] as f32) + dist * a.sin(),
+        ];
+        self.composite(accum, &blurred, center, half, (s.rotation as f32).to_radians(), opacity, BlendMode::Normal);
     }
 
     fn composite_prepared(&mut self, accum: &Tex, p: &Prepared, mode: BlendMode) {
