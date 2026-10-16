@@ -168,6 +168,9 @@ fn resolve_effects(effects: &[EffectInstance], local: Ticks, clip_len: Ticks) ->
         .collect()
 }
 
+/// Clip boundaries this close after a frame time count as at it (ticks).
+const BOUNDARY_SLACK: Ticks = 100;
+
 /// Returns the transition window `[from, to)` around the cut at `cut`.
 pub fn transition_window(tr: &Transition, cut: Ticks) -> (Ticks, Ticks) {
     match tr.alignment {
@@ -218,12 +221,13 @@ fn evaluate_at_depth(project: &Project, seq: &Sequence, t: Ticks, depth: usize) 
     let mut layers = Vec::new();
     for track in seq.tracks.iter().filter(|tr| tr.kind == TrackKind::Video && !tr.hidden) {
         let clips: Vec<&Clip> = track.clips.iter().filter(|c| !c.disabled).collect();
-        // A frame starting within a tick before a clip boundary is the first
-        // frame after it: frame times are rounded to ticks while Filmora
-        // writes boundaries rounded up, and it shows the next clip there (a
-        // clip starting 0.67 tick after a frame start, a 2 s Fast Zoom whose
-        // cut is 0.67 tick after one peaking on the incoming clip).
-        let t = clips.iter().flat_map(|c| [c.start, c.end]).find(|b| *b > t && *b - t <= 1).unwrap_or(t);
+        // A frame starting just before a clip boundary (within
+        // BOUNDARY_SLACK) is the first frame after it: frame times are
+        // rounded to ticks while Filmora writes boundaries a few ticks off
+        // the grid, and it shows the next clip there (clips starting 0.67
+        // and 2.3 ticks after a frame start; a 2 s Fast Zoom whose cut is
+        // 0.67 tick after one peaking on the incoming clip).
+        let t = clips.iter().flat_map(|c| [c.start, c.end]).find(|b| *b > t && *b - t <= BOUNDARY_SLACK).unwrap_or(t);
         let mut handled = false;
         // Transitions may extend past clip edges, so check them first.
         for pair in clips.windows(2) {

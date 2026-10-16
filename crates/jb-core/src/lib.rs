@@ -121,13 +121,13 @@ mod tests {
         let tr = plan.layers[0].transition.as_ref().unwrap();
         assert!((tr.progress - 0.5).abs() < 1e-9);
         assert_eq!(tr.incoming.clip_id, "b");
-        // A frame time rounded to one tick before the cut is the cut frame.
+        // A frame time a few ticks before the cut is the cut frame.
         let cut = 10 * TICKS_PER_SECOND;
         let plan = eval::evaluate(&h.project, h.project.main(), cut - 1);
         let tr = plan.layers[0].transition.as_ref().unwrap();
         assert!(tr.progress >= 0.5);
         assert_eq!(tr.incoming.local_time, 0);
-        let plan = eval::evaluate(&h.project, h.project.main(), cut - 2);
+        let plan = eval::evaluate(&h.project, h.project.main(), cut - 101);
         assert!(plan.layers[0].transition.as_ref().unwrap().progress < 0.5);
     }
 }
