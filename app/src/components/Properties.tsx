@@ -404,7 +404,7 @@ function MaskPane({ clip }: { clip: Clip }) {
               exec({ op: 'batch', commands: cmds })
             }}
           >
-            <m.icon size={26} strokeWidth={1.1} />
+            <m.icon size={34} strokeWidth={0.9} />
           </button>
         ))}
       </div>
@@ -527,8 +527,7 @@ function AudioTab({ clip, media }: { clip: Clip; media: MediaAsset | null }) {
                 <NumberField className="pvalue" value={p(draft.pan) * 100} onCommit={v => commit({ pan: float(Math.max(-100, Math.min(100, v)) / 100) })} />
                 <span className="pend"><Diamond /></span>
               </div>
-              <SliderRow label="Volume" value={p(draft.gain_db)} min={-60} max={10} unit="dB" onInput={v => live({ gain_db: float(v) })} onCommit={v => commit({ gain_db: float(v) })} />
-              <SliderRow label="Fade In" value={seconds(draft.fade_in)} min={0} max={Math.max(0.01, len / 2)} unit="s" keyframe={false} onInput={v => live({ fade_in: ticks(v) })} onCommit={v => commit({ fade_in: ticks(v) })} />
+                            <SliderRow label="Fade In" value={seconds(draft.fade_in)} min={0} max={Math.max(0.01, len / 2)} unit="s" keyframe={false} onInput={v => live({ fade_in: ticks(v) })} onCommit={v => commit({ fade_in: ticks(v) })} />
               <SliderRow label="Fade Out" value={seconds(draft.fade_out)} min={0} max={Math.max(0.01, len / 2)} unit="s" keyframe={false} onInput={v => live({ fade_out: ticks(v) })} onCommit={v => commit({ fade_out: ticks(v) })} />
               <SliderRow label="Pitch" value={draft.pitch ?? 0} min={-12} max={12} step={0.1} digits={1} centered onInput={v => live({ pitch: v })} onCommit={v => commit({ pitch: v })} />
               <div className="prow">
@@ -557,12 +556,12 @@ function CardWave({ media, clip }: { media: MediaAsset; clip: Clip }) {
         const from = Math.floor(seconds(clip.source_in ?? 0) * w.pps)
         const to = Math.ceil((seconds(clip.source_in ?? 0) + seconds(sourceLength(clip))) * w.pps)
         const slice = w.peaks.slice(from, to)
-        const n = 150
+        const n = Math.max(2, Math.min(150, slice.length))
         const out: number[] = []
         for (let i = 0; i < n; i++) {
           let m = 0
           for (let j = Math.floor((i * slice.length) / n); j < Math.floor(((i + 1) * slice.length) / n); j++) m = Math.max(m, slice[j])
-          out.push(Math.sqrt(m))
+          out.push(Math.min(1, m * 1.1))
         }
         setPeaks(out)
       }),
@@ -572,8 +571,8 @@ function CardWave({ media, clip }: { media: MediaAsset; clip: Clip }) {
     }
   }, [media.path, clip.source_in, clip.end, clip.start])
   return (
-    <svg className="wave-card-svg" viewBox="0 0 150 40" preserveAspectRatio="none">
-      {peaks && <path d={`M0 40 ${peaks.map((v, i) => `L${i} ${40 - v * 38} L${i + 1} ${40 - v * 38}`).join(' ')} L150 40 Z`} />}
+    <svg className="wave-card-svg" viewBox={`0 0 ${peaks?.length ?? 150} 40`} preserveAspectRatio="none">
+      {peaks && <path d={`M0 40 ${peaks.map((v, i) => `L${i + 0.5} ${40 - v * 38}`).join(' ')} L${peaks.length} 40 Z`} />}
     </svg>
   )
 }
@@ -677,7 +676,7 @@ function SpeedTab({ clip, track, project }: { clip: Clip; track: Track; project:
               <Toggle on={pitch} onChange={setPitch} />
             </div>
             <div className="prow select-row">
-              <span className="plabel">Frame Interpolation <IcHelp size={13} /></span>
+              <span className="plabel"><span className="ellipsis">Frame Interpolation</span> <IcHelp size={13} /></span>
               <Select value="sampling" options={[{ value: 'sampling', label: 'Frame Sampling' }, { value: 'blending', label: 'Frame Blending' }, { value: 'flow', label: 'Optical Flow' }]} onChange={() => {}} />
             </div>
           </div>
