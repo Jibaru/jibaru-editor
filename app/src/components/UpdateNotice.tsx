@@ -2,6 +2,7 @@
 // available" with the release notes and Update now / Remind me later / Skip
 // this version, download progress, and the result of a manual check.
 
+import { useState } from 'react'
 import {
   autoCheckEnabled,
   dismiss,
@@ -32,6 +33,7 @@ function plainNotes(md: string): string {
 export function UpdateNotice() {
   const phase = useUpdatePhase()
   const exporting = useEditor(s => s.exportJob?.state === 'running')
+  const [auto, setAuto] = useState(autoCheckEnabled)
   if (phase.kind === 'hidden') return null
 
   const close = (
@@ -41,7 +43,14 @@ export function UpdateNotice() {
   )
   const autoToggle = (
     <label className="update-auto">
-      <input type="checkbox" checked={autoCheckEnabled()} onChange={e => setAutoCheck(e.target.checked)} />
+      <input
+        type="checkbox"
+        checked={auto}
+        onChange={e => {
+          setAutoCheck(e.target.checked)
+          setAuto(e.target.checked)
+        }}
+      />
       Check for updates automatically
     </label>
   )
