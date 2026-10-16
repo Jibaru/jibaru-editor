@@ -2,20 +2,20 @@
 //!
 //! One shader (`shaders/lane1/table.wgsl`) renders every item: each side is
 //! the clip seen through a camera (shift, zoom, rotation, optional
-//! perspective) with spin / zoom / motion blur, and the frame is a
+//! perspective, radial bulge and swirl) with spin / zoom / motion blur, and the frame is a
 //! per-channel mix `al * A' + be * B' + ga` in display space (dissolves,
 //! flashes, fades and tints). Each item is a table of those parameters at
 //! progress keyframes, fitted on Filmora's export of the item (2.002 s,
 //! centred on the cut) and simplified to the keyframes that linear
 //! interpolation needs. Other durations scale in progress.
 //!
-//! Row layout ([`ROW`] floats): `p`, A `[tx, ty, k, phi, bx, by, zb, rb, px, py]`,
+//! Row layout ([`ROW`] floats): `p`, A `[tx, ty, k, phi, bx, by, zb, rb, px, py, dk, sw]`,
 //! B the same, `al.rgb`, `be.rgb`, `ga.rgb`.
 
 use super::{info, FxCx, ShaderSrc, Uniforms};
 use crate::registry::{Effect, FxInfo, FxIo, FxKind, Registry};
 
-pub const ROW: usize = 30;
+pub const ROW: usize = 34;
 
 /// Edge handling of a side's source.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -48,7 +48,7 @@ pub fn sample_rows(rows: &[[f32; ROW]], p: f32) -> [f32; ROW] {
     let identity = {
         let mut r = [0.0; ROW];
         r[3] = 1.0;
-        r[13] = 1.0;
+        r[15] = 1.0;
         r
     };
     if rows.is_empty() {
@@ -79,14 +79,14 @@ impl Effect for TableFx {
         let r = sample_rows(self.spec.rows, io.progress);
         let mut u = Uniforms { progress: io.progress, time: io.time, ..Default::default() };
         for side in 0..2 {
-            let o = 1 + side * 10;
+            let o = 1 + side * 12;
             u.p[side * 3] = [r[o], r[o + 1], r[o + 2], r[o + 3]];
             u.p[side * 3 + 1] = [r[o + 4], r[o + 5], r[o + 6], r[o + 7]];
-            u.p[side * 3 + 2] = [r[o + 8], r[o + 9], 0.0, 0.0];
+            u.p[side * 3 + 2] = [r[o + 8], r[o + 9], r[o + 10], r[o + 11]];
         }
-        u.p[6] = [r[21], r[22], r[23], 0.0];
-        u.p[7] = [r[24], r[25], r[26], 0.0];
-        u.p[8] = [r[27], r[28], r[29], 0.0];
+        u.p[6] = [r[25], r[26], r[27], 0.0];
+        u.p[7] = [r[28], r[29], r[30], 0.0];
+        u.p[8] = [r[31], r[32], r[33], 0.0];
         u.p[9] = [self.spec.edge as u32 as f32, self.spec.order as f32, 0.0, 0.0];
         cx.run(&self.shader, io.a, io.b, io.out, u);
     }
