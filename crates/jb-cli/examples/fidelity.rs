@@ -251,7 +251,10 @@ fn envelope(path: &Path, start: f64, len: f64, win: f64) -> Result<Vec<f64>> {
     let out = Command::new("ffmpeg")
         .args(["-v", "error", "-nostdin", "-ss", &format!("{start:.6}"), "-i"])
         .arg(path)
-        .args(["-t", &format!("{len:.6}"), "-vn", "-ac", "1", "-ar", "16000", "-f", "f32le", "-"])
+        // Pad to the first timestamp: a stream whose first packet starts after
+        // 0 (AAC priming trimmed by the edit list) must not shift the samples.
+        .args(["-t", &format!("{len:.6}"), "-vn", "-af", "aresample=async=1:first_pts=0"])
+        .args(["-ac", "1", "-ar", "16000", "-f", "f32le", "-"])
         .output()?;
     let s: Vec<f32> = out.stdout.chunks_exact(4).map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]])).collect();
     let n = (win * rate) as usize;

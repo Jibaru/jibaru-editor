@@ -327,6 +327,28 @@ pub fn clip_gain(clip: &Clip, local: Ticks) -> f64 {
     g
 }
 
+/// Audio gain from transitions at timeline time `t`: across a transition's
+/// window the outgoing clip ramps linearly from 1 to 0 and the incoming one
+/// from 0 to 1, each heard only on its own side of the cut (no overlap), as
+/// Filmora's "audio fade" renders (measured: −6 dB at the cut, linear in
+/// amplitude on both sides).
+pub fn transition_gain(clip: &Clip, prev: Option<&Clip>, t: Ticks) -> f64 {
+    let mut g = 1.0;
+    if let Some(tr) = &clip.transition_out {
+        let (from, to) = transition_window(tr, clip.end);
+        if t >= from && t < clip.end {
+            g *= 1.0 - (t - from) as f64 / (to - from).max(1) as f64;
+        }
+    }
+    if let Some(tr) = prev.and_then(|p| p.transition_out.as_ref()) {
+        let (from, to) = transition_window(tr, clip.start);
+        if t >= clip.start && t < to {
+            g *= (t - from) as f64 / (to - from).max(1) as f64;
+        }
+    }
+    g
+}
+
 /// Audible voices of `seq` at time `t`, recursing into nested sequences.
 pub fn audio_voices(project: &Project, seq: &Sequence, t: Ticks) -> Vec<AudioVoice> {
     let mut out = Vec::new();
@@ -347,9 +369,13 @@ fn collect_voices(
         return;
     }
     for track in seq.tracks.iter().filter(|tr| !tr.muted) {
-        for clip in track.clips.iter().filter(|c| !c.disabled && !c.speed.freeze && c.contains(t)) {
+        for (i, clip) in track.clips.iter().enumerate() {
+            if clip.disabled || clip.speed.freeze || !clip.contains(t) {
+                continue;
+            }
             let local = t - clip.start;
-            let g = gain * clip_gain(clip, local);
+            let prev = i.checked_sub(1).map(|j| &track.clips[j]).filter(|p| !p.disabled && p.end == clip.start);
+            let g = gain * clip_gain(clip, local) * transition_gain(clip, prev, t);
             let r = rate * clip.speed.ramp.as_ref().map_or(clip.speed.rate, |p| p.sample_f64(local));
             match &clip.source {
                 ClipSource::Media { media_id } => {
