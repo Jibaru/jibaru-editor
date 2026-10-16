@@ -218,6 +218,12 @@ fn evaluate_at_depth(project: &Project, seq: &Sequence, t: Ticks, depth: usize) 
     let mut layers = Vec::new();
     for track in seq.tracks.iter().filter(|tr| tr.kind == TrackKind::Video && !tr.hidden) {
         let clips: Vec<&Clip> = track.clips.iter().filter(|c| !c.disabled).collect();
+        // A frame starting within a tick before a clip boundary is the first
+        // frame after it: frame times are rounded to ticks while Filmora
+        // writes boundaries rounded up, and it shows the next clip there (a
+        // clip starting 0.67 tick after a frame start, a 2 s Fast Zoom whose
+        // cut is 0.67 tick after one peaking on the incoming clip).
+        let t = clips.iter().flat_map(|c| [c.start, c.end]).find(|b| *b > t && *b - t <= 1).unwrap_or(t);
         let mut handled = false;
         // Transitions may extend past clip edges, so check them first.
         for pair in clips.windows(2) {
@@ -225,11 +231,6 @@ fn evaluate_at_depth(project: &Project, seq: &Sequence, t: Ticks, depth: usize) 
             let Some(tr) = &a.transition_out else { continue };
             let (from, to) = transition_window(tr, a.end);
             if t >= from && t < to {
-                // A frame starting within a tick of the cut is the first frame
-                // after it: frame times are rounded to ticks, and Filmora
-                // shows the incoming side there (a 2 s Fast Zoom whose cut is
-                // 0.67 tick after a frame start peaks on the incoming clip).
-                let t = if t < a.end && a.end - t <= 1 { a.end } else { t };
                 // Clips are held on their edge frame when the window exceeds them.
                 let ta = t.min(a.end - 1).max(a.start);
                 let tb = t.max(b.start).min(b.end - 1);
