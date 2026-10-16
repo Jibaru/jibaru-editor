@@ -1,6 +1,6 @@
 // Small Filmora-style form controls used by the properties panel.
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { IcCaretDown, IcCaretUp, IcChevronDown, IcDiamond, IcHelp, IcReset } from './icons'
+import { IcCaretDown, IcCaretUp, IcChevronDown, IcChevronLeft, IcChevronRight, IcDiamond, IcHelp, IcReset } from './icons'
 
 export function Toggle({ on, onChange, disabled, title }: { on: boolean; onChange?: (v: boolean) => void; disabled?: boolean; title?: string }) {
   return (
@@ -89,6 +89,7 @@ export function NumberField({
   suffix,
   className = '',
   disabled,
+  title,
 }: {
   value: number
   onCommit: (v: number) => void
@@ -97,6 +98,7 @@ export function NumberField({
   suffix?: string
   className?: string
   disabled?: boolean
+  title?: string
 }) {
   const [text, setText] = useState<string | null>(null)
   const shown = text ?? value.toFixed(digits) + (suffix ?? '')
@@ -107,7 +109,7 @@ export function NumberField({
     if (Number.isFinite(v) && v !== value) onCommit(v)
   }
   return (
-    <label className={`numfield ${className} ${disabled ? 'disabled' : ''}`}>
+    <label className={`numfield ${className} ${disabled ? 'disabled' : ''}`} title={title}>
       {prefix && <span className="numfield-prefix">{prefix}</span>}
       <input
         value={shown}
@@ -131,11 +133,49 @@ export function NumberField({
   )
 }
 
-export function Diamond({ active, onClick, disabled }: { active?: boolean; onClick?: () => void; disabled?: boolean }) {
+/** Keyframe state of one property row: diamond plus previous/next arrows. */
+export interface Kf {
+  /** A keyframe sits under the playhead. */
+  active: boolean
+  /** The param has keyframes (shows the navigation arrows). */
+  animated?: boolean
+  onToggle: () => void
+  onPrev?: () => void
+  onNext?: () => void
+}
+
+export function Diamond({ active, onClick, disabled, title }: { active?: boolean; onClick?: () => void; disabled?: boolean; title?: string }) {
   return (
-    <button className={`kf ${active ? 'on' : ''}`} onClick={onClick} disabled={disabled} title="Add keyframe">
+    <button
+      className={`kf ${active ? 'on' : ''}`}
+      onClick={e => {
+        e.stopPropagation()
+        onClick?.()
+      }}
+      disabled={disabled || !onClick}
+      title={title ?? (active ? 'Remove keyframe' : 'Add keyframe')}
+    >
       <IcDiamond size={16} />
     </button>
+  )
+}
+
+export function KfControl({ kf, disabled }: { kf?: Kf | boolean; disabled?: boolean }) {
+  if (!kf || kf === true) return kf ? <Diamond disabled /> : null
+  return (
+    <span className={`kf-nav ${kf.animated ? 'animated' : ''}`}>
+      {kf.animated && (
+        <button className="kf-arrow" title="Previous keyframe" disabled={disabled} onClick={kf.onPrev}>
+          <IcChevronLeft size={10} />
+        </button>
+      )}
+      <Diamond active={kf.active} onClick={kf.onToggle} disabled={disabled} />
+      {kf.animated && (
+        <button className="kf-arrow" title="Next keyframe" disabled={disabled} onClick={kf.onNext}>
+          <IcChevronRight size={10} />
+        </button>
+      )}
+    </span>
   )
 }
 
@@ -158,7 +198,7 @@ export function SliderRow({
   unit,
   onInput,
   onCommit,
-  keyframe = true,
+  keyframe = false,
   disabled,
   gradient,
   centered,
@@ -174,7 +214,7 @@ export function SliderRow({
   unit?: string
   onInput?: (v: number) => void
   onCommit: (v: number) => void
-  keyframe?: boolean
+  keyframe?: boolean | Kf
   disabled?: boolean
   gradient?: string
   centered?: boolean
@@ -189,7 +229,7 @@ export function SliderRow({
       <span className="punit">{unit ?? ''}</span>
       <span className="pend">
         {reset && <ResetIcon onClick={reset} />}
-        {keyframe && <Diamond disabled={disabled} />}
+        <KfControl kf={keyframe} disabled={disabled} />
       </span>
     </div>
   )
@@ -206,31 +246,41 @@ export function Module({
   keyframe,
   extra,
   children,
+  toggleDisabled,
+  note,
 }: {
   title: string
   toggle?: boolean
   onToggle?: (v: boolean) => void
   defaultOpen?: boolean
-  help?: boolean
+  help?: boolean | string
   badge?: string
-  keyframe?: boolean
+  keyframe?: boolean | Kf
   extra?: ReactNode
   children?: ReactNode
+  /** Switch shown but not usable (e.g. a cloud feature). */
+  toggleDisabled?: boolean
+  /** Shown instead of the body when the module is unavailable. */
+  note?: string
 }) {
   const [open, setOpen] = useState(defaultOpen)
   return (
-    <section className={`module ${toggle === false ? 'off' : ''}`}>
+    <section className={`module ${toggle === false ? 'off' : ''}`} data-module={title}>
       <div className="module-head" onClick={() => setOpen(!open)}>
-        {toggle !== undefined && <Toggle on={toggle} onChange={onToggle} />}
+        {toggle !== undefined && <Toggle on={toggle} onChange={onToggle} disabled={toggleDisabled} title={toggleDisabled ? note : undefined} />}
         <span className="module-title">{title}</span>
-        {help && <IcHelp size={14} className="help" />}
+        {help && (
+          <span className="help" title={typeof help === 'string' ? help : title}>
+            <IcHelp size={14} />
+          </span>
+        )}
         {badge && <span className="new-badge">{badge}</span>}
         <span className="module-caret">{open ? <IcCaretDown size={12} /> : <IcCaretUp size={12} />}</span>
         <span className="spacer" />
         {extra}
-        {keyframe && <Diamond />}
+        <KfControl kf={keyframe} />
       </div>
-      {open && children && <div className="module-body">{children}</div>}
+      {open && (children || note) && <div className="module-body">{note && <p className="mask-hint">{note}</p>}{children}</div>}
     </section>
   )
 }
@@ -244,7 +294,7 @@ export function Select<T extends string>({
   disabled,
 }: {
   value: T
-  options: { value: T; label: string }[]
+  options: { value: T; label: string; disabled?: boolean; title?: string }[]
   onChange: (v: T) => void
   className?: string
   disabled?: boolean
@@ -271,6 +321,8 @@ export function Select<T extends string>({
             <button
               key={o.value}
               className={o.value === value ? 'on' : ''}
+              disabled={o.disabled}
+              title={o.title}
               onClick={() => {
                 setOpen(false)
                 onChange(o.value)

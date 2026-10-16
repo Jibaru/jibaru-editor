@@ -12,6 +12,8 @@ import {
   type Ticks,
   type Track,
   type Transform,
+  type Interpolation,
+  type Value,
 } from './types'
 
 export const float = (v: number): Param => ({ value: { type: 'float', value: v } })
@@ -141,6 +143,53 @@ export function displayTracks(s: Sequence): Track[] {
   const video = s.tracks.filter(t => t.kind === 'video').reverse()
   const audio = s.tracks.filter(t => t.kind === 'audio')
   return [...video, ...audio]
+}
+
+const shape = (i: Interpolation | undefined, k: number) =>
+  i === 'hold' ? 0 : i === 'ease_in' ? k * k : i === 'ease_out' ? 1 - (1 - k) * (1 - k) : i === 'ease_in_out' ? k * k * (3 - 2 * k) : k
+
+/** Value of a float param at clip-local time `t` (`Param::sample`). */
+export function sampleParam(p: Param | undefined, t: Ticks, fallback = 0): number {
+  if (!p) return fallback
+  const num = (v: Value) => (v.type === 'float' ? v.value : v.type === 'bool' ? Number(v.value) : fallback)
+  const kfs = p.keyframes ?? []
+  if (!kfs.length) return num(p.value)
+  if (t <= kfs[0].time) return num(kfs[0].value)
+  for (let i = 1; i < kfs.length; i++)
+    if (t < kfs[i].time) {
+      const a = kfs[i - 1]
+      const b = kfs[i]
+      const k = (t - a.time) / Math.max(1, b.time - a.time)
+      return num(a.value) + (num(b.value) - num(a.value)) * shape(a.interpolation, k)
+    }
+  return num(kfs[kfs.length - 1].value)
+}
+
+/** The param a keyframe path (`transform.scale_x`, `opacity`, `effect.<id>.<name>`) points at. */
+export function paramAt(clip: Clip, path: string): Param | undefined {
+  const t = clip.transform
+  switch (path) {
+    case 'transform.position_x':
+      return t?.position_x
+    case 'transform.position_y':
+      return t?.position_y
+    case 'transform.scale_x':
+    case 'transform.scale':
+      return t?.scale_x
+    case 'transform.scale_y':
+      return t?.scale_y
+    case 'transform.rotation':
+      return t?.rotation
+    case 'opacity':
+      return clip.opacity
+    case 'volume':
+      return clip.audio?.gain_db
+    case 'pan':
+      return clip.audio?.pan
+  }
+  const m = /^effect\.([^.]+)\.(.+)$/.exec(path)
+  if (!m) return undefined
+  return [...(clip.effects ?? []), ...(clip.animations ?? [])].find(e => e.id === m[1])?.params?.[m[2]]
 }
 
 /** True if [start,end) fits on the track without overlapping clips other than `ignore`. */

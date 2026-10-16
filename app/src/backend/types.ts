@@ -39,6 +39,14 @@ export interface Backend {
   pickSavePath(opts: { title: string; defaultPath?: string; filters?: FileFilter[] }): Promise<string | null>
   /** The renderer's effect registry (drives the Transitions/Effects/Filters tabs). */
   fxCatalog(): Promise<FxEntry[]>
+  /** Measures the clip's loudness and sets Auto Normalization; `null` turns it off. */
+  normalizeClip(clipId: string, targetLufs: number | null): Promise<Snapshot>
+  /** Runs the motion analysis of a `jb.stabilize` effect and stores its `data`. */
+  analyzeStabilization(clipId: string, effectId: string): Promise<Snapshot>
+  /** Saves a PNG frame (Filmora's snapshot) and imports it into the media bin. */
+  saveSnapshot(png: Blob, name: string): Promise<Snapshot | null>
+  /** Opens an http(s) URL in the system browser. */
+  openUrl(url: string): Promise<void>
   /** Called when the project changes from outside this window (agents, CLI). */
   onExternalChange(cb: (s: Snapshot) => void): () => void
   media: MediaUrls
@@ -69,6 +77,8 @@ export interface ExportRequest {
   bit_rate?: number | null
   range: [Ticks, Ticks] | null
   audio: boolean
+  /** Use a hardware encoder when available (default true). */
+  hardware?: boolean
 }
 
 export interface ExportProgress {

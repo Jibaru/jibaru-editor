@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { installShortcuts } from './actions'
 import { backend } from './backend'
 import { ExportDialog } from './components/ExportDialog'
@@ -20,9 +20,10 @@ export default function App() {
   const toast = useEditor(s => s.toast)
   const exportOpen = useEditor(s => s.exportOpen)
   const drag = useLibDrag()
-  const [libW, setLibW] = useState(562)
-  const [propsW, setPropsW] = useState(348)
-  const [topH, setTopH] = useState(459)
+  const { libW, propsW, topH } = useEditor(s => s.layout)
+  const fullscreen = useEditor(s => s.playerFullscreen)
+  type L = { libW: number; propsW: number; topH: number }
+  const setL = (f: (l: L) => Partial<L>) => setState(s => ({ layout: { ...s.layout, ...f(s.layout) } }))
 
   useEffect(() => {
     load()
@@ -50,19 +51,19 @@ export default function App() {
   if (!ready) return <div className="app loading" />
 
   return (
-    <div className="app">
+    <div className={`app ${fullscreen ? 'player-fs' : ''}`}>
       <TitleBar />
       <div className="workspace" style={{ gridTemplateColumns: `minmax(0,1fr) 6px ${propsW}px` }}>
         <div className="left-col" style={{ gridTemplateRows: `${topH}px 6px minmax(0,1fr)` }}>
           <div className="top-row" style={{ gridTemplateColumns: `${libW}px 6px minmax(0,1fr)` }}>
             <Library />
-            <Splitter dir="x" onDrag={d => setLibW(w => clampW(w + d, 340, 900))} />
+            <Splitter dir="x" onDrag={d => setL(l => ({ libW: clampW(l.libW + d, 340, 900) }))} />
             <Player />
           </div>
-          <Splitter dir="y" onDrag={d => setTopH(h => clampW(h + d, 260, innerHeight - 260))} />
+          <Splitter dir="y" onDrag={d => setL(l => ({ topH: clampW(l.topH + d, 260, innerHeight - 260) }))} />
           <Timeline />
         </div>
-        <Splitter dir="x" onDrag={d => setPropsW(w => clampW(w - d, 300, 560))} />
+        <Splitter dir="x" onDrag={d => setL(l => ({ propsW: clampW(l.propsW - d, 300, 560) }))} />
         <Properties />
       </div>
       {menu && <ContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={() => setState({ menu: null })} />}

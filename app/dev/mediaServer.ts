@@ -141,6 +141,20 @@ function serveFile(req: IncomingMessage, res: ServerResponse, file: string) {
   }
 }
 
+const MEDIA_EXT = /\.(mp4|mov|m4v|mkv|webm|avi|mts|mp3|wav|m4a|aac|flac|ogg|jpe?g|png|heic|webp|gif)$/i
+
+function listMedia(dir: string): string[] {
+  if (!fs.statSync(dir).isDirectory()) return [dir]
+  const out: string[] = []
+  for (const name of fs.readdirSync(dir).sort()) {
+    if (name.startsWith('.')) continue
+    const p = path.join(dir, name)
+    if (fs.statSync(p).isDirectory()) out.push(...listMedia(p))
+    else if (MEDIA_EXT.test(name)) out.push(p)
+  }
+  return out
+}
+
 export function devMediaServer(): Plugin {
   return {
     name: 'jb-dev-media',
@@ -168,6 +182,9 @@ export function devMediaServer(): Plugin {
           probe(file).then(m => send('application/json')(Buffer.from(JSON.stringify(m))), onErr)
         } else if (route === 'file') {
           serveFile(req, res, file)
+        } else if (route === 'list') {
+          // Media files under a folder (Import Media Folder), like the app's import_media.
+          send('application/json')(Buffer.from(JSON.stringify(listMedia(file))))
         } else fail(404, 'unknown route')
       })
     },

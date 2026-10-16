@@ -181,6 +181,11 @@ export class NativePreview implements PreviewRenderer {
     this.hud.hidden = !getState().showStats
   }
 
+  pixels(): ImageData | null {
+    if (!this.canvas.width || !this.canvas.height) return null
+    return this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height)
+  }
+
   async snapshot(): Promise<Blob | null> {
     // Full-resolution frame from the renderer, not the preview canvas.
     const s = getState()

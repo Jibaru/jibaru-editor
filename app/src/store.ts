@@ -55,6 +55,14 @@ export interface EditorState {
   proxies: Record<string, ProxyStatus>
   exportJob: ExportJob | null
   autosavedAt: number | null
+  /** Color picking from the player (eyedropper): receives sRGB 0..1. */
+  eyedropper: ((rgb: [number, number, number]) => void) | null
+  /** Source monitor in/out marks per media id (seconds). */
+  sourceRanges: Record<string, [number, number]>
+  /** The player fills the window (Full Screen preview). */
+  playerFullscreen: boolean
+  /** Panel sizes in pixels: library width, properties width, top row height. */
+  layout: { libW: number; propsW: number; topH: number }
 }
 
 export type ExportJob =
@@ -90,6 +98,10 @@ let state: EditorState = {
   proxies: {},
   exportJob: null,
   autosavedAt: null,
+  eyedropper: null,
+  sourceRanges: {},
+  playerFullscreen: false,
+  layout: { libW: 562, propsW: 348, topH: 459 },
 }
 
 function storedQuality(): EditorState['previewQuality'] {
@@ -145,14 +157,36 @@ function applySnapshot(snap: Snapshot) {
   if (opened) requestAnimationFrame(() => zoomToFit())
 }
 
+let inflightCount = 0
+/** Backend calls still running (UI tests wait for 0 before reading the project). */
+export const inflight = () => inflightCount
+
 /** Runs one command on the backend. Returns false (and shows the error) on failure. */
 export async function exec(cmd: Command): Promise<boolean> {
+  inflightCount++
   try {
     applySnapshot(await backend.execute(cmd))
     return true
   } catch (e) {
     toast(String(e), 'error')
     return false
+  } finally {
+    inflightCount--
+  }
+}
+
+/** Applies the snapshot a backend call resolves with (errors become a toast). */
+export async function applyBackend(p: Promise<Snapshot | null>): Promise<boolean> {
+  inflightCount++
+  try {
+    const snap = await p
+    if (snap) applySnapshot(snap)
+    return true
+  } catch (e) {
+    toast(String(e), 'error')
+    return false
+  } finally {
+    inflightCount--
   }
 }
 
@@ -265,7 +299,10 @@ export async function saveProject(as = false): Promise<boolean> {
     applySnapshot(saved)
     const warn = saved.save_warnings ?? []
     if (warn.length) toast(`Saved with ${warn.length} warning${warn.length > 1 ? 's' : ''}: ${warn.slice(0, 2).join('; ')}`, 'error')
-    else toast(`Saved ${path.split(/[/\\]/).pop()}`)
+    else {
+      const notes = saved.save_notes ?? []
+      toast(`Saved ${path.split(/[/\\]/).pop()}${notes.length ? ` (${notes.length} edit${notes.length > 1 ? 's' : ''} kept for Jibaru only)` : ''}`)
+    }
     return true
   } catch (e) {
     toast(String(e), 'error')
@@ -359,11 +396,68 @@ export function setNativeClock(on: boolean) {
   nativeClock = on
 }
 
-/** Marks the playhead as the start or end of the in/out range. */
+let sourceClock: (() => number) | null = null
+/** The source monitor registers its clock so I/O mark the media it shows. */
+export function registerSourceClock(f: () => number) {
+  sourceClock = f
+  return () => {
+    if (sourceClock === f) sourceClock = null
+  }
+}
+
+/** Marks the playhead as the start or end of the in/out range (or of the source range in the source monitor). */
 export function mark(which: 'in' | 'out') {
+  if (state.playerMode === 'source' && state.sourceMedia && sourceClock) {
+    const id = state.sourceMedia
+    const m = project()?.media.find(x => x.id === id)
+    if (!m) return
+    const total = m.duration / 10_000_000
+    const t = sourceClock()
+    const cur = state.sourceRanges[id] ?? [0, total]
+    const r: [number, number] = which === 'in' ? [Math.min(t, cur[1]), cur[1]] : [cur[0], Math.max(t, cur[0])]
+    setState(s => ({ sourceRanges: { ...s.sourceRanges, [id]: r } }))
+    return
+  }
   const t = state.playhead
   if (which === 'in') setState(s => ({ markIn: t, markOut: s.markOut != null && s.markOut <= t ? null : s.markOut }))
   else setState(s => ({ markOut: t, markIn: s.markIn != null && s.markIn >= t ? null : s.markIn }))
+}
+
+/** Adds a sequence marker at the playhead (Filmora's M). */
+export async function addMarkerAtPlayhead() {
+  const p = project()
+  if (!p) return
+  const seq = mainSequence(p)
+  const at = state.playhead
+  if ((seq.markers ?? []).some(m => m.time === at)) return toast('There is already a marker here')
+  const n = (seq.markers ?? []).length + 1
+  await exec({ op: 'add_marker', sequence_id: null, clip_id: null, marker: { id: newId(), time: at, duration: 0, name: `Marker ${n}`, color: [0, 206 / 255, 208 / 255, 1] } })
+}
+
+/** Layout presets of the title bar's Layout menu. */
+export function setLayout(kind: 'default' | 'player' | 'timeline') {
+  const h = innerHeight
+  const layout =
+    kind === 'player'
+      ? { libW: 400, propsW: 320, topH: Math.max(260, Math.round(h * 0.62)) }
+      : kind === 'timeline'
+        ? { libW: 562, propsW: 348, topH: Math.max(260, Math.round(h * 0.38)) }
+        : { libW: 562, propsW: 348, topH: 459 }
+  setState({ layout })
+}
+
+/** Player full screen: the player fills the window (and the window the screen in the app). */
+export async function setPlayerFullscreen(on: boolean) {
+  setState({ playerFullscreen: on })
+  try {
+    if (backend.kind === 'tauri') {
+      const { getCurrentWindow } = await import('@tauri-apps/api/window')
+      await getCurrentWindow().setFullscreen(on)
+    } else if (on) await document.documentElement.requestFullscreen?.()
+    else if (document.fullscreenElement) await document.exitFullscreen()
+  } catch {
+    /* the window stays as it is; the player still fills it */
+  }
 }
 
 export function setPreviewQuality(q: EditorState['previewQuality']) {
@@ -508,6 +602,12 @@ export async function addMediaToTimeline(m: MediaAsset, start: Ticks, trackId?: 
   const seq = mainSequence(p)
   const kind = m.kind === 'audio' ? 'audio' : 'video'
   const clip = clipFromMedia(m, Math.max(0, start))
+  // The source monitor's in/out marks pick the part of the media to use.
+  const range = state.sourceRanges[m.id]
+  if (range && m.kind !== 'image' && range[1] > range[0]) {
+    clip.source_in = ticks(range[0])
+    clip.end = clip.start + Math.max(ticks(0.1), ticks(range[1] - range[0]))
+  }
   const target = trackId ? findTrack(p, trackId) : null
   let trackForClip: string | null = null
   if (target && target.kind === kind && !target.locked && fits(target, clip.start, clip.end)) trackForClip = target.id

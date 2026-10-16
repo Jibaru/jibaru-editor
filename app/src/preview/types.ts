@@ -24,4 +24,6 @@ export interface PreviewRenderer {
   unmount(): void
   /** Current frame as an image, for the snapshot button. */
   snapshot?(): Promise<Blob | null>
+  /** Pixels of the frame on screen (scopes, eyedropper), when cheap to read. */
+  pixels?(): ImageData | null
 }

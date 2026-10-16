@@ -36,9 +36,15 @@ class MockHistory {
   path: string | null = null
   revision = 0
   savedRevision = 0
+  /** The project this history started from and the commands in effect since
+   * (undone ones dropped), so UI tests can replay them on the real core. */
+  initial: Project
+  applied: Command[] = []
+  undone: Command[] = []
 
   constructor(p: Project) {
     this.project = p
+    this.initial = structuredClone(p)
   }
 
   execute(cmd: Command) {
@@ -49,6 +55,8 @@ class MockHistory {
     this.redoStack = []
     this.project = next
     this.revision++
+    this.applied.push(structuredClone(cmd))
+    this.undone = []
   }
 
   undo() {
@@ -57,6 +65,7 @@ class MockHistory {
     this.redoStack.push(this.project)
     this.project = prev
     this.revision++
+    this.undone.push(this.applied.pop()!)
   }
 
   redo() {
@@ -65,6 +74,7 @@ class MockHistory {
     this.undoStack.push(this.project)
     this.project = next
     this.revision++
+    this.applied.push(this.undone.pop()!)
   }
 
   snapshot(): Snapshot {
@@ -145,7 +155,13 @@ export function createMockBackend(): Backend {
     probeMedia: probe,
     // Snapshot of `jibaru-editor --fx-catalog`; the app asks jb-render directly.
     fxCatalog: async () => catalog as FxEntry[],
-    async importMedia(paths) {
+    async importMedia(input) {
+      // Folders expand to the media files inside them (dev server listing).
+      const lists = await Promise.all(input.map(async p => {
+        const r = await fetch(`/__jb/list?${q({ path: p })}`)
+        return r.ok ? ((await r.json()) as string[]) : [p]
+      }))
+      const paths = lists.flat()
       const known = new Set(h.project.media.map(m => m.path))
       const assets = (await probe(paths.filter(p => !known.has(p)))).filter(a => !h.project.media.some(m => m.id === a.id))
       if (assets.length) h.execute({ op: 'batch', commands: assets.map(asset => ({ op: 'add_media', asset })) })
@@ -160,6 +176,27 @@ export function createMockBackend(): Backend {
       if (pickQueue.length) return pickQueue.shift()?.[0] ?? null
       return window.prompt(title, defaultPath ?? '/tmp/Untitled.jbp')
     },
+    // Loudness and motion analysis need the native engine; the mock records
+    // the command the app would run so UI tests can check the wiring.
+    async normalizeClip(clipId, targetLufs) {
+      h.execute({ op: 'set_normalization', clip_id: clipId, target_lufs: targetLufs, measured_lufs: targetLufs == null ? null : -20 })
+      return h.snapshot()
+    },
+    async analyzeStabilization(clipId, effectId) {
+      h.execute({ op: 'set_effect_params', clip_id: clipId, effect_id: effectId, params: { data: { value: { type: 'text', value: '30|0.0000,0.0000;0.0050,-0.0020' } } } })
+      return h.snapshot()
+    },
+    async saveSnapshot(png, name) {
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(png)
+      a.download = `${name}.png`
+      a.click()
+      ;(window as unknown as { __jbSnapshots?: string[] }).__jbSnapshots?.push(name)
+      return null
+    },
+    async openUrl(url) {
+      ;(window as unknown as { __jbOpened?: string[] }).__jbOpened?.push(url)
+    },
     onExternalChange(cb) {
       listeners.add(cb)
       return () => listeners.delete(cb)
@@ -168,12 +205,15 @@ export function createMockBackend(): Backend {
   }
 
   // Test hooks: load a project, queue dialog answers, simulate an agent edit.
+  Object.assign(window, { __jbOpened: [] as string[], __jbSnapshots: [] as string[] })
   ;(window as unknown as { __jbMock: unknown }).__jbMock = {
     setProject(p: Project) {
       h = new MockHistory(structuredClone(p))
       listeners.forEach(l => l(h.snapshot()))
     },
     project: () => structuredClone(h.project),
+    /** Initial project and the commands in effect, for replaying on jb-core. */
+    journal: () => ({ initial: structuredClone(h.initial), commands: structuredClone(h.applied) }),
     queuePick: (paths: string[] | null) => pickQueue.push(paths),
     external(cmd: Command) {
       h.execute(cmd)

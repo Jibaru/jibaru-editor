@@ -86,8 +86,8 @@ export const tauriBackend: Backend = {
   newProject: (name: string, settings?: Partial<ProjectSettings>) => invoke<Snapshot>('new_project', { name, settings: settings ?? null }),
   openProject: (path: string) => invoke<Snapshot>('open_project', { path }),
   async saveProject(path?: string) {
-    const r = await invoke<{ snapshot: Snapshot; warnings: string[] }>('save_project', { path: path ?? null })
-    return { ...r.snapshot, save_warnings: r.warnings }
+    const r = await invoke<{ snapshot: Snapshot; warnings: string[]; notes?: string[] }>('save_project', { path: path ?? null })
+    return { ...r.snapshot, save_warnings: r.warnings, save_notes: r.notes ?? [] }
   },
   execute: (command: Command) => invoke<Snapshot>('execute', { command }),
   undo: () => invoke<Snapshot>('undo'),
@@ -101,6 +101,15 @@ export const tauriBackend: Backend = {
     return Array.isArray(r) ? r : [r]
   },
   pickSavePath: ({ title, defaultPath, filters }) => save({ title, defaultPath, filters }),
+  normalizeClip: (clipId, targetLufs) => invoke<Snapshot>('normalize_clip', { clipId, targetLufs }),
+  analyzeStabilization: (clipId, effectId) => invoke<Snapshot>('analyze_stabilization', { clipId, effectId }),
+  async saveSnapshot(png, name) {
+    const bytes = new Uint8Array(await png.arrayBuffer())
+    let bin = ''
+    for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
+    return invoke<Snapshot>('save_snapshot', { png: btoa(bin), name })
+  },
+  openUrl: url => invoke('open_url', { url }),
   onExternalChange: cb => on<Snapshot>('project-changed', cb),
   media,
   engine,

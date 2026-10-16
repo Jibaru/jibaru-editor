@@ -70,6 +70,17 @@ export interface Track {
   muted?: boolean
   hidden?: boolean
   clips: Clip[]
+  height?: number
+  extra?: Extra
+}
+
+export interface Marker {
+  id: Id
+  time: Ticks
+  duration?: Ticks
+  name?: string
+  comment?: string
+  color?: [number, number, number, number]
   extra?: Extra
 }
 
@@ -77,6 +88,7 @@ export interface Sequence {
   id: Id
   name: string
   tracks: Track[]
+  markers?: Marker[]
   extra?: Extra
 }
 
@@ -102,7 +114,12 @@ export interface TitleData {
   stroke?: Stroke
   shadow?: Shadow
   background?: [number, number, number, number]
+  alignment?: TextAlignment
+  letter_spacing?: number
+  line_spacing?: number
 }
+
+export type TextAlignment = 'left' | 'center' | 'right'
 
 export type ClipSource =
   | { type: 'media'; media_id: Id }
@@ -111,10 +128,18 @@ export type ClipSource =
   | { type: 'color'; color: [number, number, number, number] }
   | { type: 'adjustment' }
 
+export interface SpeedPoint {
+  /** 0..1 position in the clip's source range. */
+  position: number
+  speed: number
+}
+
 export interface Speed {
   rate: number
   reverse?: boolean
   ramp?: Param
+  curve?: { preset: string; points: SpeedPoint[] }
+  freeze?: boolean
   maintain_pitch?: boolean
 }
 
@@ -135,6 +160,8 @@ export interface Transform {
 export type BlendMode =
   | 'normal' | 'multiply' | 'screen' | 'overlay' | 'darken' | 'lighten' | 'color_dodge'
   | 'color_burn' | 'hard_light' | 'soft_light' | 'difference' | 'exclusion' | 'add'
+  | 'linear_burn' | 'darker_color' | 'lighter_color' | 'vivid_light' | 'linear_light'
+  | 'pin_light' | 'hard_mix' | 'subtract' | 'divide'
 
 export interface AudioSettings {
   gain_db: Param
@@ -143,7 +170,15 @@ export interface AudioSettings {
   fade_out: Ticks
   pitch?: number
   muted?: boolean
+  normalize?: { target_lufs: number; measured_lufs?: number }
+  equalizer?: { preset: string; bands: number[] }
+  /** Noise reduction strength (maximum attenuation in dB). */
+  denoise_db?: number
+  /** Channel routing (Filmora's Audio Channels). */
+  channels?: AudioChannels
 }
+
+export type AudioChannels = 'stereo' | 'left' | 'right' | 'mono' | 'swap'
 
 export interface EffectInstance {
   id: Id
@@ -151,8 +186,11 @@ export interface EffectInstance {
   enabled?: boolean
   params?: Record<string, Param>
   range?: [Ticks, Ticks]
+  placement?: AnimationPlacement
   extra?: Extra
 }
+
+export type AnimationPlacement = 'in' | 'out' | 'loop' | 'combo'
 
 export type TransitionAlignment = 'center' | 'end_at_cut' | 'start_at_cut'
 
@@ -181,7 +219,9 @@ export interface Clip {
   animations?: EffectInstance[]
   transition_out?: Transition
   link_group?: Id
+  group?: Id
   disabled?: boolean
+  markers?: Marker[]
   extra?: Extra
 }
 
@@ -197,26 +237,95 @@ export interface Project {
 
 // ---------- command.rs ----------
 
+export type ClipAttribute = 'transform' | 'crop' | 'opacity' | 'blend_mode' | 'effects' | 'animations' | 'audio' | 'speed'
+
+export interface TitleStylePatch {
+  text?: string
+  font_family?: string
+  font_size?: number
+  color?: [number, number, number, number]
+  bold?: boolean
+  italic?: boolean
+  alignment?: TextAlignment
+  position?: [number, number]
+  stroke?: Stroke | null
+  shadow?: Shadow | null
+  background?: [number, number, number, number] | null
+  letter_spacing?: number
+  line_spacing?: number
+  animation?: { kind: string; placement?: AnimationPlacement; duration?: Ticks }
+}
+
 export type Command =
   | { op: 'add_media'; asset: MediaAsset }
   | { op: 'remove_media'; media_id: Id }
+  | { op: 'rename_media'; media_id: Id; name: string }
   | { op: 'add_track'; sequence_id: Id | null; kind: TrackKind; index: number | null }
   | { op: 'remove_track'; track_id: Id }
   | { op: 'set_track_flags'; track_id: Id; locked: boolean | null; muted: boolean | null; hidden: boolean | null }
+  | { op: 'move_track'; track_id: Id; index: number }
+  | { op: 'rename_track'; track_id: Id; name: string }
+  | { op: 'set_track_height'; track_id: Id; height: number | null }
   | { op: 'add_clip'; track_id: Id; clip: Clip }
+  | { op: 'insert_clip'; track_id: Id; clip: Clip }
+  | { op: 'overwrite_clip'; track_id: Id; clip: Clip }
   | { op: 'remove_clip'; clip_id: Id; ripple: boolean }
   | { op: 'move_clip'; clip_id: Id; start: Ticks; track_id: Id | null }
   | { op: 'trim_clip'; clip_id: Id; start: Ticks | null; end: Ticks | null }
+  | { op: 'ripple_trim'; clip_id: Id; edge: 'start' | 'end'; to: Ticks }
+  | { op: 'roll_edit'; clip_id: Id; at: Ticks }
+  | { op: 'slip_clip'; clip_id: Id; delta: Ticks }
   | { op: 'split_clip'; clip_id: Id; at: Ticks }
+  | { op: 'duplicate_clip'; clip_id: Id; start: Ticks | null; track_id: Id | null }
+  | { op: 'replace_media'; clip_id: Id; media_id: Id }
+  | { op: 'set_clip_enabled'; clip_id: Id; enabled: boolean }
+  | { op: 'freeze_frame'; clip_id: Id; at: Ticks; duration: Ticks }
+  | { op: 'detach_audio'; clip_id: Id; track_id: Id | null }
+  | { op: 'link_clips'; clip_ids: Id[] }
+  | { op: 'unlink_clips'; clip_ids: Id[] }
+  | { op: 'group_clips'; clip_ids: Id[] }
+  | { op: 'ungroup_clips'; clip_ids: Id[] }
+  | { op: 'create_compound_clip'; clip_ids: Id[]; name: string | null }
+  | { op: 'paste_attributes'; from_clip_id: Id; to_clip_ids: Id[]; attributes: ClipAttribute[] }
   | { op: 'set_speed'; clip_id: Id; rate: number; reverse: boolean | null }
+  | { op: 'set_speed_ramp'; clip_id: Id; preset: string; points?: SpeedPoint[] | null }
+  | { op: 'set_reverse'; clip_id: Id; reverse: boolean }
   | { op: 'set_transform'; clip_id: Id; transform: Transform }
+  | { op: 'set_crop'; clip_id: Id; crop: [number, number, number, number] }
+  | { op: 'set_flip'; clip_id: Id; horizontal: boolean | null; vertical: boolean | null }
+  | { op: 'set_rotation'; clip_id: Id; degrees: number }
+  | { op: 'set_fit_mode'; clip_id: Id; fit: FitMode }
+  | { op: 'set_blend_mode'; clip_id: Id; blend_mode: BlendMode }
   | { op: 'set_opacity'; clip_id: Id; opacity: Param }
+  | { op: 'set_param'; clip_id: Id; param: string; value: Value }
+  | { op: 'add_keyframe'; clip_id: Id; param: string; time: Ticks; value: Value; interpolation?: Interpolation | null }
+  | { op: 'remove_keyframe'; clip_id: Id; param: string; time: Ticks }
+  | { op: 'move_keyframe'; clip_id: Id; param: string; from: Ticks; to: Ticks }
+  | { op: 'clear_keyframes'; clip_id: Id; param: string }
   | { op: 'set_audio'; clip_id: Id; audio: AudioSettings }
+  | { op: 'set_volume'; clip_id: Id; gain_db: number }
+  | { op: 'set_pan'; clip_id: Id; pan: number }
+  | { op: 'set_pitch'; clip_id: Id; semitones: number }
+  | { op: 'set_mute'; clip_id: Id; muted: boolean }
+  | { op: 'set_audio_channels'; clip_id: Id; channels: AudioChannels }
+  | { op: 'set_maintain_pitch'; clip_id: Id; maintain_pitch: boolean }
+  | { op: 'set_audio_fades'; clip_id: Id; fade_in: Ticks | null; fade_out: Ticks | null }
+  | { op: 'set_normalization'; clip_id: Id; target_lufs: number | null; measured_lufs?: number | null }
+  | { op: 'set_equalizer'; clip_id: Id; preset?: string | null; bands?: number[] | null }
   | { op: 'add_effect'; clip_id: Id; effect: EffectInstance }
   | { op: 'remove_effect'; clip_id: Id; effect_id: Id }
   | { op: 'set_effect_params'; clip_id: Id; effect_id: Id; params: Record<string, Param> }
+  | { op: 'set_effect_enabled'; clip_id: Id; effect_id: Id; enabled: boolean }
+  | { op: 'add_animation'; clip_id: Id; kind: string; placement: AnimationPlacement; duration?: Ticks | null; params?: Record<string, Param>; id?: Id | null }
+  | { op: 'remove_animation'; clip_id: Id; animation_id?: Id | null; placement?: AnimationPlacement | null }
+  | { op: 'replace_animation'; clip_id: Id; animation_id: Id; kind?: string | null; duration?: Ticks | null; params?: Record<string, Param> | null }
   | { op: 'set_transition'; clip_id: Id; transition: Transition | null }
   | { op: 'set_title'; clip_id: Id; title: TitleData }
+  | ({ op: 'set_title_style'; clip_id: Id } & TitleStylePatch)
+  | { op: 'add_marker'; sequence_id?: Id | null; clip_id?: Id | null; marker: Marker }
+  | { op: 'update_marker'; marker: Marker }
+  | { op: 'remove_marker'; marker_id: Id }
+  | { op: 'set_project_settings'; width?: number | null; height?: number | null; frame_rate?: Rational | null; background?: [number, number, number, number] | null }
   | { op: 'rename_project'; name: string }
   | { op: 'batch'; commands: Command[] }
 
@@ -235,4 +344,6 @@ export interface Snapshot {
   wfp?: boolean
   /** Warnings from the last save (edits the target format cannot express). */
   save_warnings?: string[]
+  /** Edits kept only for Jibaru (in the .wfp sidecar); Filmora won't show them. */
+  save_notes?: string[]
 }

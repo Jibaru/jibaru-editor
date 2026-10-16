@@ -1,5 +1,6 @@
 import { menuBar, nativeMenuBar } from '../actions'
-import { openMenu, saveProject, setState, useEditor } from '../store'
+import { backend } from '../backend'
+import { openMenu, saveProject, setLayout, setState, toast, useEditor } from '../store'
 import {
   IcApps,
   IcChevronDown,
@@ -13,6 +14,12 @@ import {
 } from '../ui/icons'
 
 const isMac = navigator.userAgent.includes('Mac')
+const REPO = 'https://github.com/Jibaru/jibaru-editor'
+const link = (url: string) => backend.openUrl(url).catch(e => toast(String(e), 'error'))
+const menuAt = (e: React.MouseEvent, items: import('../ui/ContextMenu').MenuItem[]) => {
+  const r = e.currentTarget.getBoundingClientRect()
+  openMenu(r.right - 200, r.bottom + 4, items)
+}
 
 /** Export progress and background proxy generation, like Filmora's task chip. */
 function BackgroundStatus() {
@@ -66,14 +73,22 @@ export function TitleBar() {
       </div>
       <div className="title-actions">
         <BackgroundStatus />
-        <button className="ticon" title="What's new"><IcGift size={18} /></button>
-        <button className="ticon" title="Share"><IcSend size={18} /></button>
-        <button className="ticon" title="Feedback"><IcFeedback size={18} /></button>
-        <button className="ticon" title="Layout"><IcMonitor size={18} /></button>
-        <button className="ticon" title="Save (⌘S)" onClick={() => saveProject()}><IcSave size={18} /></button>
-        <button className="ticon" title="Cloud backup"><IcCloud size={18} /></button>
-        <button className="ticon" title="Support"><IcHeadset size={18} /></button>
-        <button className="ticon" title="More"><IcApps size={18} /></button>
+        <button className="ticon" title="What's new" onClick={() => link(`${REPO}/releases`)}><IcGift size={18} /></button>
+        <button className="ticon" title="Share to the cloud is not available in Jibaru Editor" disabled><IcSend size={18} /></button>
+        <button className="ticon" title="Feedback" onClick={() => link(`${REPO}/issues/new`)}><IcFeedback size={18} /></button>
+        <button className="ticon" title="Layout" onClick={e => menuAt(e, [
+          { label: 'Default Layout', action: () => setLayout('default') },
+          { label: 'Larger Player', action: () => setLayout('player') },
+          { label: 'Larger Timeline', action: () => setLayout('timeline') },
+        ])}><IcMonitor size={18} /></button>
+        <button className="ticon" title={`Save (${isMac ? '⌘' : 'Ctrl+'}S)`} onClick={() => saveProject()}><IcSave size={18} /></button>
+        <button className="ticon" title="Cloud backup is not available in Jibaru Editor" disabled><IcCloud size={18} /></button>
+        <button className="ticon" title="Help and documentation" onClick={() => link(`${REPO}#readme`)}><IcHeadset size={18} /></button>
+        <button className="ticon" title="More" onClick={e => menuAt(e, [
+          { label: 'About Jibaru Editor', action: () => toast('Jibaru Editor 0.1.0 · Apache-2.0 · Rust engine, Tauri + React UI') },
+          { label: 'Keyboard Shortcuts', action: () => import('../actions').then(m => m.runMenuAction('help.shortcuts')) },
+          { label: 'Jibaru Editor on GitHub', action: () => link(REPO) },
+        ])}><IcApps size={18} /></button>
         <button className="export-btn" onClick={() => setState({ exportOpen: true })}>
           Export <IcChevronDown size={13} strokeWidth={2} />
         </button>

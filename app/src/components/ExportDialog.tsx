@@ -93,6 +93,7 @@ function ExportForm() {
   const [rate, setRate] = useState('project')
   const [quality, setQuality] = useState<'low' | 'medium' | 'high'>(stored('quality', 'medium') as 'low' | 'medium' | 'high')
   const [audio, setAudio] = useState(true)
+  const [hardware, setHardware] = useState(stored('hardware', '1') === '1')
   const hasMarks = markIn != null || markOut != null
   const [range, setRange] = useState<Range>(hasMarks ? 'marks' : 'all')
   const [from, setFrom] = useState('')
@@ -150,6 +151,7 @@ function ExportForm() {
     store('format', format)
     store('codec', codec)
     store('quality', quality)
+    store('hardware', hardware ? '1' : '0')
     const req: ExportRequest = {
       path: file,
       codec,
@@ -159,6 +161,7 @@ function ExportForm() {
       quality,
       range: span,
       audio,
+      hardware,
     }
     setState({ exportJob: { state: 'running', path: file, progress: null, started: Date.now() } })
     try {
@@ -174,8 +177,8 @@ function ExportForm() {
       <div className="export-body">
         <nav className="export-targets">
           <button className="on">Local</button>
-          <button disabled>Device</button>
-          <button disabled>Social</button>
+          <button disabled title="Device presets are not available yet; pick a resolution and encoder under Local">Device</button>
+          <button disabled title="Publishing to social networks needs Wondershare's cloud and is not available">Social</button>
         </nav>
         <div className="export-form">
           <div className="prow"><span className="plabel">Name</span><input className="field" value={name} onChange={e => setName(e.target.value)} onKeyDown={e => e.stopPropagation()} /></div>
@@ -238,6 +241,10 @@ function ExportForm() {
             </div>
           )}
           <div className="prow"><span className="plabel">Audio</span><Toggle on={audio} onChange={setAudio} /></div>
+          <div className="prow" title="Use the GPU's video encoder when available (falls back to software)">
+            <span className="plabel">Hardware Encoding</span>
+            <Toggle on={hardware} onChange={setHardware} />
+          </div>
           <div className="prow export-summary">
             <span className="plabel">Output</span>
             <span>
