@@ -461,3 +461,32 @@ decimal are written short (`0.5`), others with eight decimals.
 | Equalizer | `audio/effect/equalizer` bands `31Hz` `63Hz` `125Hz` `250Hz` `500Hz` `1kHz` `2kHz` `4kHz` `8kHz` `16kHz` (paramType 2, dB); 0 dB bands are left out; no preset name — Filmora recognizes its 15 presets by their bands (`jb_core::Equalizer::PRESETS` holds them). | verified (panel shows "Low Bass") |
 | Entry/exit animations | Filmora 15 Motion presets: clip `inAnimation` / `outAnimation` = `{"duration", "effectChain": {"effectList": [video/effect/motion], "name"}, "name", "originLength", "type": 6, "userData"}`; the motion effect keys `Position_x/_y` (0.5 = in place), `Scale_x/_y` (%), `Rotation`, `Opacity` (%) at seconds over `originLength` (Version 2 strings), `duration` stretches them. userData 12 is the store record (`res_type` 28, `res_sub_type` 2801 in / 2802 out); Jibaru writes one with `is_custom: 1` — **without it Filmora's animation panel crashes**. Clip userData 13011 = last preset name. Loop/combo slots do not exist in 15.7 (warning). The pre-15 "Animation" chain (`AnimationScene`) is still read. | verified |
 | Title alignment, spacing | `scriptBuf.Layout.TextAlign` (`left`/`center`/`right`), `CharSpace`/`LineSpace` = spacing × 100. | `TextAlign` verified on the corpus; spacing units inferred |
+
+### Jibaru sidecar
+
+Edits with no verified place in Filmora's documents are kept in the archive
+entry `ProjectFolder/jibaru.json` (`crates/jb-filmora/src/sidecar.rs`), so
+they reopen in Jibaru; Filmora ignores the entry and does not show them.
+The writer reports them as `WriteReport::notes` (not warnings).
+
+```json
+{"version": 1,
+ "clips": {"<clip thisUId>": {"effects": [{"index": 2, "effect": {...}}],
+                              "denoise_db": 15.0, "channels": "left"}},
+ "native_kinds": {"<effect thisUId>": "jb.auto_enhance"}}
+```
+
+- `effects`: effects whose kind is neither `filmora:<id>` nor written
+  natively (chroma key, masks, shadow, background, library effects and
+  filters, color panel adjustments, ...), with their index in the clip's
+  effect list.
+- `denoise_db`: only when it differs from Filmora's `CacheAlg`
+  `AudioDenoiseCache` state (`null` = turned off in Jibaru).
+- `channels`: audio channel routing other than stereo.
+- `native_kinds`: effects written as Filmora built-ins and read back under
+  the Jibaru kind. `jb.auto_enhance` is written as AutoEnhance
+  (`45D9AD95-4F03-4B2F-A8C7-8F7817B73FA4`, `amount`, chain `BasicFollow`).
+
+The entry is created only when there is something to keep and removed when
+nothing is left, so unedited projects stay byte-identical. Resizing the
+project also rewrites the timelines' `aspectRatioX/Y` (reduced fraction).

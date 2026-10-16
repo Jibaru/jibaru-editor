@@ -284,3 +284,71 @@ fn written_shapes_match_filmora() {
     let vt = rp.main().tracks.iter().find(|t| t.id == video_track).unwrap();
     assert_eq!((vt.name.as_str(), vt.height), ("Main Cam", Some(160)));
 }
+
+#[test]
+fn jibaru_only_state_round_trips_through_the_sidecar() {
+    let mut w = load();
+    let a = find(&w.project, TrackKind::Video, 0, "CAM_0001").clone();
+    let music = find(&w.project, TrackKind::Audio, 0, "theme").clone();
+    let media = w.project.media[0].id.clone();
+    let mut h = History::new(w.project.clone());
+    let key = json!({"id": "11111111-2222-4333-8444-555555555555", "kind": "jb.chroma_key",
+        "params": {"tolerance": {"value": f(40.0)}, "color": {"value": {"type": "color", "value": [0.0, 1.0, 0.0, 1.0]}}}});
+    run(&mut h, json!({"op": "add_effect", "clip_id": a.id, "effect": key}));
+    run(
+        &mut h,
+        json!({"op": "add_effect", "clip_id": a.id, "effect": {"id": "e-mask", "kind": "jb.mask.ellipse", "params": {}}}),
+    );
+    run(&mut h, json!({"op": "set_effect_enabled", "clip_id": a.id, "effect_id": "e-mask", "enabled": false}));
+    run(
+        &mut h,
+        json!({"op": "add_effect", "clip_id": a.id, "effect": {"id": "e-ae", "kind": "jb.auto_enhance", "params": {"amount": {"value": f(70.0)}}}}),
+    );
+    let mut audio = h.project.clip(&music.id).unwrap().audio.clone();
+    audio.denoise_db = Some(12.0);
+    run(&mut h, json!({"op": "set_audio", "clip_id": music.id, "audio": audio}));
+    run(&mut h, json!({"op": "set_audio_channels", "clip_id": music.id, "channels": "left"}));
+    run(&mut h, json!({"op": "set_project_settings", "width": 1080, "height": 1920}));
+    run(&mut h, json!({"op": "rename_media", "media_id": media, "name": "Renamed"}));
+    w.project = h.project.clone();
+
+    let (_, report) = jb_filmora::write_bytes(&w).unwrap();
+    assert!(report.notes.iter().any(|n| n.contains("jb.chroma_key")), "{:?}", report.notes);
+    assert!(!report.notes.iter().any(|n| n.contains("jb.auto_enhance")), "{:?}", report.notes);
+    let r = write_read(&w);
+    let rp = &r.project;
+    let (ra, ea) = (rp.clip(&a.id).unwrap(), h.project.clip(&a.id).unwrap());
+    assert_eq!(ra.effects.len(), ea.effects.len());
+    for (x, y) in ra.effects.iter().zip(&ea.effects) {
+        assert_eq!((&x.kind, x.enabled), (&y.kind, y.enabled));
+        assert_eq!(x.params, y.params, "{}", x.kind);
+    }
+    // Auto Enhance is written as Filmora's own AutoEnhance effect.
+    let tl = serde_json::to_string(&r.raw.timeline).unwrap();
+    assert!(tl.contains("45D9AD95-4F03-4B2F-A8C7-8F7817B73FA4"));
+    assert!(tl.contains("\"aspectRatioX\":9") && tl.contains("\"aspectRatioY\":16"));
+    let rm = rp.clip(&music.id).unwrap();
+    assert_eq!((rm.audio.denoise_db, rm.audio.channels), (Some(12.0), ChannelMode::Left));
+    assert_eq!((rp.settings.width, rp.settings.height), (1080, 1920));
+    assert_eq!(rp.media(&media).unwrap().name, "Renamed");
+
+    // Turning denoise off survives too.
+    let mut h = History::new(r.project.clone());
+    let mut audio = rm.audio.clone();
+    audio.denoise_db = None;
+    audio.channels = ChannelMode::Stereo;
+    run(&mut h, json!({"op": "set_audio", "clip_id": music.id, "audio": audio}));
+    for e in ["11111111-2222-4333-8444-555555555555", "e-mask"] {
+        run(&mut h, json!({"op": "remove_effect", "clip_id": a.id, "effect_id": e}));
+    }
+    let mut w2 = r.clone();
+    w2.project = h.project.clone();
+    let r2 = write_read(&w2);
+    assert_eq!(r2.project.clip(&music.id).unwrap().audio.denoise_db, None);
+    assert_eq!(r2.project.clip(&music.id).unwrap().audio.channels, ChannelMode::Stereo);
+    let effects = &r2.project.clip(&a.id).unwrap().effects;
+    assert_eq!(
+        effects.iter().map(|e| e.kind.as_str()).filter(|k| k.starts_with("jb.")).collect::<Vec<_>>(),
+        ["jb.auto_enhance"]
+    );
+}

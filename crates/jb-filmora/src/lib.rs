@@ -20,10 +20,12 @@ mod json;
 mod mapping;
 mod markers;
 mod props;
+mod sidecar;
 mod title;
 
 pub use archive::Entry;
 pub use coverage::{coverage, Coverage, CoverageCategory, CoverageItem, ParamUsage, ResourceIndex, ResourceInfo};
+pub use sidecar::SIDECAR;
 
 use jb_core::Project;
 use serde_json::Value;
@@ -106,6 +108,9 @@ pub fn from_entries(entries: Vec<Entry>) -> Result<WfpProject> {
 pub struct WriteReport {
     /// Edits that could not be expressed in Filmora's format and were skipped.
     pub warnings: Vec<String>,
+    /// Edits kept only for Jibaru (in the archive's Jibaru sidecar): they
+    /// reopen in Jibaru but Filmora does not show them.
+    pub notes: Vec<String>,
 }
 
 /// Writes a `.wfp` file, patching the edits made to `wfp.project` into the

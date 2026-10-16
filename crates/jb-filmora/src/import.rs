@@ -43,6 +43,11 @@ pub fn import(entries: Vec<Entry>) -> Result<WfpProject> {
     if let Some(x) = &extra {
         crate::markers::import_markers(&mut project, &timeline, x);
     }
+    if let Some(e) = entries.iter().find(|e| e.name == crate::sidecar::SIDECAR) {
+        if let Ok(doc) = parse_json(&e.name, &e.data) {
+            crate::sidecar::apply(&mut project, &doc);
+        }
+    }
     let warnings = std::mem::take(&mut ctx.warnings);
     let raw = Raw {
         entries,

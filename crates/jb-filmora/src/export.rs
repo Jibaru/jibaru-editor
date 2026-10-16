@@ -46,6 +46,33 @@ pub fn export(wfp: &WfpProject) -> Result<(Vec<Entry>, WriteReport)> {
         }
         entries.push(out);
     }
+    let sidecar = ex.sidecar_doc();
+    let mut has_sidecar = false;
+    entries.retain_mut(|e| {
+        if e.name != crate::sidecar::SIDECAR {
+            return true;
+        }
+        has_sidecar = true;
+        match &sidecar {
+            Some(doc) => {
+                if crate::parse_json(&e.name, &e.data).ok().as_ref() != Some(doc) {
+                    e.data = serde_json::to_vec(doc).unwrap_or_default();
+                }
+                true
+            }
+            None => false,
+        }
+    });
+    if let (false, Some(doc)) = (has_sidecar, &sidecar) {
+        let info = raw.entry(PROJECT_INFO);
+        entries.push(Entry {
+            name: crate::sidecar::SIDECAR.to_string(),
+            data: serde_json::to_vec(doc).unwrap_or_default(),
+            deflated: true,
+            modified: info.and_then(|e| e.modified),
+            unix_mode: info.and_then(|e| e.unix_mode),
+        });
+    }
     if let (None, Some(doc)) = (&raw.extra_path, &extra) {
         // Markers need the timeline's extra.json; create it next to the timeline.
         let dir = raw.timeline_path.strip_suffix("timeline.wesproj").unwrap_or_default();
@@ -58,7 +85,7 @@ pub fn export(wfp: &WfpProject) -> Result<(Vec<Entry>, WriteReport)> {
             unix_mode: tl.and_then(|e| e.unix_mode),
         });
     }
-    Ok((entries, WriteReport { warnings: ex.warnings }))
+    Ok((entries, WriteReport { warnings: ex.warnings, notes: ex.notes }))
 }
 
 /// Filmora ids of transitions that registry kinds map onto.
@@ -91,6 +118,9 @@ struct Exporter<'a> {
     warnings: Vec<String>,
     /// Model clip id -> written `thisUId`.
     clip_uid: HashMap<String, String>,
+    /// Model effect id -> written `thisUId` of effects created this write.
+    effect_uid: HashMap<String, String>,
+    notes: Vec<String>,
 }
 
 fn changed<T: PartialEq>(old: Option<&Clip>, new: &Clip, f: impl Fn(&Clip) -> T) -> bool {
@@ -119,6 +149,8 @@ impl<'a> Exporter<'a> {
             new_resources: Vec::new(),
             warnings: Vec::new(),
             clip_uid: HashMap::new(),
+            effect_uid: HashMap::new(),
+            notes: Vec::new(),
         };
         for tl in timelines(&raw.timeline) {
             let id = i64_of(tl, "timelineId").unwrap_or(0);
@@ -224,6 +256,11 @@ impl<'a> Exporter<'a> {
                 put(tl, "resolutionWidth", json!(s.width));
                 put(tl, "resolutionHeight", json!(s.height));
                 put(tl, "frameRate", json!({ "den": s.frame_rate.den, "num": s.frame_rate.num }));
+                if tl.get("aspectRatioX").is_some() {
+                    let g = gcd(s.width, s.height).max(1);
+                    put(tl, "aspectRatioX", json!(s.width / g));
+                    put(tl, "aspectRatioY", json!(s.height / g));
+                }
             }
         }
         put(&mut doc, "timelineInfos", Value::Array(out));
@@ -480,6 +517,44 @@ impl<'a> Exporter<'a> {
             &clip_in,
             &known,
         )
+    }
+
+    /// Jibaru-only clip state for the archive sidecar (see `crate::sidecar`).
+    fn sidecar_doc(&mut self) -> Option<Value> {
+        use crate::sidecar::{is_private, native, ClipState};
+        let mut clips = Vec::new();
+        let mut kinds = Vec::new();
+        let mut notes = Vec::new();
+        for clip in self.p.sequences.iter().flat_map(|s| s.tracks.iter()).flat_map(|t| t.clips.iter()) {
+            let Some(uid) = self.clip_uid.get(&clip.id) else { continue };
+            let mut st = ClipState::default();
+            for (i, e) in clip.effects.iter().enumerate() {
+                if is_private(e) {
+                    notes.push(format!("clip {}: effect {} kept for Jibaru; Filmora won't show it", clip.id, e.kind));
+                    st.effects.push((i, e.clone()));
+                } else if native(&e.kind).is_some() {
+                    let euid =
+                        self.effect_uid.get(&e.id).cloned().or_else(|| marker_str(&e.extra, "uid").map(str::to_string));
+                    if let Some(u) = euid {
+                        kinds.push((u, e.kind.clone()));
+                    }
+                }
+            }
+            let filmora_denoise = marker_str(&clip.extra, "uid")
+                .and_then(|u| self.orig_clips.get(u))
+                .and_then(|c| import::audio_of(c, i64_of(c, "inPoint").unwrap_or(0)).denoise_db);
+            if clip.audio.denoise_db != filmora_denoise {
+                st.denoise_db = Some(clip.audio.denoise_db);
+                notes.push(format!("clip {}: noise reduction kept for Jibaru; Filmora won't show it", clip.id));
+            }
+            st.channels = clip.audio.channels;
+            if st.channels != ChannelMode::Stereo {
+                notes.push(format!("clip {}: audio channels kept for Jibaru; Filmora won't show it", clip.id));
+            }
+            clips.push((uid.clone(), st));
+        }
+        self.notes.extend(notes);
+        crate::sidecar::document(&clips, &kinds)
     }
 
     fn template_timeline(&self, tl_id: i64, main: bool) -> Value {
@@ -1104,7 +1179,10 @@ impl<'a> Exporter<'a> {
         if ty != CLIP_AUDIO {
             // Video clips' sound is carried by their linked audio clips, so
             // a muted video clip is what Filmora has anyway.
-            let only_mute = AudioSettings { muted: false, ..new.clone() } == AudioSettings::default();
+            // Noise reduction and channel routing live in the Jibaru sidecar.
+            let only_mute =
+                AudioSettings { muted: false, denoise_db: None, channels: ChannelMode::Stereo, ..new.clone() }
+                    == AudioSettings::default();
             if !only_mute {
                 self.warnings.push(format!("clip {clip_id}: audio settings only apply to audio clips in Filmora"));
             }
@@ -1179,7 +1257,6 @@ impl<'a> Exporter<'a> {
         desired.extend(new.animations.iter().filter(|a| is_legacy_animation(a)).map(|e| (e, true)));
         let old_inst = |id: &str| old.and_then(|o| o.effects.iter().chain(o.animations.iter()).find(|e| e.id == id));
         let mut used = vec![false; desired.len()];
-        let mut warnings = Vec::new();
 
         if let Some(chains) = v.get_mut("effectChainList").and_then(Value::as_array_mut) {
             for ch in chains.iter_mut() {
@@ -1210,26 +1287,35 @@ impl<'a> Exporter<'a> {
             if used[i] {
                 continue;
             }
-            let Some(fid) = inst.kind.strip_prefix("filmora:").map(str::to_string) else {
-                warnings.push(format!("clip {}: effect {} has no Filmora equivalent, not written", new.id, inst.kind));
-                continue;
+            let native = crate::sidecar::native(&inst.kind);
+            let fid = match (inst.kind.strip_prefix("filmora:"), native) {
+                (Some(f), _) => f.to_string(),
+                (None, Some(n)) => n.1.to_string(),
+                // Kept in the Jibaru sidecar (see `sidecar_doc`).
+                (None, None) => continue,
             };
+            let display =
+                native.map_or_else(|| marker_str(&inst.extra, "display").unwrap_or(&fid), |n| n.2).to_string();
             let src = marker_str(&inst.extra, "uid").and_then(|u| self.orig_effects.get(u).copied());
             let mut e = match src {
                 Some(s) if str_of(s, "id") == Some(fid.as_str()) => s.clone(),
-                _ => new_effect_json(&fid, marker_str(&inst.extra, "display").unwrap_or(&fid), &[]),
+                _ => new_effect_json(&fid, &display, &[]),
             };
-            put(&mut e, "thisUId", json!(self.fresh_uid(Some(&inst.id))));
+            let uid = self.fresh_uid(Some(&inst.id));
+            self.effect_uid.insert(inst.id.clone(), uid.clone());
+            put(&mut e, "thisUId", json!(uid));
             set_user_data(&mut e, ud::GUID, &guid_blob(&new_guid()));
             let baseline = src.map(|s| import::effect_of(marker_str(&inst.extra, "chain").unwrap_or(""), s, in_point));
             patch_effect(&mut e, baseline.as_ref(), inst, *anim, tb);
-            let chain = marker_str(&inst.extra, "chain").map(str::to_string).unwrap_or_else(|| "Effect".into());
+            let chain = marker_str(&inst.extra, "chain")
+                .or(native.map(|n| n.3))
+                .map(str::to_string)
+                .unwrap_or_else(|| "Effect".into());
             let ch = chain_mut(v, &chain, usize::MAX);
             if let Some(list) = ch.get_mut("effectList").and_then(Value::as_array_mut) {
                 list.push(e);
             }
         }
-        self.warnings.extend(warnings);
     }
 
     fn transition_json(&mut self, existing: Option<&Value>, t: &Transition, clip_id: &str) -> Option<Value> {
@@ -1415,6 +1501,14 @@ fn patch_effect(e: &mut Value, old: Option<&EffectInstance>, new: &EffectInstanc
             put(e, "inPoint", json!(a));
             put(e, "outPoint", json!(b));
         }
+    }
+}
+
+fn gcd(a: u32, b: u32) -> u32 {
+    if b == 0 {
+        a
+    } else {
+        gcd(b, a % b)
     }
 }
 

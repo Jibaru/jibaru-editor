@@ -96,6 +96,7 @@ Every Filmora property-panel feature is a command. Times are ticks (10_000_000 p
 
 | Area | Commands |
 |---|---|
+| Project & media | `rename_project`, `set_project_settings` (`width`, `height`, `frame_rate`, `background`; sizes even), `rename_media`, `add_media`, `remove_media` |
 | Tracks | `add_track`, `remove_track`, `set_track_flags` (lock/mute/hide), `move_track` (reorder, 0 = bottom), `rename_track`, `set_track_height` |
 | Placing clips | `add_clip`, `insert_clip` (ripple insert), `overwrite_clip`, `move_clip` (moves link group and group), `remove_clip` (`ripple`), `duplicate_clip`, `replace_media`, `set_clip_enabled` |
 | Trimming | `trim_clip`, `ripple_trim` (`edge`: `start`/`end`, `to`), `roll_edit` (cut between a clip and the next adjacent one), `slip_clip` (`delta` source ticks), `split_clip` |
@@ -103,8 +104,8 @@ Every Filmora property-panel feature is a command. Times are ticks (10_000_000 p
 | Transform | `set_transform`, `set_crop` (`[left, top, right, bottom]` insets), `set_flip`, `set_rotation`, `set_fit_mode` (`fit`/`fill`/`stretch`/`none`), `set_blend_mode` (22 Filmora modes), `set_opacity` |
 | Keyframes | `add_keyframe`, `remove_keyframe`, `move_keyframe`, `clear_keyframes`, `set_param`. `param`: `transform.position_x`/`position_y`/`scale_x`/`scale_y`/`scale`/`rotation`, `opacity`, `volume`, `pan`, `speed`, `effect.<effect_id>.<param>`. `interpolation`: `linear`, `hold`, `ease_in`, `ease_out`, `ease_in_out`. |
 | Speed | `set_speed` (constant, `reverse`), `set_speed_ramp` (`montage`, `hero_moment`, `bullet_time`, `jumper`, `flash_in`, `flash_out`, `custom` with `points: [{position 0..1 of the source, speed}]`, `none`), `set_reverse`, `set_maintain_pitch`, `freeze_frame` (`at`, `duration`) |
-| Audio | `set_audio`, `set_volume`, `set_pan`, `set_pitch` (semitones), `set_mute`, `set_audio_fades`, `set_normalization` (or the `normalize_audio` tool / `jb normalize`, which measure loudness), `set_equalizer` (preset or 10 `bands` in dB). On a camera video clip they change its linked audio clip. |
-| Effects & animations | `add_effect`, `remove_effect`, `set_effect_params`, `add_animation` (`placement`: `in`/`out`/`loop`/`combo`, `duration`), `remove_animation`, `replace_animation`, `set_transition` |
+| Audio | `set_audio`, `set_volume`, `set_pan`, `set_pitch` (semitones), `set_mute`, `set_audio_fades`, `set_normalization` (or the `normalize_audio` tool / `jb normalize`, which measure loudness), `set_equalizer` (preset or 10 `bands` in dB), `set_audio_channels` (`stereo`, `left`, `right`, `mono`, `swap`). On a camera video clip they change its linked audio clip. |
+| Effects & animations | `add_effect`, `remove_effect`, `set_effect_params`, `set_effect_enabled`, `add_animation` (`placement`: `in`/`out`/`loop`/`combo`, `duration`), `remove_animation`, `replace_animation`, `set_transition` |
 | Titles | `set_title`, `set_title_style` (text, font, size, color, bold, italic, alignment, position, stroke/shadow/background (`null` removes), spacing, `animation`); works on title clips and on Filmora title template instances |
 | Markers | `add_marker` (sequence, or `clip_id`), `update_marker`, `remove_marker` |
 
