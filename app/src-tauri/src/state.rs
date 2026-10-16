@@ -10,6 +10,9 @@ use std::sync::Mutex;
 pub struct Session {
     pub history: History,
     pub path: Option<PathBuf>,
+    /// The original Filmora documents when the project came from a `.wfp`,
+    /// so saving back patches them losslessly.
+    pub wfp: Option<jb_filmora::WfpProject>,
     revision: u64,
     saved_revision: u64,
 }
@@ -46,7 +49,13 @@ pub fn empty_project(name: &str, settings: ProjectSettings) -> Project {
 
 impl Session {
     pub fn new(project: Project, path: Option<PathBuf>) -> Self {
-        Self { history: History::new(project), path, revision: 0, saved_revision: 0 }
+        Self { history: History::new(project), path, wfp: None, revision: 0, saved_revision: 0 }
+    }
+
+    pub fn from_loaded(loaded: Loaded, path: PathBuf) -> Self {
+        let mut s = Self::new(loaded.project, Some(path));
+        s.wfp = loaded.wfp;
+        s
     }
 
     pub fn snapshot(&self) -> Snapshot {
@@ -84,24 +93,39 @@ impl Session {
 
     pub fn save(&mut self, path: Option<&Path>) -> anyhow::Result<()> {
         let target = path.map(Path::to_path_buf).or_else(|| self.path.clone()).ok_or_else(|| anyhow::anyhow!("no path"))?;
-        let is_native = target.extension().and_then(|e| e.to_str()).is_some_and(|e| e.eq_ignore_ascii_case("jbp"));
-        if !is_native {
-            anyhow::bail!("saving as {} is not supported yet; use .jbp", target.display());
+        let ext = target.extension().and_then(|e| e.to_str()).unwrap_or("").to_ascii_lowercase();
+        match ext.as_str() {
+            "jbp" => std::fs::write(&target, jb_core::to_native(&self.history.project)?)?,
+            "wfp" => {
+                let Some(wfp) = &self.wfp else {
+                    anyhow::bail!("only projects opened from a .wfp can be saved as .wfp");
+                };
+                let mut out = wfp.clone();
+                out.project = self.history.project.clone();
+                jb_filmora::write(&out, &target)?;
+            }
+            _ => anyhow::bail!("cannot save as {}; use .jbp", target.display()),
         }
-        std::fs::write(&target, jb_core::to_native(&self.history.project)?)?;
         self.path = Some(target);
         self.saved_revision = self.revision;
         Ok(())
     }
 }
 
-/// Loads a project file. Native `.jbp` is always supported; Filmora `.wfp`
-/// goes through `jb-filmora` once that crate provides a reader.
-pub fn load(path: &Path) -> anyhow::Result<Project> {
+pub struct Loaded {
+    pub project: Project,
+    pub wfp: Option<jb_filmora::WfpProject>,
+}
+
+/// Loads a native `.jbp` project or a Filmora `.wfp` (via `jb-filmora`).
+pub fn load(path: &Path) -> anyhow::Result<Loaded> {
     let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_ascii_lowercase();
     match ext.as_str() {
-        "jbp" | "json" => Ok(jb_core::from_native(&std::fs::read_to_string(path)?)?),
-        "wfp" => anyhow::bail!("opening Filmora projects is not available in this build yet"),
+        "jbp" | "json" => Ok(Loaded { project: jb_core::from_native(&std::fs::read_to_string(path)?)?, wfp: None }),
+        "wfp" => {
+            let wfp = jb_filmora::read(path)?;
+            Ok(Loaded { project: wfp.project.clone(), wfp: Some(wfp) })
+        }
         _ => anyhow::bail!("unsupported project type: {}", path.display()),
     }
 }

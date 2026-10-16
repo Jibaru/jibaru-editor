@@ -5,7 +5,7 @@ mod media;
 mod state;
 
 use jb_core::{Command, MediaAsset, ProjectSettings};
-use media::Cache;
+use media::Engine;
 use state::{AppState, Session, Snapshot};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
@@ -48,9 +48,9 @@ fn new_project(state: State<AppState>, name: String, settings: Option<serde_json
 
 #[tauri::command]
 fn open_project(state: State<AppState>, path: String) -> Res<Snapshot> {
-    let project = state::load(Path::new(&path)).map_err(err)?;
+    let loaded = state::load(Path::new(&path)).map_err(err)?;
     with_session(&state, |s| {
-        *s = Session::new(project, Some(PathBuf::from(&path)));
+        *s = Session::from_loaded(loaded, PathBuf::from(&path));
         Ok(s.snapshot())
     })
 }
@@ -92,6 +92,11 @@ async fn probe_media(paths: Vec<String>) -> Res<Vec<MediaAsset>> {
     tauri::async_runtime::spawn_blocking(move || paths.iter().map(|p| media::probe(Path::new(p)).map_err(err)).collect())
         .await
         .map_err(err)?
+}
+
+#[tauri::command]
+fn fx_catalog() -> Vec<media::FxEntry> {
+    media::catalog()
 }
 
 #[tauri::command]
@@ -146,25 +151,24 @@ fn decode(s: &str) -> String {
     String::from_utf8_lossy(&out).into_owned()
 }
 
-fn media_response(app: &AppHandle, cache: &Cache, request: &tauri::http::Request<Vec<u8>>) -> Response<Vec<u8>> {
+fn media_response(app: &AppHandle, engine: &Engine, request: &tauri::http::Request<Vec<u8>>) -> Response<Vec<u8>> {
     let q = query(request.uri());
     let num = |k: &str, d: f64| q.get(k).and_then(|v| v.parse::<f64>().ok()).unwrap_or(d);
     let path = q.get("path").map(PathBuf::from);
     let result: anyhow::Result<Option<(Vec<u8>, &str)>> = match request.uri().path().trim_start_matches('/') {
         "thumb" => path
             .ok_or_else(|| anyhow::anyhow!("missing path"))
-            .and_then(|p| cache.thumb(&p, num("t", 0.0), num("h", 90.0) as u32))
+            .and_then(|p| engine.thumb(&p, num("t", 0.0), num("h", 90.0) as u32))
             .map(|b| Some((b, "image/jpeg"))),
         "wave" => path
             .ok_or_else(|| anyhow::anyhow!("missing path"))
-            .and_then(|p| cache.wave(&p, num("pps", 20.0) as u32))
+            .and_then(|p| engine.wave(&p, num("pps", 20.0) as u32))
             .map(|b| Some((b, "application/json"))),
         "frame" => {
             let state = app.state::<AppState>();
             let project = state.0.lock().map(|s| s.history.project.clone());
             match project {
-                Ok(p) => media::render_frame(cache, &p, num("t", 0.0), num("h", 360.0) as u32)
-                    .map(|o| o.map(|b| (b, "image/jpeg"))),
+                Ok(p) => engine.frame(&p, num("t", 0.0), num("h", 360.0) as u32).map(|b| Some((b, "image/jpeg"))),
                 Err(e) => Err(anyhow::anyhow!("{e}")),
             }
         }
@@ -184,18 +188,22 @@ fn media_response(app: &AppHandle, cache: &Cache, request: &tauri::http::Request
 }
 
 fn main() {
+    if std::env::args().any(|a| a == "--fx-catalog") {
+        println!("{}", serde_json::to_string_pretty(&media::catalog()).expect("catalog json"));
+        return;
+    }
     let session = Session::new(state::empty_project("Untitled", state::default_settings()), None);
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(AppState(Mutex::new(session)))
         .setup(|app| {
-            let dir = app.path().app_cache_dir().unwrap_or_else(|_| std::env::temp_dir().join("jibaru-editor"));
-            app.manage(Arc::new(Cache::new(dir.join("media"))));
+            let dir = jb_media::MediaCache::default_dir();
+            app.manage(Arc::new(Engine::new(&dir)?));
             // Optional project to open at startup: `jibaru-editor path/to/project.jbp`.
             if let Some(p) = std::env::args().nth(1).filter(|a| !a.starts_with('-')) {
-                if let Ok(project) = state::load(Path::new(&p)) {
+                if let Ok(loaded) = state::load(Path::new(&p)) {
                     let state = app.state::<AppState>();
-                    *state.0.lock().expect("session lock") = Session::new(project, Some(PathBuf::from(p)));
+                    *state.0.lock().expect("session lock") = Session::from_loaded(loaded, PathBuf::from(p));
                 }
             }
             Ok(())
@@ -203,8 +211,8 @@ fn main() {
         .register_asynchronous_uri_scheme_protocol("jb", |ctx, request, responder| {
             let app = ctx.app_handle().clone();
             std::thread::spawn(move || {
-                let cache = app.state::<Arc<Cache>>().inner().clone();
-                responder.respond(media_response(&app, &cache, &request));
+                let engine = app.state::<Arc<Engine>>().inner().clone();
+                responder.respond(media_response(&app, &engine, &request));
             });
         })
         .invoke_handler(tauri::generate_handler![
@@ -216,7 +224,8 @@ fn main() {
             undo,
             redo,
             probe_media,
-            import_media
+            import_media,
+            fx_catalog
         ])
         .run(tauri::generate_context!())
         .expect("error while running Jibaru Editor");

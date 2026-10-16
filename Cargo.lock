@@ -2390,7 +2390,11 @@ name = "jibaru-editor"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "image",
  "jb-core",
+ "jb-filmora",
+ "jb-media",
+ "jb-render",
  "serde",
  "serde_json",
  "tauri",
