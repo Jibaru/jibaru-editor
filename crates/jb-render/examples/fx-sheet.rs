@@ -8,6 +8,55 @@ use jb_render::testing::*;
 use jb_render::{FxKind, Renderer};
 use std::io::BufWriter;
 
+fn save(path: &str, w: u32, h: u32, data: &[u8]) -> anyhow::Result<()> {
+    let file = std::fs::File::create(path)?;
+    let mut enc = png::Encoder::new(BufWriter::new(file), w, h);
+    enc.set_color(png::ColorType::Rgba);
+    enc.set_depth(png::BitDepth::Eight);
+    enc.write_header()?.write_image_data(data)?;
+    Ok(())
+}
+
+/// Title styles over clip B: plain, stroke, shadow, background, multi-line.
+fn write_titles(r: &mut Renderer, project: &jb_core::Project, src: &MemorySource, out_dir: &str, sheet_w: u32) -> anyhow::Result<()> {
+    use jb_core::{eval::LayerContent, Shadow, Stroke, TitleData};
+    let (w, h) = r.size();
+    let base = TitleData {
+        text: "Jibaru Title".into(),
+        font_family: String::new(),
+        font_size: 0.16,
+        color: [1.0, 1.0, 1.0, 1.0],
+        position: [0.5, 0.5],
+        bold: true,
+        italic: false,
+        stroke: None,
+        shadow: None,
+        background: None,
+    };
+    let styles = [
+        base.clone(),
+        TitleData { stroke: Some(Stroke { color: [0.0, 0.0, 0.0, 1.0], width: 0.012 }), ..base.clone() },
+        TitleData { shadow: Some(Shadow { color: [0.0, 0.0, 0.0, 0.8], offset: [0.01, 0.012], blur: 0.01 }), ..base.clone() },
+        TitleData { background: Some([0.05, 0.05, 0.1, 0.75]), color: [1.0, 0.8, 0.1, 1.0], italic: true, bold: false, ..base.clone() },
+        TitleData { text: "Two lines\nof text".into(), font_size: 0.12, position: [0.5, 0.7], font_family: "Georgia".into(), ..base.clone() },
+    ];
+    let gap = 4;
+    let mut sheet = vec![40u8; (sheet_w * h * 4) as usize];
+    for (i, t) in styles.into_iter().enumerate() {
+        let mut l = media_layer("t");
+        l.content = LayerContent::Title(t);
+        let plan = FramePlan { time: 0, layers: vec![media_layer("b"), l] };
+        let f = r.render(project, &plan, src);
+        let x0 = i as u32 * (w + gap);
+        for y in 0..h {
+            let srow = (y * w * 4) as usize;
+            let drow = ((y * sheet_w + x0) * 4) as usize;
+            sheet[drow..drow + (w * 4) as usize].copy_from_slice(&f.data[srow..srow + (w * 4) as usize]);
+        }
+    }
+    save(&format!("{out_dir}/_titles.png"), sheet_w, h, &sheet)
+}
+
 fn main() -> anyhow::Result<()> {
     let mut args: Vec<String> = std::env::args().skip(1).collect();
     let (mut w, mut h) = (320u32, 180u32);
@@ -58,11 +107,10 @@ fn main() -> anyhow::Result<()> {
             }
         }
         let path = format!("{out_dir}/{}.png", id.replace([':', '/'], "_"));
-        let file = std::fs::File::create(&path)?;
-        let mut enc = png::Encoder::new(BufWriter::new(file), sheet_w, h);
-        enc.set_color(png::ColorType::Rgba);
-        enc.set_depth(png::BitDepth::Eight);
-        enc.write_header()?.write_image_data(&sheet)?;
+        save(&path, sheet_w, h, &sheet)?;
+    }
+    if filter.is_empty() || "titles".contains(&filter) {
+        write_titles(&mut r, &project, &src, &out_dir, sheet_w)?;
     }
     eprintln!("wrote {} sheets to {out_dir} ({unknown} with problems)", items.len());
     Ok(())

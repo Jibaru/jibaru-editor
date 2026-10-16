@@ -151,3 +151,93 @@ fn nested_sequence_and_adjustment_layer() {
     let out = r.render(&p, &FramePlan { time: 0, layers: vec![nested] }, &src);
     assert!(mean_abs_diff(&out.data, &src.frames["b"].data) < 0.6);
 }
+
+fn title(text: &str) -> jb_core::TitleData {
+    jb_core::TitleData {
+        text: text.into(),
+        font_family: String::new(),
+        font_size: 0.25,
+        color: [1.0, 0.0, 0.0, 1.0],
+        position: [0.5, 0.5],
+        bold: true,
+        italic: false,
+        stroke: None,
+        shadow: None,
+        background: None,
+    }
+}
+
+#[test]
+fn titles_render_fill_stroke_shadow_background() {
+    let Some(mut r) = common::renderer(320, 180) else { return };
+    let p = project(320, 180);
+    let src = MemorySource::new();
+    let mut l = media_layer("t");
+    l.content = LayerContent::Title(title("HI"));
+    let out = r.render(&p, &FramePlan { time: 0, layers: vec![l.clone()] }, &src);
+    let reds = (0..180).flat_map(|y| (0..320).map(move |x| (x, y))).filter(|&(x, y)| pixel(&out, x, y)[0] > 200).count();
+    assert!(reds > 500, "fill pixels: {reds}");
+    // Text is centred: nothing in the left and right margins.
+    assert!((0..180).all(|y| pixel(&out, 5, y)[0] == 0 && pixel(&out, 314, y)[0] == 0));
+    // Stroke + background.
+    let mut t = title("HI");
+    t.stroke = Some(jb_core::Stroke { color: [0.0, 1.0, 0.0, 1.0], width: 0.02 });
+    t.background = Some([0.0, 0.0, 1.0, 1.0]);
+    t.shadow = Some(jb_core::Shadow { color: [1.0, 1.0, 1.0, 1.0], offset: [0.03, 0.03], blur: 0.0 });
+    l.content = LayerContent::Title(t);
+    let out = r.render(&p, &FramePlan { time: 0, layers: vec![l] }, &src);
+    let count = |f: &dyn Fn([u8; 4]) -> bool| {
+        (0..180).flat_map(|y| (0..320).map(move |x| (x, y))).filter(|&(x, y)| f(pixel(&out, x, y))).count()
+    };
+    assert!(count(&|c| c[1] > 200 && c[0] < 50) > 200, "stroke");
+    assert!(count(&|c| c[2] > 200 && c[0] < 50 && c[1] < 50) > 1000, "background");
+    assert!(count(&|c| c[0] > 200 && c[1] > 200 && c[2] > 200) > 50, "shadow");
+    assert!(count(&|c| c[0] > 200 && c[1] < 50) > 300, "fill");
+}
+
+#[test]
+fn crop_rotation_and_flip() {
+    let Some(mut r) = common::renderer(40, 40) else { return };
+    let p = project(40, 40);
+    // Left half red, right half blue.
+    let mut data = vec![0u8; 40 * 40 * 4];
+    for y in 0..40 {
+        for x in 0..40 {
+            let i = (y * 40 + x) * 4;
+            data[i..i + 4].copy_from_slice(if x < 20 { &[255, 0, 0, 255] } else { &[0, 0, 255, 255] });
+        }
+    }
+    let f = jb_core::frame::VideoFrame { data: std::sync::Arc::new(data), ..pattern_a(40, 40) };
+    let src = MemorySource::new().with("s", f);
+    let mut l = media_layer("s");
+    // Crop away the right half: the red half is stretched over the canvas (fit = stretch).
+    l.transform.crop = [0.0, 0.0, 0.5, 0.0];
+    l.transform.fit = jb_core::FitMode::Stretch;
+    let out = r.render(&p, &FramePlan { time: 0, layers: vec![l.clone()] }, &src);
+    assert_eq!(pixel(&out, 35, 20), [255, 0, 0, 255]);
+    // Flip horizontally without crop: blue on the left.
+    l.transform.crop = [0.0; 4];
+    l.transform.flip_h = true;
+    let out = r.render(&p, &FramePlan { time: 0, layers: vec![l.clone()] }, &src);
+    assert_eq!(pixel(&out, 5, 20), [0, 0, 255, 255]);
+    // Rotate 90 degrees clockwise (unflipped): red (left) ends up on top.
+    l.transform.flip_h = false;
+    l.transform.rotation = 90.0;
+    let out = r.render(&p, &FramePlan { time: 0, layers: vec![l] }, &src);
+    assert_eq!(pixel(&out, 20, 5), [255, 0, 0, 255]);
+    assert_eq!(pixel(&out, 20, 35), [0, 0, 255, 255]);
+}
+
+#[test]
+fn linear_light_mode_blends_in_linear() {
+    let Some(mut r) = common::renderer(16, 16) else { return };
+    r.options.linear_light = true;
+    let p = project(16, 16);
+    let src = MemorySource::new();
+    let mut top = solid([1.0, 1.0, 1.0, 1.0]);
+    top.opacity = 0.5;
+    let out = r.render(&p, &FramePlan { time: 0, layers: vec![solid([0.0, 0.0, 0.0, 1.0]), top] }, &src);
+    // 50% linear grey encodes to ~188 in sRGB (display-space mixing would give 128).
+    let v = pixel(&out, 8, 8)[0];
+    assert!((v as i32 - 188).abs() <= 2, "{v}");
+}
