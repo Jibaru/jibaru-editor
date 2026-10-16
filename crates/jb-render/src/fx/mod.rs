@@ -12,6 +12,7 @@ pub mod animations;
 pub mod color;
 pub mod creative;
 pub mod distort;
+pub mod filmora;
 pub mod filters;
 pub mod motion;
 pub mod retro;
@@ -742,6 +743,7 @@ pub fn register_builtin(r: &mut Registry) {
     filters::register(r);
     color::register(r);
     animations::register(r);
+    filmora::register(r);
     crate::aliases::register(r);
 }
 
