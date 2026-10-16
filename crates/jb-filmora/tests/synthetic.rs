@@ -118,9 +118,11 @@ fn maps_the_fixture() {
     assert_eq!(aa.transition_out.as_ref().unwrap().kind, "filmora:audio/blender/transition-fade");
 
     let b = find(p, TrackKind::Video, 5 * S, "CAM_0002");
-    assert_eq!((b.speed.rate, b.source_in, b.speed.ramp.is_none()), (2.0, 10 * S, true));
+    // The in-point snaps to the retimed frame grid: 150 timeline frames at
+    // 29.97 fps, 2x (10.01 s instead of `offset` 10 s).
+    assert_eq!((b.speed.rate, b.source_in, b.speed.ramp.is_none()), (2.0, 10 * S + S / 100, true));
     // 3 s on the timeline at 2x consume 6 s of source.
-    assert_eq!(eval::source_time(b, 3 * S), 16 * S);
+    assert_eq!(eval::source_time(b, 3 * S), 16 * S + S / 100);
 
     let music = find(p, TrackKind::Audio, 0, "theme");
     assert_eq!(f(&music.audio.gain_db), -12.5);

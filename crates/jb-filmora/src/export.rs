@@ -706,7 +706,10 @@ impl<'a> Exporter<'a> {
         if retimed {
             if has_speed {
                 let rate = if new.speed.freeze { 1.0 } else { new.speed.rate.max(1e-6) };
-                let offset = ticks_to_secs(new.source_in);
+                // The importer snaps retimed in-points to Filmora's frame
+                // grid; an unchanged in-point keeps the project's offset.
+                let kept = old.filter(|o| o.source_in == new.source_in).and_then(|_| v["speed"]["offset"].as_f64());
+                let offset = kept.unwrap_or_else(|| ticks_to_secs(new.source_in));
                 // A freeze frame counts its frozen duration as source time.
                 let span = if new.speed.freeze { dur } else { jb_core::speed::source_span(new) };
                 put(&mut v["speed"], "offset", json!(offset));

@@ -184,7 +184,13 @@ fn layer_for(project: &Project, clip: &Clip, t: Ticks, depth: usize) -> Option<L
     let local = t - clip.start;
     let content = match &clip.source {
         ClipSource::Media { media_id } => {
-            LayerContent::Media { media_id: media_id.clone(), source_time: source_time(clip, local) }
+            // A clip starting between frames plays its in-point on the frame
+            // nearest to its start (Filmora; measured on clips after retimed
+            // ones): source times count from that frame.
+            let fr = project.settings.frame_rate;
+            let first = fr.frame_start(fr.frame_at(clip.start + fr.frame_duration() / 2));
+            let src_local = (t - first).clamp(0, clip.duration());
+            LayerContent::Media { media_id: media_id.clone(), source_time: source_time(clip, src_local) }
         }
         ClipSource::Sequence { sequence_id } => {
             if depth > 16 {

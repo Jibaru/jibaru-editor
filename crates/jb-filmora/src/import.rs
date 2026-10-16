@@ -291,14 +291,12 @@ impl<'a> Ctx<'a> {
         // timebase (`inPoint = offset / rate`) rounded to a timeline frame:
         // measured on five 10x clips, the frames shown are exactly
         // rate * round(inPoint frames) source frames in (up to 4 source
-        // frames earlier than `offset`), starting on the clip's first frame
-        // even when the clip starts between frames (after another retimed clip).
+        // frames earlier than `offset`), from the clip's first frame (the
+        // evaluator counts source time from the frame nearest to the start).
         if speed.rate != 1.0 && speed.ramp.is_none() && !speed.freeze {
             let frame = TICKS_PER_SECOND as f64 * self.frame_rate.den as f64 / self.frame_rate.num as f64;
             let retimed = (source_in as f64 / speed.rate / frame).round();
-            let at = start as f64 / frame;
-            let lead = ((at - 1e-3).ceil() - at).max(0.0);
-            source_in = ((retimed - lead) * frame * speed.rate).round() as Ticks;
+            source_in = (retimed * frame * speed.rate).round() as Ticks;
         }
         clip.source_in = source_in;
         clip.speed = speed;
