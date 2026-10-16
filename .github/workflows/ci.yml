@@ -41,9 +41,16 @@ jobs:
           "RUSTFLAGS=-C link-arg=/STACK:16777216" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - run: cargo build --workspace --all-targets
-      - run: cargo test --workspace
       - name: Report hardware decode / encode support
         run: cargo run -p jb-media --example hwinfo
+      - run: cargo test --workspace
+      - name: Upload golden mismatches
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-actual-${{ matrix.os }}
+          path: crates/jb-render/tests/golden/*.actual.png
+          if-no-files-found: ignore
 
   app-frontend:
     strategy:

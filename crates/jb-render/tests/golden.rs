@@ -2,6 +2,13 @@
 //! compared with `tests/golden/<id>.png` using a tolerant metric (mean
 //! absolute difference per channel). Missing goldens are written; set
 //! `JB_UPDATE_GOLDEN=1` to regenerate all of them after intended changes.
+//!
+//! Goldens are produced on real GPUs. On software or virtualized adapters
+//! (WARP, llvmpipe/lavapipe, the paravirtual GPU of macOS CI runners) the
+//! per-pixel hash noise of grain/glitch style items is not reproducible, so
+//! those items are compared and reported but not asserted; every other item
+//! is still checked with the normal tolerance. `JB_GOLDEN_STRICT=1` forces
+//! the strict behavior on any adapter.
 
 mod common;
 
@@ -47,9 +54,41 @@ fn tolerance(id: &str) -> f64 {
     }
 }
 
+/// Whether the adapter is a software rasterizer or a virtualized GPU, where
+/// noisy items cannot be expected to match goldens made on real hardware.
+fn is_reference_adapter(info: &wgpu::AdapterInfo) -> bool {
+    if std::env::var_os("JB_GOLDEN_STRICT").is_some() {
+        return true;
+    }
+    let name = info.name.to_ascii_lowercase();
+    let soft_name = ["paravirtual", "basic render", "warp", "llvmpipe", "lavapipe", "swiftshader", "software"]
+        .iter()
+        .any(|n| name.contains(n));
+    !soft_name && matches!(info.device_type, wgpu::DeviceType::DiscreteGpu | wgpu::DeviceType::IntegratedGpu)
+}
+
+/// Appends a line to the GitHub Actions job summary when running in CI.
+fn summary(line: &str) {
+    if let Some(path) = std::env::var_os("GITHUB_STEP_SUMMARY") {
+        use std::io::Write;
+        if let Ok(mut f) = std::fs::OpenOptions::new().append(true).create(true).open(path) {
+            let _ = writeln!(f, "{line}");
+        }
+    }
+}
+
 #[test]
 fn every_item_matches_its_golden() {
     let Some(mut r) = common::renderer(W, H) else { return };
+    let info = r.gpu().adapter_info.clone();
+    let strict = is_reference_adapter(&info);
+    let adapter = format!("{} ({:?}, {:?}, driver {:?})", info.name, info.device_type, info.backend, info.driver);
+    eprintln!("golden: adapter {adapter}, {}", if strict { "strict" } else { "noisy items report-only" });
+    summary(&format!(
+        "### jb-render goldens\n\nAdapter: `{adapter}` ({})\n",
+        if strict { "strict" } else { "software/virtual: noisy items report-only" }
+    ));
+    let mut report_only = Vec::new();
     let update = std::env::var_os("JB_UPDATE_GOLDEN").is_some();
     let dir = golden_dir();
     std::fs::create_dir_all(&dir).unwrap();
@@ -80,7 +119,9 @@ fn every_item_matches_its_golden() {
         match read_png(&path).filter(|_| !update) {
             Some(want) => {
                 let d = mean_abs_diff(&out.data, &want);
-                if d > tolerance(&id) {
+                if d > tolerance(&id) && !strict && tolerance(&id) > 3.0 {
+                    report_only.push(format!("{id}: mean abs diff {d:.2}"));
+                } else if d > tolerance(&id) {
                     failures.push(format!("{id}: mean abs diff {d:.2}"));
                     write_png(&dir.join(format!("{}.actual.png", id.replace([':', '/'], "_"))), &out.data);
                 }
@@ -90,6 +131,13 @@ fn every_item_matches_its_golden() {
                 written += 1;
             }
         }
+    }
+    if !report_only.is_empty() {
+        eprintln!("golden: not asserted on this adapter:\n{}", report_only.join("\n"));
+        summary(&format!("Noisy items not asserted on this adapter:\n\n- {}\n", report_only.join("\n- ")));
+    }
+    if !failures.is_empty() {
+        summary(&format!("Mismatches:\n\n- {}\n", failures.join("\n- ")));
     }
     if written > 0 {
         eprintln!("wrote {written} golden images to {}", dir.display());
