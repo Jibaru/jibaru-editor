@@ -16,5 +16,26 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+
+      # FFmpeg is linked dynamically. On macOS the Homebrew build is used for
+      # development; releases bundle an LGPL build.
+      - name: Install FFmpeg (macOS)
+        if: runner.os == 'macOS'
+        run: brew install ffmpeg pkgconf
+
+      # LGPL shared build: DLLs, import libraries and headers.
+      - name: Install FFmpeg (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $name = "ffmpeg-n9.0-latest-win64-lgpl-shared-9.0"
+          $url = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/$name.zip"
+          Invoke-WebRequest $url -OutFile "$env:RUNNER_TEMP\ffmpeg.zip"
+          Expand-Archive "$env:RUNNER_TEMP\ffmpeg.zip" -DestinationPath $env:RUNNER_TEMP
+          $dir = Join-Path $env:RUNNER_TEMP $name
+          "FFMPEG_DIR=$dir" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "LIBCLANG_PATH=C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "$dir\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
+
       - run: cargo build --workspace --all-targets
       - run: cargo test --workspace
