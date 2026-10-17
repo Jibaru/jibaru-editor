@@ -31,6 +31,14 @@ MAD mean / max over the window (0–255 over RGB).
 | Ripple | tr005 | `jb.a4.puddle_ripple` | 23.77 / 49.2 | 17.10 / 27.4 | seeded noise bumps; bump positions are statistical, not identical |
 | Wave | tr005 | `jb.a4.ring_ripple_reveal` | 27.49 / 48.1 | 21.31 / 34.1 | expanding ring front with concentric ripples |
 | Butterfly Wave Scrawler | tr004 | `jb.a4.ribbon_wave_split` | 40.74 / 55.4 | 40.28 / 50.6 | sine-bent lines + RGB split; structure close, phase of the bands differs |
+| Mosaic | trfix1 | `jb.a4.block_pixelate` | 43.65 / 102.7 | 41.62 / 64.0 | centre-anchored N×N cells, point-sampled; the fine grid media makes any cell misalignment expensive |
+| Strong Sharpening (grid / scene) | fx003 | `jb.a4.crisp_sharpen` | 29.76 / 29.9 · 12.34 / 12.9 | 26.75 / 26.8 · 8.91 / 9.2 | unsharp mask + vertical red/blue fringes + desaturation |
+| Chromatic Aberration (grid / scene) | fx002 | `jb.a4.prism_split_bursts` | 16.15 / 59.7 · 7.23 / 33.2 | 11.74 / 45.7 · 4.32 / 11.4 | per-frame red/blue split and smear; burst timing is deterministic in clip time (same on both clips) |
+| Heart Zoom (grid / scene) | fx003 | `jb.a4.dreamy_focus_in` | 26.08 / 50.9 · 8.07 / 16.2 | 18.60 / 36.0 · 4.81 / 9.6 | blur that pulls into focus; the heart-shaped bokeh and heart particles are not drawn |
+| Baltan (grid / scene) | fx001 | `jb.a4.afterimage_rise` | 28.76 / 86.8 · 27.74 / 78.6 | 3.54 / 5.5 · 6.44 / 10.8 | stepped rise from black; Filmora's temporal echo on moving footage is not modelled (effects have no frame history) |
+| Money (grid / scene) | fx001 | `jb.a4.banknote_engrave` | 76.32 / 76.4 · 64.93 / 66.0 | 68.63 / 68.7 · 49.33 / 50.1 | high-contrast grey with a faint engraving screen; the binary line screen cannot be phase-matched, so a full-strength screen measures worse than grey |
+| Shattered 02 (grid / scene) | fx003 | `jb.a4.shard_sweep` | 100.45 / 112.3 · 89.81 / 100.8 | 12.21 / 46.3 · 10.49 / 39.7 | Voronoi shards released left to right, shrinking, over black; shard layout is seeded, not Filmora's |
+| Shattered 03 (grid / scene) | fx003 | `jb.a4.shard_burst` | 72.76 / 112.3 · 59.22 / 100.2 | 20.51 / 57.2 · 12.43 / 45.2 | same model, radial release from the centre |
 
 ## Gaps
 

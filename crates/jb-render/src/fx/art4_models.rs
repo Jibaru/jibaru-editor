@@ -37,8 +37,9 @@ pub const WAVE_SPLIT: Model =
     Model { name: "wave_split", bodies: &[include_str!("../shaders/art4/wave_split.wgsl")], encode: encode_single };
 
 /// Unsharp mask (strong sharpening): gaussian of `c0` 1080p px, amount `c1`,
-/// red/blue fringes from taps shifted `±c2` px blended by `c3`, then
-/// contrast `c4` and lift `c5`.
+/// red/blue fringes from taps shifted `±(c2, c6)` px blended by `c3`,
+/// saturation `1 + c7`, scanlines (amplitude `c8`, period `c9` px, phase
+/// `c10`), then contrast `c4`, lift `c5` and per-channel lift `c11..c13`.
 pub const UNSHARP: Model = Model { name: "unsharp", bodies: &[include_str!("../shaders/art4/unsharp.wgsl")], encode: encode_unsharp };
 
 /// Glow: the clip zoomed by `k5` is mixed with a gaussian copy (sigma `k0`
@@ -72,7 +73,38 @@ fn encode_glow(fx: &Art4Fx, cx: &mut FxCx<'_>, io: &FxIo<'_>, u: Uniforms) {
 /// middle of its axis by that fraction), camera dolly `k10` (half-heights).
 pub const PRISM: Model = Model { name: "prism", bodies: &[include_str!("../shaders/art4/prism.wgsl")], encode: encode_single };
 
-pub static MODELS: &[&Model] = &[&PRISM, &SWIRL, &RIPPLE, &RING_WAVE, &WAVE_SPLIT, &UNSHARP, &GLOW];
+/// Mosaic: the frame is cut into `k0` columns and `k0 · k1` rows (`k1 = 0`:
+/// as many rows as columns) with a cell edge on the centre (offset `k2, k3`
+/// cells),
+/// each filled with the clip point-sampled at `c0, c1` inside the cell (mixed
+/// with the cell average by `c2`); `k4`
+/// mixes outgoing to incoming, then gain `k5` and lift `k6`.
+pub const MOSAIC: Model = Model { name: "mosaic", bodies: &[include_str!("../shaders/art4/mosaic.wgsl")], encode: encode_single };
+
+/// Channel split: red, green and blue are read from the clip shifted by
+/// `(k0, k1)`, `(k2, k3)`, `(k4, k5)` (uv) and smeared horizontally over
+/// `k6` 1080p px; `k9` blends the split over the clip (0: fully), then gain
+/// `1 + k7` and lift `k8`. Outside the frame is mirrored.
+pub const RGB_SPLIT: Model = Model { name: "rgb_split", bodies: &[include_str!("../shaders/art4/rgb_split.wgsl")], encode: encode_single };
+
+/// Banknote engraving: the luminance (gain `c8`, lift `c9`, gamma `c11`)
+/// is drawn as ink lines of two screens, concentric rings about `c0, c1`
+/// (uv) of period `c2` 1080p px and straight lines at angle `c3` of period
+/// `c4` waving by `c5` px at `c6` cycles per 1000 px (weight `c12`); a line
+/// is inked where the screen falls below the darkness (sharpness `c7`).
+/// `c10` blends the engraving over the plain grey.
+pub const ENGRAVE: Model = Model { name: "engrave", bodies: &[include_str!("../shaders/art4/engrave.wgsl")], encode: encode_single };
+
+/// Shatter: the clip is a jittered Voronoi mosaic of cells `c0` 1080p px
+/// (seed `c16`). A cell breaks off at progress `c1 + c2 · x + c3 · rnd`
+/// (`x`: horizontal position, or with `c7 > 0.5` the distance from `c8, c9`
+/// in frame heights); `c4` before that black cracks of `c5` cells outline
+/// it. A released shard shrinks to `c6` over `c10`, drifts `c11` px per
+/// unit progress in a random direction plus `c12` downwards, is lit by
+/// `c15` and vanishes after `c13 + c14 · rnd`. The rest is black.
+pub const SHATTER: Model = Model { name: "shatter", bodies: &[include_str!("../shaders/art4/shatter.wgsl")], encode: encode_single };
+
+pub static MODELS: &[&Model] = &[&SHATTER, &ENGRAVE, &RGB_SPLIT, &MOSAIC, &PRISM, &SWIRL, &RIPPLE, &RING_WAVE, &WAVE_SPLIT, &UNSHARP, &GLOW];
 
 pub fn model(name: &str) -> Option<&'static Model> {
     MODELS.iter().copied().find(|m| m.name == name)
