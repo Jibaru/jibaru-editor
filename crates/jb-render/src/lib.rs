@@ -12,6 +12,7 @@
 //! See [`registry`] for the effect catalog and [`Renderer`] for the pipeline.
 
 pub mod aliases;
+pub mod aliases_art3a;
 pub mod aliases_lane1;
 pub mod aliases_lane2;
 pub mod aliases_lane3;

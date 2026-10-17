@@ -26,8 +26,6 @@ pub const FILMORA_LANE1: &[(&str, &str)] = &[
     ("2D9EDF1E-BB2B-4BC1-B455-6FAE3B00BD6F", "jb.laser_band_blue"),
     ("70D8169D-7B37-4864-9E4B-7593C646ECD3", "jb.laser_band_red"),
     ("44ECCE7F-73FE-4815-8C3C-B1E14B73926F", "jb.torn_paper_rise"),
-    ("582C0031-3A5A-4839-86C2-BD5662120FAD", "jb.shutter_wash_01"),
-    ("0A51BCC4-B46C-40E3-AB2E-072317A483D0", "jb.shutter_wash_02"),
     ("08C887B6-5597-4A52-BE2B-133E6B6EC9BD", "jb.shape_burst_wash_01"),
     ("3B7844DB-2D95-4136-BE2E-4D59D3FB0CF8", "jb.paint_stroke_reveal_01"),
     ("6F64A98D-2C50-4D7F-9314-89E859FB9AD4", "jb.shape_burst_wash_02"),

@@ -302,7 +302,7 @@ pub const GROUPS: &[LibraryGroup] = &[
 
 /// [`GROUPS`] followed by the groups contributed by fitted item sets.
 pub fn all_groups() -> impl Iterator<Item = &'static LibraryGroup> {
-    GROUPS.iter().chain(crate::fx::lane3::LIBRARY.iter())
+    GROUPS.iter().chain(crate::fx::lane3::LIBRARY.iter()).chain(crate::fx::art3a::LIBRARY.iter())
 }
 
 /// The groups listing `id`, with its position in each.
