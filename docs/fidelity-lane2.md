@@ -85,8 +85,8 @@ MAD mean / worst frame over the item window at 960x540 (harness with `JB_FIDELIT
 | Photo Slide 3 | `8E4DCEF8-3E13-4D9E-896A-EFD2C7969698` | `jb.photo_slide_3` | 14.91 | 36.1 | 2.86 | +12.05 | approximation: per-frame layer fit with large residuals (curved, multi-card or blurred motion) (hard cut: 43.5) |
 | Photo Slide 4 | `BD576272-6A8F-41C4-8643-8404A0B16D3E` | `jb.photo_slide_4` | 12.90 | 21.7 | 3.59 | +9.31 | approximation: per-frame layer fit with large residuals (curved, multi-card or blurred motion) (hard cut: 40.9) |
 | Photo Slide 5 | `B75481DA-EB86-48E6-805C-888F6C051913` | `jb.photo_slide_5` | 22.49 | 39.8 | 2.60 | +19.89 | approximation: per-frame layer fit with large residuals (curved, multi-card or blurred motion) (hard cut: 44.2) |
-| Photo Slide 6 | `D08AB7BA-2B35-43CA-AF77-2907B1BE31C8` | — |  |  |  |  | not implemented |
-| Paper Page Curl | `81527EAA-3AD1-418D-8C56-B7BC4E174D03` | — |  |  |  |  | not implemented |
+| Photo Slide 6 | `D08AB7BA-2B35-43CA-AF77-2907B1BE31C8` | `jb.photo_slide_6` | 19.52 | 50.1 | 3.90 | +15.62 | approximation: per-frame layer fit with large residuals (curved, multi-card or blurred motion) (hard cut: 47.6) |
+| Paper Page Curl | `81527EAA-3AD1-418D-8C56-B7BC4E174D03` | `jb.page_curl` | 5.14 | 7.5 | 5.33 | -0.19 |  |
 | Erase Slide Right | `4CA4EF88-5997-41a6-AAE6-0C2226D5A96E` | `jb.erase_slide_right` | 2.23 | 2.8 | 2.59 | -0.36 |  |
 | Box Flip Left | `B0FA9DF9-6C71-4B4D-8102-8F106A9E1385` | `jb.box_flip_left` | 8.00 | 32.3 | 5.84 | +2.16 | approximation: per-frame layer fit with large residuals (curved, multi-card or blurred motion) (hard cut: 10.0) |
 | Box Flip Right | `6C491663-ADFE-49B5-855F-FF2AE53E8F34` | `jb.box_flip_right` | 7.06 | 25.9 | 2.56 | +4.50 | approximation: per-frame layer fit with large residuals (curved, multi-card or blurred motion) (hard cut: 9.2) |
@@ -99,11 +99,11 @@ MAD mean / worst frame over the item window at 960x540 (harness with `JB_FIDELIT
 | Simple Roll 2 | `d8867ccc-4762-49c4-93fd-616208d056cf` | `jb.roll_down_2` | 4.47 | 8.9 | 2.09 | +2.38 |  |
 | Simple Roll 3 | `f03e2971-f66f-4481-b308-a640d451d2ca` | `jb.roll_left_3` | 4.32 | 7.7 | 3.03 | +1.29 |  |
 | Simple Roll 6 | `3e2c9408-4b1e-4e78-afc4-4d6c837f6c6e` | `jb.roll_6` | 4.99 | 9.2 | 3.15 | +1.84 |  |
-| Simple Roll 7 | `0fbaebd7-c224-4ca5-a9f0-d16307f19854` | `jb.roll_7` | 4.85 | 10.2 | 3.27 | +1.58 | worst frame where faces swap or motion blur peaks |
+| Simple Roll 7 | `0fbaebd7-c224-4ca5-a9f0-d16307f19854` | `jb.roll_7` | 4.01 | 7.6 | 2.70 | +1.31 |  |
 | Simple Roll 8 | `93a969d4-9108-45d6-9c09-f08350b2dca7` | `jb.roll_8` | 4.48 | 7.9 | 2.54 | +1.94 |  |
 | Simple Roll 9 | `1568e098-ca48-4861-9667-6d3d6ed19b60` | `jb.roll_9` | 4.36 | 11.3 | 3.20 | +1.16 | worst frame where faces swap or motion blur peaks |
 | Retro Box 01 | `7DB28C3E-D012-470E-B872-F71BA20437E2` | `jb.retro_box` | 2.82 | 3.5 | 2.59 | +0.23 |  |
-| 3D Box Close | `16BFABD5-AC48-42AF-BAF9-149934D9B990` | `jb.box_close_3d` | 8.85 | 30.5 | 2.23 | +6.62 | approximation: per-frame layer fit with large residuals (curved, multi-card or blurred motion) (hard cut: 16.9) |
+| 3D Box Close | `16BFABD5-AC48-42AF-BAF9-149934D9B990` | `jb.box_close_3d` | 8.75 | 27.8 | 2.23 | +6.52 | approximation: per-frame layer fit with large residuals (curved, multi-card or blurred motion) (hard cut: 16.9) |
 | 3D Box Down | `86437F55-4674-4809-9B7A-0D39DCF9E313` | `jb.box_down_3d` | 8.55 | 49.4 | 1.91 | +6.64 | approximation: per-frame layer fit with large residuals (curved, multi-card or blurred motion) (hard cut: 14.8) |
 | 3D Box Drop | `3B310488-6093-4A52-B87E-0367ADF1641A` | `jb.box_drop_3d` | 3.93 | 6.9 | 3.04 | +0.89 |  |
 | 3D Box Fall | `0C615FD6-6C3D-469A-955C-5FDF8FA6A23A` | `jb.box_fall_3d` | 3.92 | 8.8 | 1.88 | +2.04 |  |
@@ -114,7 +114,7 @@ MAD mean / worst frame over the item window at 960x540 (harness with `JB_FIDELIT
 | 3D Box Flip 5 | `64D165BC-C38F-400F-965D-A9E33BA1128C` | `jb.box_flip_3d_5` | 3.73 | 5.5 | 3.90 | -0.17 |  |
 | 3D Box Flip 6 | `95EB31D4-DA7A-4642-8E35-CEA17DD93B35` | `jb.box_flip_3d_6` | 4.81 | 22.4 | 1.90 | +2.91 | worst frame where faces swap or motion blur peaks |
 | 3D Box Right | `9BF9CABE-864C-43D2-A282-24A578AF699F` | `jb.box_turn_right_3d` | 5.31 | 28.1 | 2.51 | +2.80 | worst frame where faces swap or motion blur peaks |
-| 3D Box Split 1 | `3B28FE15-13ED-4BF8-A844-9DFDAC64816B` | — |  |  |  |  | not implemented |
+| 3D Box Split 1 | `3B28FE15-13ED-4BF8-A844-9DFDAC64816B` | `jb.box_split_3d_1` | 4.74 | 23.1 | 2.88 | +1.86 | worst frame where faces swap or motion blur peaks |
 | 3D Box Split 2 | `93020E77-3F2E-4A15-BE14-A2C09970408D` | — |  |  |  |  | not implemented |
 | 3D Box Up | `F9DB5BCD-C24E-43A4-BAE3-7FC4BE93A25F` | `jb.box_up_3d` | 9.57 | 55.8 | 1.99 | +7.58 | approximation: per-frame layer fit with large residuals (curved, multi-card or blurred motion) (hard cut: 14.8) |
 | 3D Camera Transitions 7 | `F163DDE7-90AF-077C-84B2-1498C379F735` | `jb.camera_cards_7` | 23.49 | 52.9 | 2.59 | +20.90 | approximation: per-frame layer fit with large residuals (curved, multi-card or blurred motion) (hard cut: 69.0) |
@@ -140,7 +140,7 @@ MAD mean / worst frame over the item window at 960x540 (harness with `JB_FIDELIT
 | 3D Flip | `EC14B694-D0AD-425A-806C-BA9D288341CC` | `jb.flip_3d_tilt` | 2.88 | 4.3 | 4.32 | -1.44 |  |
 | 3D Frame Shift | `8C84620F-C904-4702-B697-F87B224048B9` | — |  |  |  |  | not implemented |
 | 3D Page Flip Left | `A985CC65-0A2B-440F-B437-6F802A0305B0` | `jb.page_flip_left_3d` | 13.77 | 39.9 | 7.65 | +6.12 | approximation: per-frame layer fit with large residuals (curved, multi-card or blurred motion) (hard cut: 17.3) |
-| 3D Screens | `94860FC5-0D3E-42F4-A8BB-AE99CFBE5DF5` | `jb.screens_3d` | 16.31 | 32.9 | 2.04 | +14.27 | approximation: per-frame layer fit with large residuals (curved, multi-card or blurred motion) (hard cut: 23.2) |
+| 3D Screens | `94860FC5-0D3E-42F4-A8BB-AE99CFBE5DF5` | `jb.screens_3d` | 15.94 | 33.5 | 2.04 | +13.90 | approximation: per-frame layer fit with large residuals (curved, multi-card or blurred motion) (hard cut: 23.2) |
 | 3D Slideshow Style 1 | `82F40844-1371-4C82-A822-40DB348B8A8C` | `jb.slideshow_tilt_1` | 47.28 | 60.2 | 20.26 | +27.02 | stand-in: timed global blend; the overlay imagery is not modelled (hard cut: 57.0) |
 | 3D Slideshow Style 2 | `DE2B8F85-34CE-43B3-A326-293F597C2B0F` | `jb.slideshow_tilt_2` | 9.29 | 12.8 | 8.63 | +0.66 | approximation: per-frame layer fit with large residuals (curved, multi-card or blurred motion) (hard cut: 38.3) |
 | 3D Slideshow Style 3 | `A12CC2AE-1864-44B7-88AE-4F5A3DA50167` | — |  |  |  |  | not implemented |
@@ -156,7 +156,7 @@ MAD mean / worst frame over the item window at 960x540 (harness with `JB_FIDELIT
 | Cube Facets Down | `FAC11A67-7C08-497E-B979-1EF1F923DEF6` | `jb.cube_facets_down` | 11.16 | 51.7 | 2.84 | +8.32 | approximation: per-frame layer fit with large residuals (curved, multi-card or blurred motion) (hard cut: 16.5) |
 | Cube Facets Left | `55C7899F-8326-4E0E-8A14-BAD17A8757E5` | `jb.cube_facets_left` | 7.35 | 22.2 | 2.84 | +4.51 | approximation: per-frame layer fit with large residuals (curved, multi-card or blurred motion) (hard cut: 12.8) |
 | Cube Facets Right | `C73CB5B2-6885-48E1-A97D-9DC8C8D1E3BD` | `jb.cube_facets_right` | 7.07 | 21.6 | 2.13 | +4.94 | approximation: per-frame layer fit with large residuals (curved, multi-card or blurred motion) (hard cut: 12.4) |
-| Cube Facets Up | `09FB622E-E770-4E86-BC86-A6F3BDFACF75` | `jb.cube_facets_up` | 10.53 | 37.4 | 2.85 | +7.68 | approximation: per-frame layer fit with large residuals (curved, multi-card or blurred motion) (hard cut: 17.2) |
+| Cube Facets Up | `09FB622E-E770-4E86-BC86-A6F3BDFACF75` | `jb.cube_facets_up` | 9.84 | 26.8 | 2.85 | +6.99 | approximation: per-frame layer fit with large residuals (curved, multi-card or blurred motion) (hard cut: 17.2) |
 | Cube Left | `A6B6286F-F9FE-4F9F-8C45-538EEC05F620` | `jb.cube_turn_left` | 5.26 | 7.1 | 3.08 | +2.18 |  |
 | Cube Up | `5107B490-0EA4-47E1-8343-BD779895685F` | `jb.cube_turn_up` | 5.89 | 6.8 | 4.85 | +1.04 |  |
 | Diagonal Slice Reveal | `E5C74593-D113-47B5-B174-252E1716826C` | `jb.diagonal_slice_reveal` | 3.18 | 11.4 | 3.23 | -0.05 | worst frame where faces swap or motion blur peaks |
@@ -177,7 +177,7 @@ MAD mean / worst frame over the item window at 960x540 (harness with `JB_FIDELIT
 | Fold Transition 08 | `96262F03-7368-4610-91AB-6B25D29322D2` | `jb.fold_8` | 3.06 | 7.4 | 2.64 | +0.42 |  |
 | Glass Panel Flash | `293A55BF-E78C-4F2A-A0C5-2B8E2B023C51` | `jb.glass_panel_flash` | 3.59 | 23.3 | 1.72 | +1.87 | worst frame where faces swap or motion blur peaks |
 | Grid Flip 3D | `D314281B-DD2C-4662-8A52-A955B8A7E54B` | — |  |  |  |  | not implemented |
-| Luminous Page Turning | `C8D169E4-A8B6-470C-872E-9CA9A09D7134` | `jb.page_turn_luminous` | 32.70 | 78.6 | 3.24 | +29.46 | stand-in: timed global blend; the overlay imagery is not modelled (hard cut: 81.4) |
+| Luminous Page Turning | `C8D169E4-A8B6-470C-872E-9CA9A09D7134` | `jb.page_turn_luminous` | 15.21 | 29.9 | 2.93 | +12.28 | approximation: per-frame layer fit with large residuals (curved, multi-card or blurred motion) (hard cut: 81.4) |
 | Magic Card | `52730ECE-003C-40A3-A880-2A2E23A10295` | — |  |  |  |  | not implemented |
 | Panel Collapse | `7C0FB782-E755-4BFE-96B5-CA90BA997B9D` | — |  |  |  |  | not implemented |
 | Rolling Screen | `D4E2B8C1-3A5F-4E7B-9C2D-6F8A1B0E7C3F` | — |  |  |  |  | not implemented |
@@ -189,14 +189,14 @@ MAD mean / worst frame over the item window at 960x540 (harness with `JB_FIDELIT
 | Tear Paper Recovery | `BE9481E4-EE77-4040-B059-42844D024AEC` | — |  |  |  |  | not implemented |
 | History Slideshow Transition 01 | `770A5643-34DC-435D-B35B-722B21A5A27D` | `jb.slideshow_history` | 19.53 | 45.5 | 2.44 | +17.09 | stand-in: timed global blend; the overlay imagery is not modelled (hard cut: 24.3) |
 | Film Roll Transition 01 | `E041F777-9B75-4881-B7F6-706101648EF1` | `jb.film_strip_1` | 36.29 | 66.7 | 2.10 | +34.19 | stand-in: timed global blend; the overlay imagery is not modelled (hard cut: 70.2) |
-| Film Roll Transition 03 | `7F1C1BD9-E672-4BD5-A833-0E3FCDAB155B` | `jb.film_strip_3` | 16.62 | 31.4 | 3.04 | +13.58 | approximation: per-frame layer fit with large residuals (curved, multi-card or blurred motion) (hard cut: 46.6) |
+| Film Roll Transition 03 | `7F1C1BD9-E672-4BD5-A833-0E3FCDAB155B` | `jb.film_strip_3` | 10.08 | 17.1 | 3.04 | +7.04 | approximation: per-frame layer fit with large residuals (curved, multi-card or blurred motion) (hard cut: 46.6) |
 | Photobook Slides | `3E0DC666-ED48-4D40-81F4-D7E25A044A09` | — |  |  |  |  | not implemented |
 | Box Flip Down | `bf05541f-7e2b-4ee3-af3c-f2b5608879a8` | `jb.box_flip_down` | 5.53 | 21.5 | 1.80 | +3.73 | worst frame where faces swap or motion blur peaks |
 | Box Flip Up | `c76663b6-72d0-4d87-9f35-0e4c57ce37da` | `jb.box_flip_up` | 5.33 | 13.8 | 2.75 | +2.58 | worst frame where faces swap or motion blur peaks |
-| Fisheye Roll Down | `0bc06bc0-0c06-4583-a15d-13b01fc71e05` | — |  |  |  |  | not implemented |
+| Fisheye Roll Down | `0bc06bc0-0c06-4583-a15d-13b01fc71e05` | `jb.fisheye_roll_down` | 11.40 | 25.2 | 1.83 | +9.57 | approximation: per-frame layer fit with large residuals (curved, multi-card or blurred motion) (hard cut: 29.8) |
 | Fisheye Roll Down Right | `5a5e8238-0f9a-4a35-8331-6fd2348fcaf1` | — |  |  |  |  | not implemented |
 | Fisheye Roll Right | `05e90c4d-fedc-4102-968a-0d830e04fb68` | `jb.fisheye_roll_right` | 11.15 | 22.1 | 2.22 | +8.93 | approximation: per-frame layer fit with large residuals (curved, multi-card or blurred motion) (hard cut: 32.4) |
-| Fisheye Roll Up | `7c8e17d9-1294-4307-b99f-103fff2cf91f` | — |  |  |  |  | not implemented |
+| Fisheye Roll Up | `7c8e17d9-1294-4307-b99f-103fff2cf91f` | `jb.fisheye_roll_up` | 11.82 | 33.2 | 4.25 | +7.57 | approximation: per-frame layer fit with large residuals (curved, multi-card or blurred motion) (hard cut: 30.4) |
 | Fisheye Roll Up Right | `464f09fe-10cd-4701-b2f5-8c5ae4463086` | — |  |  |  |  | not implemented |
 | Cross Split | `75A09E8D-21D1-4c4e-AEA9-EB9CEC11A644` | `jb.cross_split` | 1.79 | 2.3 | 1.85 | -0.06 |  |
 | DoorWay | `976B2502-3B22-4dd4-AEB4-0AAA2C1E5AC8` | `jb.doorway` | 6.14 | 8.9 | 1.66 | +4.48 | approximation: per-frame layer fit with large residuals (curved, multi-card or blurred motion) (hard cut: 50.5) |
@@ -204,4 +204,4 @@ MAD mean / worst frame over the item window at 960x540 (harness with `JB_FIDELIT
 | Skew Right Split | `2D4099D2-9B28-437f-8FEB-2A7E25C0B549` | `jb.skew_split_right` | 1.68 | 2.5 | 1.73 | -0.05 |  |
 | Cube Right | `0FCB240F-5328-4e85-869A-2D989F50D387` | `jb.cube_turn_right` | 4.85 | 5.7 | 3.18 | +1.67 |  |
 
-96 of 138 items implemented; 13 within mean < 3 and worst < 10.
+101 of 138 items implemented; 13 within mean < 3 and worst < 10.

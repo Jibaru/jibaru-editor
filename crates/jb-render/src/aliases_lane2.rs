@@ -39,6 +39,8 @@ pub const FILMORA_LANE2: &[(&str, &str)] = &[
     ("EBC160A4-C522-4DEE-8FF2-24596EFF5CDA", "jb.box_horizontal_3d"),
     // 3D Box Left
     ("75E87EE4-EC9E-4398-BA61-0653057F144A", "jb.box_left_3d"),
+    // 3D Box Split 1
+    ("3B28FE15-13ED-4BF8-A844-9DFDAC64816B", "jb.box_split_3d_1"),
     // 3D Box Right
     ("9BF9CABE-864C-43D2-A282-24A578AF699F", "jb.box_turn_right_3d"),
     // 3D Box Up
@@ -101,8 +103,12 @@ pub const FILMORA_LANE2: &[(&str, &str)] = &[
     ("E041F777-9B75-4881-B7F6-706101648EF1", "jb.film_strip_1"),
     // Film Roll Transition 03
     ("7F1C1BD9-E672-4BD5-A833-0E3FCDAB155B", "jb.film_strip_3"),
+    // Fisheye Roll Down
+    ("0bc06bc0-0c06-4583-a15d-13b01fc71e05", "jb.fisheye_roll_down"),
     // Fisheye Roll Right
     ("05e90c4d-fedc-4102-968a-0d830e04fb68", "jb.fisheye_roll_right"),
+    // Fisheye Roll Up
+    ("7c8e17d9-1294-4307-b99f-103fff2cf91f", "jb.fisheye_roll_up"),
     // 3D Flip Right
     ("B04A402D-5C04-4110-AEAD-2E3DBEC1FEFF", "jb.flip_3d_right"),
     // 3D Flip
@@ -141,6 +147,8 @@ pub const FILMORA_LANE2: &[(&str, &str)] = &[
     ("96262F03-7368-4610-91AB-6B25D29322D2", "jb.fold_8"),
     // Glass Panel Flash
     ("293A55BF-E78C-4F2A-A0C5-2B8E2B023C51", "jb.glass_panel_flash"),
+    // Paper Page Curl
+    ("81527EAA-3AD1-418D-8C56-B7BC4E174D03", "jb.page_curl"),
     // 3D Page Flip Left
     ("A985CC65-0A2B-440F-B437-6F802A0305B0", "jb.page_flip_left_3d"),
     // Luminous Page Turning
@@ -157,6 +165,8 @@ pub const FILMORA_LANE2: &[(&str, &str)] = &[
     ("BD576272-6A8F-41C4-8643-8404A0B16D3E", "jb.photo_slide_4"),
     // Photo Slide 5
     ("B75481DA-EB86-48E6-805C-888F6C051913", "jb.photo_slide_5"),
+    // Photo Slide 6
+    ("D08AB7BA-2B35-43CA-AF77-2907B1BE31C8", "jb.photo_slide_6"),
     // Pivot Flip
     ("D9864B5B-CAF1-4C24-9124-49B8F7926046", "jb.pivot_flip"),
     // Fast Push Down
