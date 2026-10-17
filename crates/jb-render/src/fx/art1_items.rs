@@ -33,6 +33,12 @@ pub const LIB_TRANSITIONS: &[&str] = &[
     "jb.golden_bokeh_band",
 ];
 
+/// Library group of the art1 effects (`library.rs`).
+pub const LIB_EFFECTS: &[&str] = &[
+    "jb.fast_light_leaks",
+    "jb.focus_pull_bokeh",
+];
+
 /// Every art1 item.
 pub fn specs() -> Vec<ArtSpec> {
     vec![
@@ -46,9 +52,13 @@ pub fn specs() -> Vec<ArtSpec> {
         art!("jb.peach_orb_leak", "Peach Orb Leak", "Light", Transition, "peach_orb_leak", "Big out-of-focus orange orbs drift in and melt into a cream flash that clears on the new clip."),
         art!("jb.sunlit_haze_leak", "Sunlit Haze Leak", "Light", Transition, "sunlit_haze_leak", "A low sun throws a diagonal shaft of light over the old clip while the new clip rises from below."),
         art!("jb.golden_bokeh_band", "Golden Bokeh Band", "Light", Transition, "golden_bokeh_band", "A band of golden light full of bokeh sweeps left to right, revealing the new clip."),
+        art!("jb.fast_light_leaks", "Fast Light Leaks", "Light", Effect, "fast_light_leaks", "A short burst of burnt film light: churning cream flares and maroon smoke that bleach the picture and thin out."),
+        art!("jb.focus_pull_bokeh", "Focus Pull Bokeh", "Light", Effect, "focus_pull_bokeh", "The lens racks out of focus and back while the highlights swell into glowing discs."),
     ]
 }
 
 pub fn register(r: &mut Registry) {
-    register_all(r, &specs());
+    let mut all = specs();
+    all.extend(super::art1_kit::dev_specs(&all));
+    register_all(r, &all);
 }

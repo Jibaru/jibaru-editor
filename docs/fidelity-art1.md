@@ -55,6 +55,15 @@ plus the rest of the project).
 | Light Leaks Transition 11 | `5FCF4746-3646-415B-9884-A9ECED01EBE7` | `jb.sunlit_haze_leak` | 24.55 / 37.0 | 23.08 / 31.4 | 3.88 |
 | Light Leaks Transition Pack Transition 03 | `DE3A553C-34A6-4EA4-B65D-BAC68391C2A1` | `jb.golden_bokeh_band` | 20.12 / 45.8 | 17.03 / 28.7 | 3.19 |
 
+Effects (previously unimplemented, so "before" is the untouched clip), each
+measured on its two 2 s windows of `fx003` / `fxfix1` (grid clip, then scene
+clip; clip-local time):
+
+| Filmora item | GUID | jb id | before grid / scene | art1 grid / scene |
+|---|---|---|---|---|
+| Fast Light Leaks 2 | `DF9D7C57-52C1-43D3-9723-6E4759D4134E` | `jb.fast_light_leaks` | 34.17 / 35.19 | 17.67 / 15.98 |
+| Camera Focus Bokeh | `CE74AA1F-07F6-46A9-9D59-C4B1D7802A53` | `jb.focus_pull_bokeh` | 35.06 / 7.31 | 19.26 / 7.27 |
+
 Particle items (sparkles, glitter, bokeh) stay well above the floor even when
 they look right: individual sparks cannot land on the reference's pixels, so
 a dense spark field costs MAD wherever it does not coincide. The gain over the

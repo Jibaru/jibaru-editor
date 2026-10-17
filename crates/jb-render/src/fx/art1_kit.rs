@@ -234,6 +234,39 @@ impl Effect for ArtFx {
     }
 }
 
+/// Development only: with `JB_ART1_WGSL_DIR` set, every other `<stem>.wgsl`
+/// of that directory is registered as `jb.<stem>` (an effect when it keys on
+/// clip seconds, else a transition), so new items can be drafted without
+/// rebuilding.
+pub fn dev_specs(known: &[ArtSpec]) -> Vec<ArtSpec> {
+    let Some(dir) = std::env::var_os("JB_ART1_WGSL_DIR") else { return Vec::new() };
+    let Ok(rd) = std::fs::read_dir(&dir) else { return Vec::new() };
+    let mut out = Vec::new();
+    for e in rd.flatten() {
+        let path = e.path();
+        let Some(stem) = path.file_stem().and_then(|s| s.to_str()) else { continue };
+        if path.extension().is_none_or(|x| x != "wgsl") || stem == "kit" || known.iter().any(|k| k.file == stem) {
+            continue;
+        }
+        let Ok(src) = std::fs::read_to_string(&path) else { continue };
+        let kind = match parse_directives(&src).map(|d| d.time) {
+            Ok(KeyTime::Seconds { .. }) => FxKind::Effect,
+            _ => FxKind::Transition,
+        };
+        let leak = |s: String| -> &'static str { Box::leak(s.into_boxed_str()) };
+        out.push(ArtSpec {
+            id: leak(format!("jb.{stem}")),
+            name: leak(stem.to_string()),
+            category: "Light",
+            kind,
+            description: "development draft",
+            file: leak(stem.to_string()),
+            wgsl: leak(src),
+        });
+    }
+    out
+}
+
 /// Registers every spec.
 pub fn register_all(r: &mut Registry, specs: &[ArtSpec]) {
     for s in specs {

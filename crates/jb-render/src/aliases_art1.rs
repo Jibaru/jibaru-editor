@@ -20,6 +20,8 @@ pub const FILMORA_ART1: &[(&str, &str, &str)] = &[
     ("B288EAEA-E306-4E5A-8BBB-4AE8F52B65AC", "jb.peach_orb_leak", "Light Leaks Transition 02"),
     ("5FCF4746-3646-415B-9884-A9ECED01EBE7", "jb.sunlit_haze_leak", "Light Leaks Transition 11"),
     ("DE3A553C-34A6-4EA4-B65D-BAC68391C2A1", "jb.golden_bokeh_band", "Light Leaks Transition Pack Transition 03"),
+    ("DF9D7C57-52C1-43D3-9723-6E4759D4134E", "jb.fast_light_leaks", "Fast Light Leaks 2"),
+    ("CE74AA1F-07F6-46A9-9D59-C4B1D7802A53", "jb.focus_pull_bokeh", "Camera Focus Bokeh"),
 ];
 
 pub fn register(r: &mut Registry) {
