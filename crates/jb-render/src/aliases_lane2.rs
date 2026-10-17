@@ -51,6 +51,8 @@ pub const FILMORA_LANE2: &[(&str, &str)] = &[
     ("95AE988D-EDE9-4C4F-B813-A24BE7DE7415", "jb.boxed_reality"),
     // 3D Camera Transitions 7
     ("F163DDE7-90AF-077C-84B2-1498C379F735", "jb.camera_cards_7"),
+    // 3D Camera Transitions 8
+    ("BCD1F0EA-3EEA-EBE7-EAC8-6FE53723769E", "jb.camera_cards_8"),
     // 3D Card
     ("1C56ABE1-F948-4426-AC71-6710D6362312", "jb.card_3d"),
     // Card Switch
@@ -105,6 +107,8 @@ pub const FILMORA_LANE2: &[(&str, &str)] = &[
     ("7F1C1BD9-E672-4BD5-A833-0E3FCDAB155B", "jb.film_strip_3"),
     // Fisheye Roll Down
     ("0bc06bc0-0c06-4583-a15d-13b01fc71e05", "jb.fisheye_roll_down"),
+    // Fisheye Roll Down Right
+    ("5a5e8238-0f9a-4a35-8331-6fd2348fcaf1", "jb.fisheye_roll_down_right"),
     // Fisheye Roll Right
     ("05e90c4d-fedc-4102-968a-0d830e04fb68", "jb.fisheye_roll_right"),
     // Fisheye Roll Up
@@ -147,6 +151,8 @@ pub const FILMORA_LANE2: &[(&str, &str)] = &[
     ("96262F03-7368-4610-91AB-6B25D29322D2", "jb.fold_8"),
     // Glass Panel Flash
     ("293A55BF-E78C-4F2A-A0C5-2B8E2B023C51", "jb.glass_panel_flash"),
+    // Grid Flip 3D
+    ("D314281B-DD2C-4662-8A52-A955B8A7E54B", "jb.grid_flip_3d"),
     // Paper Page Curl
     ("81527EAA-3AD1-418D-8C56-B7BC4E174D03", "jb.page_curl"),
     // 3D Page Flip Left
