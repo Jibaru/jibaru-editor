@@ -113,6 +113,8 @@ pub const FILMORA_LANE2: &[(&str, &str)] = &[
     ("05e90c4d-fedc-4102-968a-0d830e04fb68", "jb.fisheye_roll_right"),
     // Fisheye Roll Up
     ("7c8e17d9-1294-4307-b99f-103fff2cf91f", "jb.fisheye_roll_up"),
+    // Fisheye Roll Up Right
+    ("464f09fe-10cd-4701-b2f5-8c5ae4463086", "jb.fisheye_roll_up_right"),
     // 3D Flip Right
     ("B04A402D-5C04-4110-AEAD-2E3DBEC1FEFF", "jb.flip_3d_right"),
     // 3D Flip
@@ -147,6 +149,8 @@ pub const FILMORA_LANE2: &[(&str, &str)] = &[
     ("621D9BE3-3FBD-488E-823E-A48E37FE24F7", "jb.fold_3"),
     // Fold Transition 04
     ("75729E2E-A47F-4E0C-8AC8-4DDA210C158B", "jb.fold_4"),
+    // Fold Transition 05
+    ("D1BA4DE3-3FCA-480B-B8EA-4A1048A389DF", "jb.fold_5"),
     // Fold Transition 08
     ("96262F03-7368-4610-91AB-6B25D29322D2", "jb.fold_8"),
     // Glass Panel Flash
@@ -207,6 +211,8 @@ pub const FILMORA_LANE2: &[(&str, &str)] = &[
     ("5003D879-7930-44fa-A333-F21F62564709", "jb.skew_split_left"),
     // Skew Right Split
     ("2D4099D2-9B28-437f-8FEB-2A7E25C0B549", "jb.skew_split_right"),
+    // Slice Transform 3D
+    ("563C3469-9210-4B7F-97D9-95C27A1105FA", "jb.slice_transform_3d"),
     // History Slideshow Transition 01
     ("770A5643-34DC-435D-B35B-722B21A5A27D", "jb.slideshow_history"),
     // Smooth Slideshow Transition 05
@@ -215,6 +221,8 @@ pub const FILMORA_LANE2: &[(&str, &str)] = &[
     ("82F40844-1371-4C82-A822-40DB348B8A8C", "jb.slideshow_tilt_1"),
     // 3D Slideshow Style 2
     ("DE2B8F85-34CE-43B3-A326-293F597C2B0F", "jb.slideshow_tilt_2"),
+    // Split Dimension
+    ("92936B8A-B906-4E4C-B4C3-8664A15D9246", "jb.split_dimension"),
 ];
 
 pub fn register(r: &mut Registry) {
