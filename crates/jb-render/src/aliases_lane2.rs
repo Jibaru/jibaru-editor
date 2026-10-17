@@ -7,16 +7,22 @@ use crate::registry::Registry;
 
 /// (Filmora resource GUID, our id).
 pub const FILMORA_LANE2: &[(&str, &str)] = &[
+    // 3D Box Down
+    ("86437F55-4674-4809-9B7A-0D39DCF9E313", "jb.box_down_3d"),
     // 3D Box Drop
     ("3B310488-6093-4A52-B87E-0367ADF1641A", "jb.box_drop_3d"),
     // 3D Box Fall
     ("0C615FD6-6C3D-469A-955C-5FDF8FA6A23A", "jb.box_fall_3d"),
+    // 3D Box Flip 1
+    ("A84BB82F-36F0-4E6A-8488-FBC2F1AA0BD0", "jb.box_flip_3d_1"),
     // 3D Box Flip 2
     ("D1334A82-581D-42C6-B3CD-7B0DF3E5F565", "jb.box_flip_3d_2"),
     // 3D Box Flip 4
     ("B88000C0-71DF-4B92-B4DE-A63C7733978D", "jb.box_flip_3d_4"),
     // 3D Box Flip 5
     ("64D165BC-C38F-400F-965D-A9E33BA1128C", "jb.box_flip_3d_5"),
+    // 3D Box Flip 6
+    ("95EB31D4-DA7A-4642-8E35-CEA17DD93B35", "jb.box_flip_3d_6"),
     // Box Flip Down
     ("bf05541f-7e2b-4ee3-af3c-f2b5608879a8", "jb.box_flip_down"),
     // Box Flip Up
@@ -41,12 +47,16 @@ pub const FILMORA_LANE2: &[(&str, &str)] = &[
     ("E5C74593-D113-47B5-B174-252E1716826C", "jb.diagonal_slice_reveal"),
     // DoorWay
     ("976B2502-3B22-4dd4-AEB4-0AAA2C1E5AC8", "jb.doorway"),
+    // Erase Slide Right
+    ("4CA4EF88-5997-41a6-AAE6-0C2226D5A96E", "jb.erase_slide_right"),
     // 3D Flip Right
     ("B04A402D-5C04-4110-AEAD-2E3DBEC1FEFF", "jb.flip_3d_right"),
     // 3D Flip
     ("EC14B694-D0AD-425A-806C-BA9D288341CC", "jb.flip_3d_tilt"),
     // Flip Down
     ("804982E3-3FC8-425E-B43A-6444F2C53B79", "jb.flip_down"),
+    // Flip Down
+    ("0A8EF5CE-6993-474F-9609-F0C3B2ADF0C1", "jb.flip_down_fast"),
     // Fast Flip
     ("175D2B82-F671-4D65-AF17-134C941C3A03", "jb.flip_fast"),
     // Flip Left
@@ -61,14 +71,28 @@ pub const FILMORA_LANE2: &[(&str, &str)] = &[
     ("2787c059-6baa-4819-9298-9ee22071cc95", "jb.flip_roll_right"),
     // Flip Roll Up
     ("af113622-985e-4ce3-a807-9601607ee43f", "jb.flip_roll_up"),
+    // Slow Flip
+    ("F2C5B762-7F0D-4A06-BC2C-FBB8727AADA5", "jb.flip_slow"),
+    // Fold Transition 01
+    ("6912AFD8-AF5E-4E98-9C99-1D627627B4D6", "jb.fold_1"),
+    // Fold Transition 02
+    ("381884E7-ADD2-43EE-9316-D0C7F159C3B5", "jb.fold_2"),
     // Fold Transition 03
     ("621D9BE3-3FBD-488E-823E-A48E37FE24F7", "jb.fold_3"),
+    // Fold Transition 04
+    ("75729E2E-A47F-4E0C-8AC8-4DDA210C158B", "jb.fold_4"),
+    // Fold Transition 08
+    ("96262F03-7368-4610-91AB-6B25D29322D2", "jb.fold_8"),
+    // Pivot Flip
+    ("D9864B5B-CAF1-4C24-9124-49B8F7926046", "jb.pivot_flip"),
     // Fast Push Down
     ("255239EC-BB3E-4B54-B74B-A51F15AF381F", "jb.push_down_fast"),
     // Fast Push Left
     ("2DD72324-4654-456D-9EA8-9931F6B6A1FD", "jb.push_left_fast"),
     // Fast Push Right
     ("95DF8005-6F31-48DD-9713-3FB2EECF102F", "jb.push_right_fast"),
+    // Simple Roll 10
+    ("691302d8-de75-4f40-82e3-5dd30fc0dc55", "jb.roll_10"),
     // Simple Roll 11
     ("490e0bdb-f7b7-4fb2-a92a-ed5927ca13b3", "jb.roll_11"),
     // Simple Roll 6
@@ -81,6 +105,8 @@ pub const FILMORA_LANE2: &[(&str, &str)] = &[
     ("1568e098-ca48-4861-9667-6d3d6ed19b60", "jb.roll_9"),
     // Simple Roll 2
     ("d8867ccc-4762-49c4-93fd-616208d056cf", "jb.roll_down_2"),
+    // Simple Roll 3
+    ("f03e2971-f66f-4481-b308-a640d451d2ca", "jb.roll_left_3"),
     // Skew Left Split
     ("5003D879-7930-44fa-A333-F21F62564709", "jb.skew_split_left"),
     // Skew Right Split
