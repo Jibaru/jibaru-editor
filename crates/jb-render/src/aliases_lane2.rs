@@ -53,6 +53,12 @@ pub const FILMORA_LANE2: &[(&str, &str)] = &[
     ("1C56ABE1-F948-4426-AC71-6710D6362312", "jb.card_3d"),
     // Card Switch
     ("7F1B4870-2C3C-4E61-9066-2F993F00594E", "jb.card_switch"),
+    // 3D Carousel Card Slide Left
+    ("1EFB3402-5599-414F-98BA-ADE56537FD63", "jb.carousel_card_slide_left"),
+    // 3D Carousel Card Spin Left
+    ("e25b66ac-d8a8-4732-8777-09bef4648e00", "jb.carousel_card_spin_left"),
+    // 3D Carousel Card Spin Right
+    ("0a336063-7e21-4c2e-9884-22ef56fe59c1", "jb.carousel_card_spin_right"),
     // 3D Carousel Spin Left
     ("8E484E8F-4097-45F5-9857-90E0646776D6", "jb.carousel_spin_left"),
     // 3D Carousel Spin Left Close
@@ -69,6 +75,8 @@ pub const FILMORA_LANE2: &[(&str, &str)] = &[
     ("55C7899F-8326-4E0E-8A14-BAD17A8757E5", "jb.cube_facets_left"),
     // Cube Facets Right
     ("C73CB5B2-6885-48E1-A97D-9DC8C8D1E3BD", "jb.cube_facets_right"),
+    // Cube Facets Up
+    ("09FB622E-E770-4E86-BC86-A6F3BDFACF75", "jb.cube_facets_up"),
     // Rotating Cube
     ("F23CEC10-EB99-4085-BA42-86CD41883CEE", "jb.cube_rotate"),
     // Cube Down
@@ -89,6 +97,12 @@ pub const FILMORA_LANE2: &[(&str, &str)] = &[
     ("93240F33-7900-4971-B90D-442502ED3A48", "jb.fast_box_right_1"),
     // 3D Fast Box Right 02
     ("A9CD0FFC-0A62-42BC-B595-2E85DD1F8F3A", "jb.fast_box_right_2"),
+    // Film Roll Transition 01
+    ("E041F777-9B75-4881-B7F6-706101648EF1", "jb.film_strip_1"),
+    // Film Roll Transition 03
+    ("7F1C1BD9-E672-4BD5-A833-0E3FCDAB155B", "jb.film_strip_3"),
+    // Fisheye Roll Right
+    ("05e90c4d-fedc-4102-968a-0d830e04fb68", "jb.fisheye_roll_right"),
     // 3D Flip Right
     ("B04A402D-5C04-4110-AEAD-2E3DBEC1FEFF", "jb.flip_3d_right"),
     // 3D Flip
@@ -129,6 +143,8 @@ pub const FILMORA_LANE2: &[(&str, &str)] = &[
     ("293A55BF-E78C-4F2A-A0C5-2B8E2B023C51", "jb.glass_panel_flash"),
     // 3D Page Flip Left
     ("A985CC65-0A2B-440F-B437-6F802A0305B0", "jb.page_flip_left_3d"),
+    // Luminous Page Turning
+    ("C8D169E4-A8B6-470C-872E-9CA9A09D7134", "jb.page_turn_luminous"),
     // 3D Horizontal Closing
     ("B070D206-0B16-4B67-BCF6-98414767AEA8", "jb.panels_close_3d"),
     // Photo Slide 1
@@ -175,6 +191,12 @@ pub const FILMORA_LANE2: &[(&str, &str)] = &[
     ("5003D879-7930-44fa-A333-F21F62564709", "jb.skew_split_left"),
     // Skew Right Split
     ("2D4099D2-9B28-437f-8FEB-2A7E25C0B549", "jb.skew_split_right"),
+    // History Slideshow Transition 01
+    ("770A5643-34DC-435D-B35B-722B21A5A27D", "jb.slideshow_history"),
+    // Smooth Slideshow Transition 05
+    ("DD93DBBA-7FB8-474A-B599-71E4E08B69D5", "jb.slideshow_smooth_5"),
+    // 3D Slideshow Style 1
+    ("82F40844-1371-4C82-A822-40DB348B8A8C", "jb.slideshow_tilt_1"),
     // 3D Slideshow Style 2
     ("DE2B8F85-34CE-43B3-A326-293F597C2B0F", "jb.slideshow_tilt_2"),
 ];
