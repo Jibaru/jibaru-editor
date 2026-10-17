@@ -31,7 +31,7 @@ worse than the stand-in's. Artwork whose drawing differs from Filmora's (as
 it must) keeps a residual above the floor along its edges and details; the
 gain over the stand-in is in shape, coverage and motion.
 
-## Upgraded (10)
+## Upgraded (14)
 
 | Filmora item | Ours | Replaced stand-in | MAD before | MAD now | MAD max | Floor | Notes |
 |---|---|---|---:|---:|---:|---:|---|
@@ -39,6 +39,10 @@ gain over the stand-in is in shape, coverage and motion.
 | Camera Shutter | `jb.iris_shutter` | `jb.shutter_wash_01` | 9.72 | 4.88 | 11.69 | — |  |
 | Camera Transition 09 | `jb.lens_iris` | `jb.shutter_wash_02` | 14.04 | 7.60 | 13.15 | — |  |
 | Gaming Set Sports Transition 2 | `jb.arrow_stack` | `jb.chevron_wipe` | 10.47 | 5.51 | 8.94 | 2.48 |  |
+| Golden Awards Ceremony Transition 05 | `jb.gold_diamond` | `jb.gold_diamond_wipe` | 6.90 | 4.63 | 13.90 | 2.79 |  |
+| Golden Awards Pack Transition 04 | `jb.gold_plates_sweep` | `jb.gold_ribbon_1` | 10.69 | 8.54 | 19.60 | 3.18 |  |
+| Golden Awards Transition 03 | `jb.gold_plates_rise` | `jb.gold_ribbon_4` | 10.71 | 8.55 | 19.85 | 2.41 |  |
+| Grammy Award 2024 Transition 02 | `jb.gold_chevrons` | `jb.gold_frames_zoom` | 13.67 | 10.73 | 30.36 | 2.55 |  |
 | Halloween Colorful Transition 04 | `jb.pumpkin_grin` | `jb.pumpkin_face_wipe` | 31.61 | 25.65 | 80.12 | 2.30 |  |
 | Halloween Colorful Transition 09 | `jb.witch_hat_wave` | `jb.witch_hat_wipe` | 6.22 | 4.10 | 11.27 | 2.29 |  |
 | Halloween Colorful Transition 17 | `jb.skull_and_hat` | `jb.skull_hat_sweep` | 15.71 | 10.70 | 20.46 | 2.33 |  |
@@ -46,7 +50,7 @@ gain over the stand-in is in shape, coverage and motion.
 | Horrible Colorful Transition 02 | `jb.ghost_glide` | `jb.glitch_bands` | 10.73 | 5.52 | 11.99 | 2.33 |  |
 | Horrible Colorful Transition 13 | `jb.boo_dive` | `jb.ghost_face_flash` | 22.67 | 21.39 | 86.89 | 2.40 |  |
 
-## Still stand-ins (55)
+## Still stand-ins (51)
 
 Mapped by their lane's stand-in; "Tried" is the best original-art attempt when one was measured but not switched (worse or not visually right).
 
@@ -93,14 +97,10 @@ Mapped by their lane's stand-in; "Tried" is the best original-art attempt when o
 | Gold Blue Transition 04 | `jb.gold_blue_paint_4` | 24.00 | — |  |
 | Gold Blue Transition 05 | `jb.gold_blue_paint_5` | 10.19 | — |  |
 | Gold Blue Transition 06 | `jb.gold_blue_paint_6` | 9.21 | — |  |
-| Golden Awards Ceremony Transition 05 | `jb.gold_diamond_wipe` | 6.90 | — |  |
-| Golden Awards Pack Transition 04 | `jb.gold_ribbon_1` | 10.69 | — |  |
 | Golden Awards Transition 01 | `jb.gold_ribbon_2` | 12.21 | — |  |
 | Golden Awards Transition 02 | `jb.gold_ribbon_3` | 11.56 | — |  |
-| Golden Awards Transition 03 | `jb.gold_ribbon_4` | 10.71 | — |  |
 | Golden Awards Transition 04 | `jb.golden_bloom_flash` | 7.45 | — |  |
 | Golden Awards Transition 05 | `jb.gold_glitter_flash` | 8.58 | — |  |
-| Grammy Award 2024 Transition 02 | `jb.gold_frames_zoom` | 13.67 | — |  |
 | Halloween Horrors Pack Transition 02 | `jb.ghost_crowd_rise` | 19.01 | 19.44 |  |
 | Halloween Party Transition 02 | `jb.lantern_glow` | 10.57 | 13.77 |  |
 | Halloween Party Transition 03 | `jb.bat_swarm` | 9.27 | 10.47 |  |

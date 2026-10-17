@@ -8,6 +8,11 @@ pub const LIBRARY: &[LibraryGroup] = &[
     LibraryGroup { kind: T, name: "Graphics", items: &["jb.stripe_close", "jb.arrow_stack"] },
     LibraryGroup {
         kind: T,
+        name: "Awards",
+        items: &["jb.gold_diamond", "jb.gold_chevrons", "jb.gold_plates_sweep", "jb.gold_plates_rise"],
+    },
+    LibraryGroup {
+        kind: T,
         name: "Halloween",
         items: &[
             "jb.pumpkin_grin",

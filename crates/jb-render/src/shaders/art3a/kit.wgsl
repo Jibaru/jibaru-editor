@@ -185,3 +185,27 @@ fn ak_base(uv: vec2f, w: f32) -> vec3f {
     if (w >= 1.0) { return l3_db(uv); }
     return mix(l3_da(uv), l3_db(uv), w);
 }
+
+// --- polished gold ---
+// Polished gold of a bar: `along` runs along the bar (frame heights),
+// `across` is -1..1 over its width, `t` drifts the reflections. Mostly dark
+// metal with bright moving glints and a lit ridge.
+fn ak_gold(along: f32, across: f32, t: f32) -> vec3f {
+    let dark = vec3f(0.21, 0.145, 0.065);
+    let mid = vec3f(0.50, 0.38, 0.19);
+    let hi = vec3f(0.80, 0.66, 0.40);
+    let g1 = 0.5 + 0.5 * sin(along * 9.0 + t * 5.0 + across * 1.5);
+    let g2 = 0.5 + 0.5 * sin(along * 23.0 - t * 3.0 + 1.7);
+    let glint = pow(g1, 6.0) * 0.8 + pow(g2, 10.0) * 0.5;
+    let ridge = exp(-pow((across - 0.25) / 0.35, 2.0));
+    var c = mix(dark, mid, 0.35 + 0.4 * ridge);
+    c = mix(c, hi, clamp(glint * (0.4 + 0.6 * ridge), 0.0, 1.0));
+    return c;
+}
+// Gold lit by a passing light: `lit` 0..1 brightens it towards pale gold.
+fn ak_gold_lit(along: f32, across: f32, t: f32, lit: f32) -> vec3f {
+    let c = ak_gold(along, across, t);
+    let pale = vec3f(0.86, 0.76, 0.56);
+    let ridge = exp(-pow((across - 0.1) / 0.6, 2.0));
+    return mix(c, pale, clamp(lit * (0.45 + 0.55 * ridge), 0.0, 1.0));
+}

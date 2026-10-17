@@ -16,6 +16,8 @@ use crate::registry::Registry;
 mod business;
 #[path = "art3a_camera.rs"]
 mod camera;
+#[path = "art3a_gold.rs"]
+mod gold;
 #[path = "art3a_halloween.rs"]
 mod halloween;
 #[path = "art3a_library.rs"]
@@ -68,6 +70,7 @@ pub fn register(r: &mut Registry) {
     let mut items = Vec::new();
     items.extend(business::items());
     items.extend(camera::items());
+    items.extend(gold::items());
     items.extend(halloween::items());
     register_items(r, items);
 }
