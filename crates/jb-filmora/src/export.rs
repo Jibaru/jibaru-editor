@@ -1319,6 +1319,7 @@ impl<'a> Exporter<'a> {
             self.effect_uid.insert(inst.id.clone(), uid.clone());
             put(&mut e, "thisUId", json!(uid));
             set_user_data(&mut e, ud::GUID, &guid_blob(&new_guid()));
+            set_store_record(&mut e, &inst.extra);
             let baseline = src.map(|s| import::effect_of(marker_str(&inst.extra, "chain").unwrap_or(""), s, in_point));
             patch_effect(&mut e, baseline.as_ref(), inst, *anim, tb);
             let chain = marker_str(&inst.extra, "chain")
@@ -1368,6 +1369,7 @@ impl<'a> Exporter<'a> {
                 list.retain(|u| u.get("key").and_then(Value::as_i64) != Some(ud::RESOURCE));
             }
         }
+        set_store_record(&mut tj, &t.extra);
         Some(tj)
     }
 
@@ -1523,6 +1525,16 @@ fn gcd(a: u32, b: u32) -> u32 {
         a
     } else {
         gcd(b, a % b)
+    }
+}
+
+/// Writes `extra.filmora.resource` (Filmora's store record: `id`, `name`
+/// slug, `res_type`, ...) as userData 12. A fresh Filmora session resolves a
+/// store transition or effect GUID only through this record; without it the
+/// item is dropped unless it was already loaded earlier in the session.
+fn set_store_record(v: &mut Value, extra: &Extra) {
+    if let Some(res) = extra.get("filmora").and_then(|f| f.get("resource")).filter(|r| r.is_object()) {
+        set_user_data(v, ud::RESOURCE, res.to_string().as_bytes());
     }
 }
 

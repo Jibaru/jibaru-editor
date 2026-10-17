@@ -53,9 +53,9 @@ pub fn register(r: &mut Registry) {
     }
     for (fid, to) in FILMORA {
         if r.get(to).is_some() {
+            // Registered in the exact case Filmora uses (it resolves store
+            // GUIDs case-sensitively); `Registry` also matches any other case.
             r.alias(format!("filmora:{fid}"), to);
-            // Filmora ids are case-insensitive GUIDs.
-            r.alias(format!("filmora:{}", fid.to_ascii_uppercase()), to);
         }
     }
     crate::aliases_lane4::register(r);

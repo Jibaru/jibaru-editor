@@ -384,3 +384,39 @@ fn coverage_lists_everything_used() {
     merged.merge(&cov);
     assert_eq!(merged.get(CoverageCategory::Transition, "2981D185-D52E-44f4-ABD5-3CE83890E32E").unwrap().count, 4);
 }
+
+#[test]
+fn store_transition_keeps_guid_case_and_store_record() {
+    let mut w = load();
+    let b = find(&w.project, TrackKind::Video, 5 * S, "CAM_0002").clone();
+    let res =
+        serde_json::json!({ "id": 63572662, "infoType": 7, "name": "Luminous_Ink_Wash_Transition_08", "res_type": 2 });
+    let tr = Transition {
+        id: new_id(),
+        kind: "filmora:aefdb0d3-3841-f111-b45f-d8bbc19410ee".into(),
+        duration: S,
+        alignment: TransitionAlignment::Center,
+        params: Default::default(),
+        extra: serde_json::json!({ "filmora": { "display": "Luminous Ink Wash 08", "resource": res } }),
+    };
+    let mut h = History::new(w.project.clone());
+    h.execute(&Command::SetTransition { clip_id: b.id.clone(), transition: Some(tr) }).unwrap();
+    w.project = h.project.clone();
+    let (bytes, _) = jb_filmora::write_bytes(&w).unwrap();
+    let r = jb_filmora::read_bytes(&bytes).unwrap();
+    check_invariants(timeline(&r));
+    let t = &clip_json(timeline(&r), &b.id)["postTransition"];
+    // Written in the exact case: Filmora resolves store GUIDs case-sensitively.
+    assert_eq!(t["id"], "aefdb0d3-3841-f111-b45f-d8bbc19410ee");
+    use base64::Engine;
+    let rec = t["userData"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|u| u["key"] == 12)
+        .map(|u| base64::engine::general_purpose::STANDARD.decode(u["data"].as_str().unwrap()).unwrap())
+        .expect("store record");
+    assert_eq!(serde_json::from_slice::<Json>(&rec).unwrap(), res);
+    let back = find(&r.project, TrackKind::Video, 5 * S, "CAM_0002");
+    assert_eq!(back.transition_out.as_ref().unwrap().kind, "filmora:aefdb0d3-3841-f111-b45f-d8bbc19410ee");
+}

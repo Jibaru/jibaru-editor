@@ -8,9 +8,16 @@ progress with `jb fx catalog-status` (see the end of this page).
 **Legal boundary.** Only names, ids/GUIDs, categories, flags, durations and
 parameter schemas (name, type, default, range) were read from Filmora's
 metadata. Shaders, LUT files, overlay videos, images, fonts and previews were
-never copied: entries only point at the local preview files (`~/Library/...`,
-outside the repository) and at the store's public preview URL, and the
-measurements below are numbers derived from decoding those previews.
+never copied. The public JSON keeps no preview URLs, local paths or keyframe
+values; the measurements below are numbers derived from decoding the previews.
+
+**GUIDs are stored in Filmora's exact case.** Filmora resolves store resource
+GUIDs case-sensitively (`aefdb0d3-…` works, the same GUID upper-cased is
+dropped), and about 270 store GUIDs are lower or mixed case. Compare GUIDs
+case-insensitively (the `filmora:<GUID>` alias lookup in `jb-render` does),
+but write them exactly as stored. Keys of built-in items (`builtin:<GUID>`)
+keep the upper-cased form as a stable join key; their `filmora.guids` field
+has the exact case.
 
 ## Where the metadata came from
 
@@ -64,16 +71,16 @@ is cached) and re-run the catalog builder.
 
 ## Counts
 
-| Kind | Items | Premium | Free | Unknown | Downloaded / built-in | Implemented (`jb`) | Look-alike (`jb_similar`) | With preview |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| transition | 288 | 203 | 76 | 9 | 29 | 9 | 15 | 57 |
-| effect | 405 | 98 | 291 | 16 | 273 | 1 | 15 | 1 |
-| filter | 146 | 29 | 117 | 0 | 113 | 0 | 3 | 1 |
-| overlay | 89 | 54 | 35 | 0 | 2 | 0 | 1 | 0 |
-| animation | 542 | 315 | 227 | 0 | 183 | 1 | 14 | 6 |
-| title | 90 | 19 | 71 | 0 | 2 | 0 | 0 | 0 |
-| lut | 19 | 0 | 19 | 0 | 19 | 0 | 0 | 0 |
-| **total** | **1579** | **718** | **836** | **25** | **621** | **11** | **48** | **65** |
+| Kind | Items | Premium | Free | Unknown | Downloaded / built-in | With GUID | Implemented (`jb`) | Look-alike (`jb_similar`) | With preview |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| transition | 2437 | 2146 | 282 | 9 | 2314 | 2238 | 9 | 15 | 57 |
+| effect | 1101 | 703 | 382 | 16 | 901 | 898 | 1 | 15 | 1 |
+| filter | 532 | 379 | 153 | 0 | 479 | 431 | 0 | 3 | 1 |
+| overlay | 214 | 133 | 81 | 0 | 101 | 101 | 0 | 1 | 0 |
+| animation | 542 | 315 | 227 | 0 | 183 | 64 | 1 | 14 | 6 |
+| title | 394 | 309 | 85 | 0 | 265 | 0 | 0 | 0 | 0 |
+| lut | 19 | 0 | 19 | 0 | 19 | 0 | 0 | 0 | 0 |
+| **total** | **5239** | **3985** | **1229** | **25** | **4262** | **3732** | **11** | **48** | **65** |
 
 Out of scope and only counted (store rows seen): font 575, music 50, project_template 52, sound 101, stock_color 29, stock_video 71, type_147 1, type_167 1, type_41 1, type_58 1.
 No sticker rows were cached (the Stickers store was never browsed).
@@ -619,3 +626,12 @@ metadata and built-in registries by store id, slug and GUID, maps GUIDs to
 `jb.*` ids through the live alias table, classifies items into groups by
 name/tags/category keywords, and attaches the preview measurements. Field
 meanings are in the JSON's `fields` object.
+
+Items added after the October 2026 download pass (the bulk of the store
+transitions, effects, filters, overlays and lower-third titles) carry only
+names, ids, exact-case GUIDs, store categories and premium/downloaded flags.
+They were read from the store metadata rows (`resInfo.db`), the category tree,
+each downloaded item's store record (`resinfo.json`) and, for the GUID only,
+the first GUID string of the item's `filter.xml` / `*.conf`; they have no
+`group`, `popularity` or preview measurement yet (`jb fx catalog-status`
+buckets them under `other`).

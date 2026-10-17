@@ -56,9 +56,8 @@ fn implemented(reg: &jb_render::Registry, item: &Value) -> Option<String> {
         }
     }
     item["filmora"]["guids"].as_array().into_iter().flatten().filter_map(Value::as_str).find_map(|g| {
-        reg.canonical(&format!("filmora:{g}"))
-            .or_else(|| reg.canonical(&format!("filmora:{}", g.to_ascii_uppercase())))
-            .map(str::to_string)
+        // Catalog GUIDs keep Filmora's exact case; the registry matches any case.
+        reg.canonical(&format!("filmora:{g}")).map(str::to_string)
     })
 }
 

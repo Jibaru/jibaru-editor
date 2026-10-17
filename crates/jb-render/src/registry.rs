@@ -257,13 +257,23 @@ impl Registry {
     }
 
     /// Maps an external identifier (e.g. `filmora:12345`) onto a registered id.
+    /// `filmora:<GUID>` aliases are also registered upper-cased, so lookups of
+    /// imported GUIDs match in any case (see [`Registry::get`]).
     pub fn alias(&mut self, from: impl Into<String>, to: &'static str) {
-        self.aliases.insert(from.into(), to);
+        let from = from.into();
+        if let Some(upper) = filmora_upper(&from) {
+            self.aliases.insert(upper, to);
+        }
+        self.aliases.insert(from, to);
     }
 
-    /// Resolves a kind (or alias) to its implementation.
+    /// Resolves a kind (or alias) to its implementation. `filmora:<GUID>`
+    /// kinds match case-insensitively: Filmora itself resolves store GUIDs
+    /// case-sensitively, so projects keep the exact case they were read
+    /// with, but any spelling maps onto the same implementation here.
     pub fn get(&self, kind: &str) -> Option<&Arc<dyn Effect>> {
-        self.items.get(kind).or_else(|| self.aliases.get(kind).and_then(|id| self.items.get(id)))
+        let by_alias = |k: &str| self.aliases.get(k).and_then(|id| self.items.get(id));
+        self.items.get(kind).or_else(|| by_alias(kind)).or_else(|| filmora_upper(kind).and_then(|k| by_alias(&k)))
     }
 
     /// Canonical id for a kind, following aliases.
@@ -290,5 +300,30 @@ impl Registry {
 
     pub fn is_empty(&self) -> bool {
         self.items.is_empty()
+    }
+}
+
+/// `filmora:<id>` with the id upper-cased, when that differs from `kind`.
+fn filmora_upper(kind: &str) -> Option<String> {
+    let id = kind.strip_prefix("filmora:")?;
+    id.bytes().any(|b| b.is_ascii_lowercase()).then(|| format!("filmora:{}", id.to_ascii_uppercase()))
+}
+
+#[cfg(test)]
+mod alias_case_tests {
+    use super::*;
+
+    #[test]
+    fn filmora_aliases_match_any_case() {
+        let r = Registry::builtin();
+        // Mixed case as Filmora stores it, upper case and lower case all resolve.
+        for k in [
+            "filmora:2981D185-D52E-44f4-ABD5-3CE83890E32E",
+            "filmora:2981D185-D52E-44F4-ABD5-3CE83890E32E",
+            "filmora:2981d185-d52e-44f4-abd5-3ce83890e32e",
+        ] {
+            assert_eq!(r.canonical(k), Some("jb.dissolve"), "{k}");
+        }
+        assert_eq!(r.canonical("filmora:8d02cb83-6fc6-406b-8506-252f58a1d3b3"), Some("jb.fast_zoom"));
     }
 }
