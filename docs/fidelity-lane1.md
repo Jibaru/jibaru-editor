@@ -41,7 +41,7 @@ cut at the middle (what an unknown item renders), approximations 11.2 against 37
 | model | items | mean excess | worst < 10 | excess < 1.5 |
 |---|---:|---:|---:|---:|
 | fitted | 22 | +0.62 | 19 | 19 |
-| approx. | 25 | +9.35 | 2 | 0 |
+| approx. | 27 | +9.07 | 2 | 0 |
 | stand-in | 108 | +14.84 | 0 | 0 |
 
 ## Results
@@ -95,6 +95,8 @@ cut at the middle (what an unknown item renders), approximations 11.2 against 37
 | Wormhole 2 | `74ae63b9-ce3e-47e8-966a-0d5c2dada46e` | `jb.tunnel_warp_2` | approx. | 17.47 | 24.95 | +12.92 |  |
 | Wormhole 3 | `4d71fc4e-d3c5-4e82-b57c-2312572feba1` | `jb.tunnel_warp_3` | approx. | 12.89 | 30.71 | +8.34 |  |
 | Wormhole 6 | `947d8c0d-576a-430e-8e70-cbffcd33b02e` | `jb.tunnel_warp_4` | approx. | 10.94 | 18.82 | +6.39 |  |
+| Orb 3 | `273416f0-3460-4ed6-880b-445f4650cd08` | `jb.orb_warp_2` | approx. | 10.06 | 39.15 | +5.51 |  |
+| Orb 4 | `d3797047-d7c1-457b-a606-0f460b0ed516` | `jb.orb_warp_3` | approx. | 10.28 | 27.70 | +5.73 |  |
 | Camera Shutter | `582C0031-3A5A-4839-86C2-BD5662120FAD` | `jb.shutter_wash_01` | stand-in | 11.36 | 46.47 | +6.81 | camera body / aperture overlay |
 | Camera Transition 09 | `0A51BCC4-B46C-40E3-AB2E-072317A483D0` | `jb.shutter_wash_02` | stand-in | 14.77 | 49.29 | +10.22 | camera body / aperture overlay |
 | Motion Transitions Pack Vol 4 Transition 14 | `08C887B6-5597-4A52-BE2B-133E6B6EC9BD` | `jb.shape_burst_wash_01` | stand-in | 22.01 | 58.57 | +17.46 | animated graphic shapes overlay |
@@ -203,8 +205,3 @@ cut at the middle (what an unknown item renders), approximations 11.2 against 37
 | Wedding Invitation Template Transition 02 | `97426E0D-3458-4316-877B-4FD00C507D82` | `jb.paint_stroke_reveal_24` | stand-in | 10.52 | 22.07 | +5.97 | brush-stroke matte (hand-painted stroke animation) |
 | Wedding Invitation Template Transition 04 | `546B3563-6DE9-44D1-9386-390BA3D3E73B` | `jb.paint_stroke_reveal_25` | stand-in | 10.41 | 24.35 | +5.86 | brush-stroke matte (hand-painted stroke animation) |
 | Year of the Tiger Pack Transition 02 | `B3DB8933-F2E5-4094-975D-2595F0121FC2` | `jb.sparkle_trail_wash_06` | stand-in | 8.11 | 33.07 | +3.56 | particle / sparkle overlay |
-
-## Not mapped
-
-- Orb 3 (`273416f0-3460-4ed6-880b-445f4650cd08`)
-- Orb 4 (`d3797047-d7c1-457b-a606-0f460b0ed516`)
