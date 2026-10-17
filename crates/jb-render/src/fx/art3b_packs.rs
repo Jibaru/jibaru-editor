@@ -746,3 +746,74 @@ pub fn card_ring_turn(t: f32, _asp: f32) -> Scene {
     }
     s
 }
+
+/// Projects ring panel corners: ring of `n` panels (each one frame wide)
+/// around a vertical axis, the panel at angle 0 nearest to the camera at
+/// distance `d`; `phi` turns the ring (radians), `e` lifts the camera.
+fn ring_panels(n: usize, d: f32, phi: f32, e: f32, asp: f32) -> Vec<(f32, [[f32; 2]; 4], usize, f32)> {
+    let fl = 2.0;
+    let hw = 0.5 * asp;
+    let r = hw / (PI / n as f32).tan();
+    let zc = d + r;
+    // Screen shift keeping the near panel's centre at a fixed height.
+    let near_y = 0.13 * ((d - fl) / fl).clamp(0.0, 1.0);
+    let k = fl * e / d - near_y;
+    let mut out = Vec::new();
+    for i in 0..n {
+        let a = i as f32 * TAU / n as f32 - phi;
+        let (sa, ca) = (a.sin(), a.cos());
+        let c = [r * sa, zc - r * ca];
+        let t = [ca, sa];
+        let mut q = [[0.0f32; 2]; 4];
+        let mut ok = true;
+        for (j, (u, v)) in [(-1.0f32, -1.0f32), (1.0, -1.0), (1.0, 1.0), (-1.0, 1.0)].iter().enumerate() {
+            let x = c[0] + u * hw * t[0];
+            let z = c[1] + u * hw * t[1];
+            if z < 0.2 {
+                ok = false;
+            }
+            let y = v * 0.5;
+            q[j] = [fl * x / z, fl * (y + e) / z - k];
+        }
+        if ok {
+            let light = 0.45 + 0.55 * ca.max(0.0).powf(3.0);
+            out.push((c[1], q, i, light));
+        }
+    }
+    out.sort_by(|p, q| q.0.partial_cmp(&p.0).unwrap_or(std::cmp::Ordering::Equal));
+    out
+}
+
+/// The old clip pulls back into one panel of a ring of eight standing on
+/// a dark floor (old and new clips alternating), the ring spins left by one
+/// panel with motion blur and the camera pushes back into the new panel.
+pub fn panel_ring_spin(t: f32, asp: f32) -> Scene {
+    let f = t * 60.0;
+    if f < 1.0 {
+        return Scene::new();
+    }
+    if f >= 58.0 {
+        return Scene::cut(t, 0.0);
+    }
+    let mut s = Scene::new().dip([0.0; 3], 1.0);
+    let d = kf(f, &[(1.0, 2.0), (4.0, 2.29), (7.0, 2.38), (13.0, 2.78), (16.0, 3.33), (25.0, 4.0), (40.0, 4.0), (44.0, 3.6), (49.0, 3.2), (52.0, 2.35), (55.0, 2.1), (58.0, 2.0)]);
+    let e = 0.5 * ((d - 2.0) / 2.0).clamp(0.0, 1.0);
+    let phi_at = |f: f32| kfs(f, &[(19.0, 0.0), (24.0, 4.0), (28.0, 14.0), (34.0, 38.0), (40.0, 45.0)]).to_radians();
+    let speed = (phi_at(f + 0.5) - phi_at(f - 0.5)).abs();
+    let samples = if speed > 0.04 { 4 } else { 1 };
+    // Floor glow under the ring.
+    let fl = (e * 1.2).min(1.0);
+    if fl > 0.0 {
+        s.push(Prim::ellipse(0.0, 0.32, 0.9, 0.2).col(0x2A2A30).alpha(0.6 * fl).soft(0.15));
+    }
+    for j in 0..samples {
+        let phi = phi_at(f + 1.2 * (j as f32 / samples.max(2) as f32 - 0.5) * (samples > 1) as i32 as f32);
+        let w = 1.0 / (j + 1) as f32;
+        for (_, q, i, light) in ring_panels(8, d, phi, e, asp) {
+            let near = i == 0 && f < 30.0 || i == 1 && f >= 30.0;
+            let l = if near { light.max(0.95) } else { light };
+            s.push(Prim::quad(q).quad_tex(i % 2 == 1).rgb([l, l, l]).alpha(w));
+        }
+    }
+    s
+}

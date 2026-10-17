@@ -4,7 +4,7 @@ Art3b replaces stand-ins of the earlier lanes (a global A/B mix plus a smooth
 colour field: right timing and average colour, no shapes) for graphic,
 cartoon and themed motion transitions (shapes, comic bursts, holiday,
 seasonal, sports and business graphics, motion-graphics packs) with
-recreations drawn with **our own original vector art**. **26 of 66**
+recreations drawn with **our own original vector art**. **27 of 66**
 items are upgraded; imported projects reach them through the
 `filmora:<GUID>` aliases in `crates/jb-render/src/aliases_art3b.rs` (the
 stand-in alias of each upgraded GUID was removed from the older lane file,
@@ -100,7 +100,7 @@ be higher where a hard-edged shape is a few pixels off).
 | Scoreboard Transition 01 | `5DC77869-75E6-45F6-9BCA-9B96CBA83DEC` | tr002 | `jb.shape_burst_wash_21` | `jb.red_x_panels` | 2.51 | 12.77 / 43.1 (+10.26) | 9.69 / 28.3 (+7.18) | upgraded |  |
 | Shape Gradient Transitions Transition 25 | `108B1920-9128-4983-BAC9-FB4100603A8E` | tr005 | `jb.shape_burst_wash_22` | `jb.diagonal_streak_sweep` | 2.67 | 20.53 / 49.1 (+17.86) | 18.80 / 56.3 (+16.13) | upgraded |  |
 | Shape Transition 106 | `D8775488-C02D-4661-937D-4C3C937D4ACB` | tr005 | `jb.cell_dissolve_wash_02` | `jb.honeycomb_pop` | 2.38 | 7.06 / 29.3 (+4.68) | 7.52 / 29.9 (+5.14) | kept stand-in | honeycomb looks right but random pop timing measures slightly worse; listed in the library only |
-| Space Rotation Left | `401962DA-6B63-4EB0-95C5-5C43A04601DE` | tr009 | `jb.panel_shuffle_wash_03` | — | 4.12 | 41.18 / 71.4 (+37.06) | — | stand-in |  |
+| Space Rotation Left | `401962DA-6B63-4EB0-95C5-5C43A04601DE` | tr009 | `jb.panel_shuffle_wash_03` | `jb.panel_ring_spin` | 4.12 | 41.18 / 71.4 (+37.06) | 36.16 / 59.9 (+32.04) | upgraded |  |
 | Special Effects Skill Pack Transition 01 | `E943F100-16E7-4F2D-8821-A26E4C94A201` | tr010 | `jb.cartoon_burst_wash_04` | `jb.fireball_swirl` | 3.68 | 16.44 / 52.2 (+12.76) | 14.17 / 55.7 (+10.49) | upgraded |  |
 | Special Effects Skill Transition 03 | `D9AEBB98-B58B-4EC1-9750-F17BC822E7CB` | tr010 | `jb.cartoon_burst_wash_05` | `jb.cloud_puff_cover` | 2.77 | 23.95 / 63.4 (+21.18) | 20.46 / 59.0 (+17.69) | upgraded |  |
 | Special Effects Skill Transition 04 | `AE4878F8-8587-448A-9065-37C631D0AB51` | tr010 | `jb.cartoon_burst_wash_06` | — | 2.48 | 12.57 / 45.4 (+10.09) | — | stand-in |  |

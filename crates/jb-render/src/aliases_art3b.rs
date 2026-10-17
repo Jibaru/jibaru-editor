@@ -29,6 +29,7 @@ pub const FILMORA_ART3B: &[(&str, &str)] = &[
     ("CAD04901-7A9A-4172-A68F-82F3E1781E52", "jb.photo_desk_pan"), // Profile Movie Transition 01
     ("5DC77869-75E6-45F6-9BCA-9B96CBA83DEC", "jb.red_x_panels"), // Scoreboard Transition 01
     ("108B1920-9128-4983-BAC9-FB4100603A8E", "jb.diagonal_streak_sweep"), // Shape Gradient Transitions Transition 25
+    ("401962DA-6B63-4EB0-95C5-5C43A04601DE", "jb.panel_ring_spin"), // Space Rotation Left
     ("E943F100-16E7-4F2D-8821-A26E4C94A201", "jb.fireball_swirl"), // Special Effects Skill Pack Transition 01
     ("D9AEBB98-B58B-4EC1-9750-F17BC822E7CB", "jb.cloud_puff_cover"), // Special Effects Skill Transition 03
     ("F2F3C70C-0ADF-41BE-B4EB-B2DDC98CDFD9", "jb.vertical_cutouts"), // Vertical Cutout 1
