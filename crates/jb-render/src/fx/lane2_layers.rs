@@ -39,6 +39,15 @@ pub enum Src {
     A,
     B,
     Solid,
+    /// The outgoing / incoming clip blurred by the table's `blur` (backgrounds).
+    BlurA,
+    BlurB,
+}
+
+impl Src {
+    fn blurred(self) -> bool {
+        matches!(self, Src::BlurA | Src::BlurB)
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -112,6 +121,8 @@ pub struct Table {
     pub bg: [f32; 3],
     /// Key spacing in progress (one fitted frame).
     pub dp: f32,
+    /// Gaussian sigma (1080p pixels) of the blurred sources.
+    pub blur: f32,
     pub layers: Vec<Layer>,
 }
 
@@ -173,6 +184,7 @@ pub fn parse_tables(text: &str) -> Result<Vec<Table>, String> {
                         description: String::new(),
                         bg: [0.0; 3],
                         dp: 1.0 / 60.0,
+                        blur: 0.0,
                         layers: Vec::new(),
                     },
                 ));
@@ -194,10 +206,13 @@ pub fn parse_tables(text: &str) -> Result<Vec<Table>, String> {
                         t.bg = [v[0], v[1], v[2]];
                     }
                     "dp" => t.dp = nums(&rest)?[0],
+                    "blur" => t.blur = nums(&rest)?[0],
                     "layer" => {
                         let src = match rest.first().copied() {
                             Some("A") => Src::A,
                             Some("B") => Src::B,
+                            Some("Ab") => Src::BlurA,
+                            Some("Bb") => Src::BlurB,
                             _ => Src::Solid,
                         };
                         let edge = match rest.get(1).copied() {
@@ -269,7 +284,22 @@ fn shader() -> &'static ShaderSrc {
 pub fn encode_table(table: &Table, cx: &mut FxCx<'_>, io: &FxIo<'_>) {
     let b = io.b.unwrap_or(io.a);
     let layers = table.eval(io.progress);
-    let chunks: Vec<&[(&Layer, Key)]> = if layers.is_empty() { vec![&[]] } else { layers.chunks(PER_PASS).collect() };
+    // Passes of at most PER_PASS layers, never mixing blurred and sharp sources.
+    let mut chunks: Vec<&[(&Layer, Key)]> = Vec::new();
+    let mut i = 0;
+    while i < layers.len() {
+        let blurred = layers[i].0.src.blurred();
+        let mut j = i + 1;
+        while j < layers.len() && j - i < PER_PASS && layers[j].0.src.blurred() == blurred {
+            j += 1;
+        }
+        chunks.push(&layers[i..j]);
+        i = j;
+    }
+    if chunks.is_empty() {
+        chunks.push(&[]);
+    }
+    let mut blurred_ab: Option<(crate::pool::Tex, crate::pool::Tex)> = None;
     let mut prev: Option<crate::pool::Tex> = None;
     let last = chunks.len() - 1;
     for (ci, chunk) in chunks.iter().enumerate() {
@@ -281,8 +311,8 @@ pub fn encode_table(table: &Table, cx: &mut FxCx<'_>, io: &FxIo<'_>) {
             let s = li * 11;
             let taps = blur_taps(&k.bc);
             let src = match l.src {
-                Src::A => 0.0,
-                Src::B => 1.0,
+                Src::A | Src::BlurA => 0.0,
+                Src::B | Src::BlurB => 1.0,
                 Src::Solid => 2.0,
             };
             let edge = match l.edge {
@@ -303,9 +333,17 @@ pub fn encode_table(table: &Table, cx: &mut FxCx<'_>, io: &FxIo<'_>) {
             u.p[s + 10] = [k.lens[0], k.lens[1], k.sat, 0.0];
         }
         let target = if ci == last { io.out.clone() } else { cx.temp_like(io.out) };
+        if chunk.first().is_some_and(|(l, _)| l.src.blurred()) && blurred_ab.is_none() {
+            let s = table.blur * io.a.height as f32 / 1080.0;
+            blurred_ab = Some((cx.blur(io.a, s, s), cx.blur(b, s, s)));
+        }
+        let (sa, sb) = match (&blurred_ab, chunk.first().is_some_and(|(l, _)| l.src.blurred())) {
+            (Some((x, y)), true) => (x.clone(), y.clone()),
+            _ => (io.a.clone(), b.clone()),
+        };
         let mut pass = Pass::full(shader(), &target, u);
-        pass.a = Bind::Tex(io.a);
-        pass.b = Bind::Tex(b);
+        pass.a = Bind::Tex(&sa);
+        pass.b = Bind::Tex(&sb);
         if let Some(p) = &prev {
             pass.aux = Bind::Tex(p);
         }
