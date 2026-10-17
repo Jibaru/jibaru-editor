@@ -40,6 +40,8 @@ pub const LIB_EFFECTS: &[&str] = &[
     "jb.cine_film_burn",
     "jb.cine_film_gate_sun",
     "jb.cine_light_bands",
+    "jb.edge_glow_pulse",
+    "jb.flash_tint_leak",
 ];
 
 /// Every art1 item.
@@ -60,6 +62,8 @@ pub fn specs() -> Vec<ArtSpec> {
         art!("jb.cine_film_burn", "Cine Film Burn", "Light", Effect, "cine_film_burn", "A reel of burning film flickers over the picture: orange and white burns, a red flash-back and sprocket holes."),
         art!("jb.cine_film_gate_sun", "Cine Film Gate Sun", "Light", Effect, "cine_film_gate_sun", "The picture becomes a film frame in a projector gate with a burning sun crescent, a swelling burn and a frame roll."),
         art!("jb.cine_light_bands", "Cine Light Bands", "Light", Effect, "cine_light_bands", "Strobing vertical bands of white, yellow and orange stage light flash across the picture."),
+        art!("jb.edge_glow_pulse", "Edge Glow Pulse", "Light", Effect, "edge_glow_pulse", "A soft band sweeps across the picture again and again, lighting its edges up as glowing white lines."),
+        art!("jb.flash_tint_leak", "Flash Tint Leak", "Light", Effect, "flash_tint_leak", "An aged, slightly darker print with a soft light leak washing over it: lavender, cream, peach and a red burn."),
     ]
 }
 
