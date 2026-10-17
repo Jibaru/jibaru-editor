@@ -275,6 +275,8 @@ fn art_fx(uv: vec2f) -> vec4f {
     let a = to_disp(sa(uv)).rgb;
     let bcol = to_disp(sb(uv)).rgb;
     if (p >= ART_DONE) { return from_disp(vec4f(bcol, 1.0)); }
+    // A transition starts exactly on the outgoing clip.
+    if (p <= 0.0) { return from_disp(vec4f(a, 1.0)); }
     let q = art_q(uv);
     let px = 1.0 / u.size.y;
     var col = a;
