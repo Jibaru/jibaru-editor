@@ -521,3 +521,170 @@ pub fn cloud_puff_cover(t: f32, asp: f32) -> Scene {
     }
     s
 }
+
+/// A cartoon fireball swells out of the centre until it fills the frame,
+/// then swirls open into spinning orange and yellow rings that spread out
+/// and break up over the new clip. Animated on twos, like hand-drawn
+/// effects.
+pub fn fireball_swirl(t: f32, _asp: f32) -> Scene {
+    let f = (t * 60.0 / 2.0).floor() * 2.0;
+    let mut s = Scene::cut(t, 30.0 / 60.0);
+    let (cx, cy) = (0.02, 0.0);
+    let (red, orange, yellow, pale) = (0xE8432A, 0xF3742C, 0xF8C73E, 0xFBDF6A);
+    if f < 30.0 {
+        let r = kf(f, &[(16.0, 0.0), (18.0, 0.12), (20.0, 0.18), (22.0, 0.43), (24.0, 0.62), (26.0, 0.8), (28.0, 0.95), (30.0, 1.1)]);
+        if r <= 0.0 {
+            return s;
+        }
+        // Flying flecks around the rim, the red rim, the yellow body.
+        for i in 0..14u32 {
+            let a = TAU * rnd(i, 61) + 0.3 * f;
+            let d = r * (1.05 + 0.12 * rnd(i, 62));
+            s.push(Prim::capsule(cx + d * a.cos(), cy + d * a.sin(), 0.04 * r + 0.01, 0.006 + 0.01 * r, 0.4).rot(a + 1.4).col(red));
+        }
+        s.push(Prim::blob(cx, cy, 1.03 * r, 0.05, 9.0, f).col(red));
+        s.push(Prim::blob(cx, cy, 0.9 * r, 0.03, 7.0, f + 3.0).col(pale).radial(yellow, 0.9 * r).noise(yellow, 9.0, f));
+        if f >= 26.0 {
+            // The swirl starting in the middle.
+            s.push(Prim::arc(cx, cy, 0.09, 0.08, 2.2).rot(0.6 * f).col(red));
+            s.push(Prim::circle(cx - 0.02, cy + 0.02, 0.06).col(orange));
+        }
+        return s;
+    }
+    let hole = kf(f, &[(30.0, 0.06), (32.0, 0.3), (34.0, 0.48), (36.0, 0.62), (38.0, 0.78), (40.0, 0.86), (42.0, 0.92), (44.0, 1.02), (46.0, 1.15)]);
+    let fill = 1.0 - seg(f, 31.0, 36.0);
+    if fill > 0.0 {
+        s.push(annulus_c(cx, cy, hole + 0.02, 2.2).col(yellow).alpha(fill));
+    }
+    let thin = 1.0 - seg(f, 34.0, 47.0);
+    if thin <= 0.0 {
+        return s;
+    }
+    for k in 0..12u32 {
+        let rr = hole + 0.035 + 0.075 * k as f32;
+        if rr > 1.3 {
+            break;
+        }
+        let w = 0.05 * thin * (0.7 + 0.5 * rnd(k, 63));
+        let col = [red, yellow, orange, pale][(k % 4) as usize];
+        let spin = 0.5 * f - 1.6 * rr;
+        for j in 0..3u32 {
+            let half = (0.5 + 0.9 * rnd(k * 3 + j, 64)) * (0.4 + 0.6 * thin);
+            let a = spin + TAU * (j as f32 + rnd(k * 3 + j, 65)) / 3.0;
+            s.push(Prim::arc(cx, cy, rr, w, half).rot(a).col(col));
+        }
+    }
+    s
+}
+
+/// Hexagonal windows onto the new clip pop open one by one at random over
+/// a honeycomb, grow until only thin seams of the old clip remain, and
+/// close up.
+pub fn honeycomb_pop(t: f32, asp: f32) -> Scene {
+    let f = t * 60.0;
+    let mut s = Scene::new();
+    if f >= 29.0 {
+        s.mix = 1.0;
+        return s;
+    }
+    let rc = 0.168;
+    let (dx, dy) = (3f32.sqrt() * rc, 1.5 * rc);
+    let rows = (1.0 / dy) as i32 / 2 + 2;
+    let cols = (asp / dx) as i32 / 2 + 2;
+    for j in -rows..=rows {
+        for i in -cols..=cols {
+            let x = dx * (i as f32 + 0.5 * (j.rem_euclid(2)) as f32) + 0.06;
+            let y = dy * j as f32 + 0.04;
+            if x.abs() > 0.5 * asp + rc || y.abs() > 0.5 + rc {
+                continue;
+            }
+            let id = ((j + 20) * 100 + i + 50) as u32;
+            let t0 = 7.0 + 12.0 * rnd(id, 21);
+            let grow = ease_out(seg(f, t0, t0 + 7.0));
+            // Seams close at the end.
+            let close = seg(f, 21.0, 28.0);
+            let r = rc * (0.86 * grow + 0.16 * close);
+            if r > 0.002 {
+                s.push(Prim::poly(x, y, r, 6.0).rot(PI / 6.0).tex_b());
+            }
+        }
+    }
+    s
+}
+
+/// Five vertical cut-outs of the new clip (shown at 80 %) pop up one after
+/// another from the centre outwards at staggered heights, stretch and
+/// merge into one card, and the card grows to fill the frame.
+pub fn vertical_cutouts(t: f32, _asp: f32) -> Scene {
+    let f = t * 60.0;
+    let mut s = Scene::new();
+    if f >= 59.5 {
+        s.mix = 1.0;
+        return s;
+    }
+    let z = kfs(f, &[(49.0, 0.8), (59.5, 1.0)]);
+    let (cw, ch) = (0.711 * z / 0.8, 0.4 * z / 0.8);
+    if f >= 49.0 {
+        s.push(Prim::rect(0.0, 0.0, cw, ch).piece_b(0.0, 0.0, z));
+        return s;
+    }
+    // (centre x, appears at, half height while staggered)
+    let strips = [(0.0, 9.0, 0.35), (-0.285, 15.0, 0.27), (0.285, 21.0, 0.275), (-0.565, 29.0, 0.2), (0.575, 33.0, 0.2)];
+    let merge = seg(f, 46.0, 49.0);
+    for (x, t0, hh) in strips {
+        if f < t0 {
+            continue;
+        }
+        let pop = ease_out(seg(f, t0, t0 + 1.5));
+        let mut h = hh * pop;
+        if hh < 0.25 {
+            h = kf(f, &[(t0, 0.0), (t0 + 1.5, hh), (40.0, hh), (42.0, 0.33), (44.0, 0.4)]);
+        } else if hh < 0.3 {
+            h = kf(f, &[(t0, 0.0), (t0 + 1.5, hh), (43.0, hh), (45.0, 0.3), (48.0, 0.4)]);
+        }
+        let hw = 0.135 + 0.01 * merge;
+        let h = lerp(h, 0.4, merge);
+        s.push(Prim::rect(x, 0.0, hw, h).piece_b(x / 0.8, 0.0, 0.8));
+    }
+    s
+}
+
+/// Thumbnail card showing a whole clip at scale `z`, centred at (cx, cy).
+fn thumb(cx: f32, cy: f32, z: f32, asp: f32, new: bool) -> Prim {
+    let p = Prim::rect(cx, cy, 0.5 * asp * z, 0.5 * z).round(0.012);
+    if new {
+        p.piece_b(0.0, 0.0, z)
+    } else {
+        p.piece_a(0.0, 0.0, z)
+    }
+}
+
+/// The frame cuts to black and three thumbnail cards (old, new, old) rise
+/// from the bottom one after another into a row; the new card in the
+/// middle then grows to fill the frame.
+pub fn rising_thumb_row(t: f32, asp: f32) -> Scene {
+    let f = t * 60.0;
+    if f < 0.5 {
+        return Scene::new();
+    }
+    let mut s = Scene::new().dip([0.0; 3], 1.0);
+    if f >= 58.0 {
+        return Scene::cut(t, 0.0);
+    }
+    let z = 0.281;
+    let rise = |t0: f32| kf(f - t0, &[(0.0, 0.64), (2.0, 0.5), (4.0, 0.33), (6.0, 0.2), (8.0, 0.115), (10.0, 0.06), (12.0, 0.02), (14.0, 0.0)]);
+    for (x, t0, new) in [(-0.52, 2.0, false), (0.0, 8.0, true), (0.52, 17.0, false)] {
+        if f < t0 {
+            continue;
+        }
+        if new {
+            continue;
+        }
+        s.push(thumb(x, rise(t0), z, asp, new));
+    }
+    if f >= 8.0 {
+        let zb = kf(f, &[(45.0, z), (46.0, 0.3), (48.0, 0.38), (50.0, 0.54), (52.0, 0.76), (54.0, 0.92), (56.0, 0.98), (58.0, 1.0)]);
+        s.push(thumb(0.0, rise(8.0), zb, asp, true));
+    }
+    s
+}

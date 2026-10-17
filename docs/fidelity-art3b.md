@@ -4,7 +4,7 @@ Art3b replaces stand-ins of the earlier lanes (a global A/B mix plus a smooth
 colour field: right timing and average colour, no shapes) for graphic,
 cartoon and themed motion transitions (shapes, comic bursts, holiday,
 seasonal, sports and business graphics, motion-graphics packs) with
-recreations drawn with **our own original vector art**. **22 of 66**
+recreations drawn with **our own original vector art**. **25 of 66**
 items are upgraded; imported projects reach them through the
 `filmora:<GUID>` aliases in `crates/jb-render/src/aliases_art3b.rs` (the
 stand-in alias of each upgraded GUID was removed from the older lane file,
@@ -99,13 +99,13 @@ be higher where a hard-edged shape is a few pixels off).
 | Scary Pack Transition 08 | `AE6FC8AC-655B-458D-95E0-4D03F7748C23` | tr003 | `jb.dark_smoke_wash_06` | — | 4.11 | 23.35 / 40.0 (+19.24) | — | stand-in |  |
 | Scoreboard Transition 01 | `5DC77869-75E6-45F6-9BCA-9B96CBA83DEC` | tr002 | `jb.shape_burst_wash_21` | `jb.red_x_panels` | 2.51 | 12.77 / 43.1 (+10.26) | 9.69 / 28.3 (+7.18) | upgraded |  |
 | Shape Gradient Transitions Transition 25 | `108B1920-9128-4983-BAC9-FB4100603A8E` | tr005 | `jb.shape_burst_wash_22` | `jb.diagonal_streak_sweep` | 2.67 | 20.53 / 49.1 (+17.86) | 18.80 / 56.3 (+16.13) | upgraded |  |
-| Shape Transition 106 | `D8775488-C02D-4661-937D-4C3C937D4ACB` | tr005 | `jb.cell_dissolve_wash_02` | — | 2.38 | 7.06 / 29.3 (+4.68) | — | stand-in |  |
+| Shape Transition 106 | `D8775488-C02D-4661-937D-4C3C937D4ACB` | tr005 | `jb.cell_dissolve_wash_02` | `jb.honeycomb_pop` | 2.38 | 7.06 / 29.3 (+4.68) | 7.52 / 29.9 (+5.14) | kept stand-in | honeycomb looks right but random pop timing measures slightly worse; listed in the library only |
 | Space Rotation Left | `401962DA-6B63-4EB0-95C5-5C43A04601DE` | tr009 | `jb.panel_shuffle_wash_03` | — | 4.12 | 41.18 / 71.4 (+37.06) | — | stand-in |  |
-| Special Effects Skill Pack Transition 01 | `E943F100-16E7-4F2D-8821-A26E4C94A201` | tr010 | `jb.cartoon_burst_wash_04` | — | 3.68 | 16.44 / 52.2 (+12.76) | — | stand-in |  |
+| Special Effects Skill Pack Transition 01 | `E943F100-16E7-4F2D-8821-A26E4C94A201` | tr010 | `jb.cartoon_burst_wash_04` | `jb.fireball_swirl` | 3.68 | 16.44 / 52.2 (+12.76) | 14.17 / 55.7 (+10.49) | upgraded |  |
 | Special Effects Skill Transition 03 | `D9AEBB98-B58B-4EC1-9750-F17BC822E7CB` | tr010 | `jb.cartoon_burst_wash_05` | `jb.cloud_puff_cover` | 2.77 | 23.95 / 63.4 (+21.18) | 20.46 / 59.0 (+17.69) | upgraded |  |
 | Special Effects Skill Transition 04 | `AE4878F8-8587-448A-9065-37C631D0AB51` | tr010 | `jb.cartoon_burst_wash_06` | — | 2.48 | 12.57 / 45.4 (+10.09) | — | stand-in |  |
-| Special Effects Skill Transition 05 | `58BDBBA2-D53A-4331-83BF-9C0BF0AA1D48` | tr010 | `jb.cartoon_burst_wash_07` | — | 2.86 | 30.37 / 59.4 (+27.51) | — | stand-in |  |
-| Special FX Motion Transition 04 | `efbf96b4-211e-ef11-ba94-8045dd702285` | tr010 | `jb.cartoon_burst_wash_01` | — | 3.02 | 15.54 / 62.4 (+12.52) | — | stand-in |  |
+| Special Effects Skill Transition 05 | `58BDBBA2-D53A-4331-83BF-9C0BF0AA1D48` | tr010 | `jb.cartoon_burst_wash_07` | `jb.energy_vortex` | 2.86 | 30.37 / 59.4 (+27.51) | 41.91 / 94.0 (+39.05) | kept stand-in | energy vortex draft measured worse (full-cover phase); dropped |
+| Special FX Motion Transition 04 | `efbf96b4-211e-ef11-ba94-8045dd702285` | tr010 | `jb.cartoon_burst_wash_01` | `jb.flame_burst` | 3.02 | 15.54 / 62.4 (+12.52) | 18.55 / 79.9 (+15.53) | kept stand-in | flame burst draft measured worse; dropped |
 | Speed Motivation Transition 01 | `6cdc4237-8c92-ef11-b433-d8bbc19410ef` | tr010 | `jb.cartoon_burst_wash_02` | — | 2.88 | 38.48 / 56.7 (+35.60) | — | stand-in |  |
 | Spiral Rise | `34F473F4-EEB9-4606-926D-8FE2540CF7AB` | tr010 | `jb.panel_shuffle_wash_04` | — | 4.14 | 58.75 / 68.0 (+54.61) | — | stand-in |  |
 | Sports Broadcast Transition 04 | `657A3B6F-B23F-4804-98EB-3213FF54E84F` | tr001 | `jb.shape_burst_wash_23` | — | 2.58 | 14.08 / 35.7 (+11.50) | — | stand-in |  |
@@ -113,10 +113,10 @@ be higher where a hard-edged shape is a few pixels off).
 | Swap Left | `C3612776-D62E-41a2-8733-0429F50E11F5` | tr005 | `jb.overlay_wash_02` | — | 3.48 | 52.53 / 59.4 (+49.05) | — | stand-in |  |
 | Technology HUD Transition 01 | `C9C2E39A-F581-4D9D-B1EF-140FC7F45798` | tr003 | `jb.cell_dissolve_wash_03` | — | 2.49 | 9.80 / 28.7 (+7.31) | — | stand-in |  |
 | Top Bottom Gate | `C3043949-5B2B-444E-9079-3A7B7B2F52A1` | tr010 | `jb.panel_shuffle_wash_05` | — | 3.97 | 32.13 / 48.3 (+28.16) | — | stand-in |  |
-| Vertical Cutout 1 | `F2F3C70C-0ADF-41BE-B4EB-B2DDC98CDFD9` | tr010 | `jb.panel_shuffle_wash_06` | — | 3.54 | 27.26 / 42.5 (+23.72) | — | stand-in |  |
+| Vertical Cutout 1 | `F2F3C70C-0ADF-41BE-B4EB-B2DDC98CDFD9` | tr010 | `jb.panel_shuffle_wash_06` | `jb.vertical_cutouts` | 3.54 | 27.26 / 42.5 (+23.72) | 6.58 / 23.5 (+3.04) | upgraded |  |
 | Vertical Slice | `3B9CFBA3-EEE5-4C4D-A8AA-457A8B4044C9` | tr001 | `jb.glitch_strobe_wash_01` | — | 3.24 | 17.25 / 34.9 (+14.01) | — | stand-in |  |
 | Vintage Glamour Transition 02 | `A6F74AF0-069F-4B0B-985E-9032ED630409` | tr012 | `jb.paint_stroke_reveal_22` | — | 2.4 | 9.72 / 18.9 (+7.32) | — | stand-in |  |
-| Vision Blocks | `CA0C9A79-A8F7-4B25-AC48-942275E756A9` | tr010 | `jb.panel_shuffle_wash_07` | — | 3.48 | 34.05 / 65.3 (+30.57) | — | stand-in |  |
+| Vision Blocks | `CA0C9A79-A8F7-4B25-AC48-942275E756A9` | tr010 | `jb.panel_shuffle_wash_07` | `jb.rising_thumb_row` | 3.48 | 34.05 / 65.3 (+30.57) | 4.87 / 17.2 (+1.39) | upgraded |  |
 | Wedding Invitation Template Transition 01 | `9CC68058-8C13-4EC4-8B59-5BB5752CBEDD` | tr012 | `jb.paint_stroke_reveal_23` | — | 2.44 | 11.59 / 24.4 (+9.15) | — | stand-in |  |
 | Wedding Invitation Template Transition 02 | `97426E0D-3458-4316-877B-4FD00C507D82` | tr012 | `jb.paint_stroke_reveal_24` | — | 2.48 | 9.16 / 21.5 (+6.68) | — | stand-in |  |
 | Wedding Invitation Template Transition 04 | `546B3563-6DE9-44D1-9386-390BA3D3E73B` | tr012 | `jb.paint_stroke_reveal_25` | — | 2.45 | 8.81 / 23.4 (+6.36) | — | stand-in |  |
