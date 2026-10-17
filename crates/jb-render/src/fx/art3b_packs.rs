@@ -688,3 +688,61 @@ pub fn rising_thumb_row(t: f32, asp: f32) -> Scene {
     }
     s
 }
+
+/// Card of half size (hw, hh) at (cx, cy) showing its clip scaled to the
+/// card height (cropped at the sides).
+fn crop_card(cx: f32, cy: f32, hw: f32, hh: f32, new: bool) -> Prim {
+    let p = Prim::rect(cx, cy, hw, hh).round(0.015 * (hh / 0.125).min(1.0));
+    if new {
+        p.piece_b(0.0, 0.0, 2.0 * hh)
+    } else {
+        p.piece_a(0.0, 0.0, 2.0 * hh)
+    }
+}
+
+/// The old clip shrinks into one square card of a ring of eight over black
+/// (old cards on the axes, new ones on the diagonals); the ring turns an
+/// eighth, a new card slides out to the left and grows to fill the frame.
+pub fn card_ring_turn(t: f32, _asp: f32) -> Scene {
+    let f = t * 60.0;
+    if f < 0.5 {
+        return Scene::new();
+    }
+    if f >= 58.0 {
+        return Scene::cut(t, 0.0);
+    }
+    let mut s = Scene::new().dip([0.0; 3], 1.0);
+    let (rx, ry, h) = (0.325, 0.29, 0.123);
+    let turn = kfs(f, &[(12.0, 0.0), (40.0, 45.0)]).to_radians();
+    let ring_on = f >= 3.0;
+    // Card leaving the ring: the new card that ends on the left slot.
+    let leave = f >= 40.0;
+    for k in 0..8 {
+        let a = k as f32 * PI / 4.0 + turn;
+        let new = k % 2 == 1;
+        let (x, y) = (rx * a.cos(), ry * a.sin());
+        // The old clip's own card (k = 0) is drawn as the shrinking frame.
+        if k == 0 && f < 11.0 {
+            continue;
+        }
+        if leave && k == 3 {
+            continue;
+        }
+        if ring_on {
+            s.push(crop_card(x, y, h, h, new));
+        }
+    }
+    if f < 11.0 {
+        let cx = kf(f, &[(0.0, 0.0), (2.0, 0.08), (4.0, 0.18), (6.0, 0.26), (8.0, 0.29), (10.0, 0.32), (11.0, rx)]);
+        let hw = kf(f, &[(0.0, 0.889), (2.0, 0.71), (4.0, 0.47), (6.0, 0.285), (8.0, 0.19), (10.0, 0.136), (11.0, h)]);
+        let hh = kf(f, &[(0.0, 0.5), (2.0, 0.4), (4.0, 0.3), (6.0, 0.195), (8.0, 0.17), (10.0, 0.13), (11.0, h)]);
+        s.push(crop_card(cx, 0.0, hw, hh, false));
+    }
+    if leave {
+        let cx = kf(f, &[(40.0, -rx), (41.0, -0.5), (44.0, -0.605), (47.0, -0.655), (49.0, -0.66), (51.0, -0.615), (54.0, -0.35), (56.0, -0.12), (58.0, 0.0)]);
+        let hw = kf(f, &[(40.0, h), (47.0, 0.135), (49.0, 0.16), (51.0, 0.235), (54.0, 0.55), (56.0, 0.78), (58.0, 0.889)]);
+        let hh = kf(f, &[(40.0, h), (47.0, 0.135), (49.0, 0.16), (51.0, 0.19), (54.0, 0.36), (56.0, 0.45), (58.0, 0.5)]);
+        s.push(crop_card(cx, 0.0, hw, hh, true));
+    }
+    s
+}

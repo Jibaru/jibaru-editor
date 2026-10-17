@@ -4,7 +4,7 @@ Art3b replaces stand-ins of the earlier lanes (a global A/B mix plus a smooth
 colour field: right timing and average colour, no shapes) for graphic,
 cartoon and themed motion transitions (shapes, comic bursts, holiday,
 seasonal, sports and business graphics, motion-graphics packs) with
-recreations drawn with **our own original vector art**. **25 of 66**
+recreations drawn with **our own original vector art**. **26 of 66**
 items are upgraded; imported projects reach them through the
 `filmora:<GUID>` aliases in `crates/jb-render/src/aliases_art3b.rs` (the
 stand-in alias of each upgraded GUID was removed from the older lane file,
@@ -60,7 +60,7 @@ be higher where a hard-edged shape is a few pixels off).
 | Horror Story Transition 02 | `8169CEC2-0E41-4DCA-AF4E-6850BE909274` | tr003 | `jb.zombie_hands` | `jb.zombie_reach` | 2.62 | 12.43 / 25.9 (+9.81) | 13.34 / 34.4 (+10.72) | kept stand-in |  |
 | Horrors Pack Transition 01 | `A4A64485-7A1E-4CD7-9621-C4EC79433BAA` | tr003 | `jb.dark_smoke_wash_01` | — | 4.02 | 6.75 / 32.1 (+2.73) | — | stand-in |  |
 | Influencer Toolkit Vol 1 Transition 01 | `1E059E6B-7E12-4DC1-A5ED-982CF52EDD8F` | tr006 | `jb.shape_burst_wash_03` | `jb.glossy_slab_sweep` | 2.75 | 24.38 / 48.3 (+21.63) | 22.02 / 41.3 (+19.27) | upgraded |  |
-| Layered Vision | `0647A4ED-769A-494E-92EF-34984F81DD18` | tr009 | `jb.panel_shuffle_wash_01` | — | 4.0 | 48.60 / 66.0 (+44.60) | — | stand-in |  |
+| Layered Vision | `0647A4ED-769A-494E-92EF-34984F81DD18` | tr009 | `jb.panel_shuffle_wash_01` | `jb.card_ring_turn` | 4.0 | 48.60 / 66.0 (+44.60) | 18.63 / 49.4 (+14.63) | upgraded |  |
 | Linear 14 | `1C10FA86-5D69-4E77-9F5C-C99D2097D86F` | tr004 | `jb.shape_burst_wash_04` | `jb.chevron_trio_right` | 2.43 | 19.11 / 54.5 (+16.68) | 6.50 / 21.0 (+4.07) | upgraded |  |
 | Linear 19 | `C2A21964-21C9-48B3-8E17-3A78E97EC290` | tr004 | `jb.shape_burst_wash_05` | `jb.ring_burst_center` | 2.42 | 24.73 / 61.3 (+22.31) | 16.81 / 59.5 (+14.39) | upgraded |  |
 | Linear 4 | `2A59A5A5-A492-425C-904E-D7703218AC16` | tr004 | `jb.shape_burst_wash_06` | `jb.spinning_square_frames` | 2.49 | 23.17 / 53.2 (+20.68) | 15.07 / 39.2 (+12.58) | upgraded |  |

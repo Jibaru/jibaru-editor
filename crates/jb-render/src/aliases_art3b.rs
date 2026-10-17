@@ -8,6 +8,7 @@ use crate::registry::Registry;
 
 pub const FILMORA_ART3B: &[(&str, &str)] = &[
     ("1E059E6B-7E12-4DC1-A5ED-982CF52EDD8F", "jb.glossy_slab_sweep"), // Influencer Toolkit Vol 1 Transition 01
+    ("0647A4ED-769A-494E-92EF-34984F81DD18", "jb.card_ring_turn"), // Layered Vision
     ("1C10FA86-5D69-4E77-9F5C-C99D2097D86F", "jb.chevron_trio_right"), // Linear 14
     ("C2A21964-21C9-48B3-8E17-3A78E97EC290", "jb.ring_burst_center"), // Linear 19
     ("2A59A5A5-A492-425C-904E-D7703218AC16", "jb.spinning_square_frames"), // Linear 4
