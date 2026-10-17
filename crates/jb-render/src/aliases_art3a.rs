@@ -20,6 +20,7 @@ pub const FILMORA_ART3A: &[(&str, &str, &str)] = &[
     ("111DB3F8-9030-48DB-9D22-CF80B3F6CEF1", "jb.gold_chevrons", "Grammy Award 2024 Transition 02"),
     ("87003965-AF55-4819-A386-E7DF971D9456", "jb.gold_plates_sweep", "Golden Awards Pack Transition 04"),
     ("012134A4-92F3-4209-8605-7BCD218DC892", "jb.gold_plates_rise", "Golden Awards Transition 03"),
+    ("C10C8F47-92A9-48EA-9D9A-10C1F0B89773", "jb.comic_page", "Comic Style 3"),
 ];
 
 pub fn register(r: &mut Registry) {

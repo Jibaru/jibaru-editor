@@ -37,7 +37,6 @@ pub const FILMORA_LANE3: &[(&str, &str, &str)] = &[
     ("D8784519-CDBE-49AE-AFE0-D603FF248519", "jb.liquid_blob_wipe", "Colorful Transition Pack Transition 01"),
     ("593E6445-05BE-4DFF-B9CE-38CA0137AF77", "jb.color_rings", "Colorful Transitions Vol 06 Transition 16"),
     ("E323451A-2BD6-4E19-9312-D47E43E8CC42", "jb.ink_brush_sweep", "Comic Film Flash"),
-    ("C10C8F47-92A9-48EA-9D9A-10C1F0B89773", "jb.comic_panels", "Comic Style 3"),
     ("51BC2986-7BCC-463C-B976-2A893ABFA41F", "jb.floating_gallery", "Cosmic Gallery"),
     ("851A9995-1FA1-4025-B986-46D92D0CF02D", "jb.creature_reveal", "Creepy  Pack Transition 01"),
     ("D8CBBBDE-1C0F-438B-9DA6-FB08132959FD", "jb.face_slide", "Creepy Pack Transition 02"),

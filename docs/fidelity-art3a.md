@@ -31,13 +31,14 @@ worse than the stand-in's. Artwork whose drawing differs from Filmora's (as
 it must) keeps a residual above the floor along its edges and details; the
 gain over the stand-in is in shape, coverage and motion.
 
-## Upgraded (14)
+## Upgraded (15)
 
 | Filmora item | Ours | Replaced stand-in | MAD before | MAD now | MAD max | Floor | Notes |
 |---|---|---|---:|---:|---:|---:|---|
 | Business Presentation Vol 02 Transition 02 | `jb.stripe_close` | `jb.stripe_slide_diagonal` | 25.40 | 5.90 | 17.65 | 2.43 |  |
 | Camera Shutter | `jb.iris_shutter` | `jb.shutter_wash_01` | 9.72 | 4.88 | 11.69 | — |  |
 | Camera Transition 09 | `jb.lens_iris` | `jb.shutter_wash_02` | 14.04 | 7.60 | 13.15 | — |  |
+| Comic Style 3 | `jb.comic_page` | `jb.comic_panels` | 35.33 | 27.50 | 42.94 | 3.81 | camera fitted per frame on the hero panels; the other panels of the reference are halftone-printed and cannot be matched pixel-wise |
 | Gaming Set Sports Transition 2 | `jb.arrow_stack` | `jb.chevron_wipe` | 10.47 | 5.51 | 8.94 | 2.48 |  |
 | Golden Awards Ceremony Transition 05 | `jb.gold_diamond` | `jb.gold_diamond_wipe` | 6.90 | 4.63 | 13.90 | 2.79 |  |
 | Golden Awards Pack Transition 04 | `jb.gold_plates_sweep` | `jb.gold_ribbon_1` | 10.69 | 8.54 | 19.60 | 3.18 |  |
@@ -50,7 +51,7 @@ gain over the stand-in is in shape, coverage and motion.
 | Horrible Colorful Transition 02 | `jb.ghost_glide` | `jb.glitch_bands` | 10.73 | 5.52 | 11.99 | 2.33 |  |
 | Horrible Colorful Transition 13 | `jb.boo_dive` | `jb.ghost_face_flash` | 22.67 | 21.39 | 86.89 | 2.40 |  |
 
-## Still stand-ins (51)
+## Still stand-ins (50)
 
 Mapped by their lane's stand-in; "Tried" is the best original-art attempt when one was measured but not switched (worse or not visually right).
 
@@ -67,7 +68,7 @@ Mapped by their lane's stand-in; "Tried" is the best original-art attempt when o
 | Carousel Down | `jb.carousel_down` | 21.09 | — |  |
 | Carousel Down Rebound | `jb.carousel_down_rebound` | 21.39 | — |  |
 | Carousel Up | `jb.carousel_up` | 21.98 | — |  |
-| Cartoony Vlog Pack Transition 01 | `jb.candy_spiral` | 22.05 | — |  |
+| Cartoony Vlog Pack Transition 01 | `jb.candy_spiral` | 22.05 | 24.65 | `jb.candy_swirl` drawn (spiral, gem, blob) but the stripe phase of the reference spiral is not matched, so its high-contrast bands measure worse than the smooth stand-in; alias kept on the stand-in |
 | Christmas Gift Transition 03 | `jb.bokeh_flash` | 6.89 | — |  |
 | Cinematic Transition 03 | `jb.soft_light_leak` | 4.65 | — |  |
 | Cinematic Transition 09 | `jb.scratched_film_dip` | 6.04 | — |  |
@@ -76,7 +77,6 @@ Mapped by their lane's stand-in; "Tried" is the best original-art attempt when o
 | Color Dissolve 3 | `jb.block_glow_dissolve` | 13.36 | — |  |
 | Color Distance | `jb.checker_scatter` | 7.65 | — |  |
 | Colorful Transition Pack Transition 01 | `jb.liquid_blob_wipe` | 7.44 | — |  |
-| Comic Style 3 | `jb.comic_panels` | 35.33 | — |  |
 | Creepy  Pack Transition 01 | `jb.creature_reveal` | 18.23 | — |  |
 | Creepy Pack Transition 02 | `jb.face_slide` | 17.42 | — |  |
 | Creepy Pack Transition 03 | `jb.lantern_sweep` | 25.04 | — |  |
@@ -101,9 +101,9 @@ Mapped by their lane's stand-in; "Tried" is the best original-art attempt when o
 | Golden Awards Transition 02 | `jb.gold_ribbon_3` | 11.56 | — |  |
 | Golden Awards Transition 04 | `jb.golden_bloom_flash` | 7.45 | — |  |
 | Golden Awards Transition 05 | `jb.gold_glitter_flash` | 8.58 | — |  |
-| Halloween Horrors Pack Transition 02 | `jb.ghost_crowd_rise` | 19.01 | 19.44 |  |
-| Halloween Party Transition 02 | `jb.lantern_glow` | 10.57 | 13.77 |  |
-| Halloween Party Transition 03 | `jb.bat_swarm` | 9.27 | 10.47 |  |
+| Halloween Horrors Pack Transition 02 | `jb.ghost_crowd_rise` | 19.01 | 19.44 | `jb.ghost_crowd` drawn; measures 19.44 vs 19.01, alias kept on the stand-in |
+| Halloween Party Transition 02 | `jb.lantern_glow` | 10.57 | 13.77 | `jb.lantern_face` drawn; measures 13.77 vs 10.57, alias kept on the stand-in |
+| Halloween Party Transition 03 | `jb.bat_swarm` | 9.27 | 10.47 | `jb.bat_swarm_dive` drawn; measures 10.47 vs 9.27, alias kept on the stand-in |
 | Halloween Scary Pack Transition 06 | `jb.blue_fire_smoke` | 20.20 | — |  |
 | Horizontal Reel | `jb.card_reel` | 14.42 | — |  |
 | Horizontal Screen Cutting | `jb.band_cut_zoom` | 14.85 | — |  |
