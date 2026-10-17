@@ -17,6 +17,7 @@ pub const LIBRARY: &[LibraryGroup] = &[
         name: "Halloween",
         items: &[
             "jb.pumpkin_grin",
+            "jb.lantern_roll",
             "jb.witch_hat_wave",
             "jb.bat_rise",
             "jb.skull_and_hat",

@@ -31,7 +31,7 @@ worse than the stand-in's. Artwork whose drawing differs from Filmora's (as
 it must) keeps a residual above the floor along its edges and details; the
 gain over the stand-in is in shape, coverage and motion.
 
-## Upgraded (15)
+## Upgraded (16)
 
 | Filmora item | Ours | Replaced stand-in | MAD before | MAD now | MAD max | Floor | Notes |
 |---|---|---|---:|---:|---:|---:|---|
@@ -39,6 +39,7 @@ gain over the stand-in is in shape, coverage and motion.
 | Camera Shutter | `jb.iris_shutter` | `jb.shutter_wash_01` | 9.72 | 4.88 | 11.69 | — |  |
 | Camera Transition 09 | `jb.lens_iris` | `jb.shutter_wash_02` | 14.04 | 7.60 | 13.15 | — |  |
 | Comic Style 3 | `jb.comic_page` | `jb.comic_panels` | 35.33 | 27.50 | 42.94 | 3.81 | camera fitted per frame on the hero panels; the other panels of the reference are halftone-printed and cannot be matched pixel-wise |
+| Creepy Pack Transition 03 | `jb.lantern_roll` | `jb.lantern_sweep` | 25.04 | 20.73 | 44.20 | 2.35 |  |
 | Gaming Set Sports Transition 2 | `jb.arrow_stack` | `jb.chevron_wipe` | 10.47 | 5.51 | 8.94 | 2.48 |  |
 | Golden Awards Ceremony Transition 05 | `jb.gold_diamond` | `jb.gold_diamond_wipe` | 6.90 | 4.63 | 13.90 | 2.79 |  |
 | Golden Awards Pack Transition 04 | `jb.gold_plates_sweep` | `jb.gold_ribbon_1` | 10.69 | 8.54 | 19.60 | 3.18 |  |
@@ -51,7 +52,7 @@ gain over the stand-in is in shape, coverage and motion.
 | Horrible Colorful Transition 02 | `jb.ghost_glide` | `jb.glitch_bands` | 10.73 | 5.52 | 11.99 | 2.33 |  |
 | Horrible Colorful Transition 13 | `jb.boo_dive` | `jb.ghost_face_flash` | 22.67 | 21.39 | 86.89 | 2.40 |  |
 
-## Still stand-ins (50)
+## Still stand-ins (49)
 
 Mapped by their lane's stand-in; "Tried" is the best original-art attempt when one was measured but not switched (worse or not visually right).
 
@@ -77,9 +78,8 @@ Mapped by their lane's stand-in; "Tried" is the best original-art attempt when o
 | Color Dissolve 3 | `jb.block_glow_dissolve` | 13.36 | — |  |
 | Color Distance | `jb.checker_scatter` | 7.65 | — |  |
 | Colorful Transition Pack Transition 01 | `jb.liquid_blob_wipe` | 7.44 | — |  |
-| Creepy  Pack Transition 01 | `jb.creature_reveal` | 18.23 | — |  |
-| Creepy Pack Transition 02 | `jb.face_slide` | 17.42 | — |  |
-| Creepy Pack Transition 03 | `jb.lantern_sweep` | 25.04 | — |  |
+| Creepy  Pack Transition 01 | `jb.creature_reveal` | 18.23 | — | photoreal creature close-up; not attempted (a stylised drawing cannot match its texture) |
+| Creepy Pack Transition 02 | `jb.face_slide` | 17.42 | — | photoreal doll face; an original stylised head measured only 16.97 vs 17.42 and did not look equivalent, so it was not kept |
 | Cross Whisk | `jb.block_whisk` | 12.48 | — |  |
 | Cut Off | `jb.cut_off` | 11.33 | — |  |
 | Diagonal Slice | `jb.split_slide` | 11.19 | — |  |

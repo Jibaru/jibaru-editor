@@ -40,7 +40,6 @@ pub const FILMORA_LANE3: &[(&str, &str, &str)] = &[
     ("51BC2986-7BCC-463C-B976-2A893ABFA41F", "jb.floating_gallery", "Cosmic Gallery"),
     ("851A9995-1FA1-4025-B986-46D92D0CF02D", "jb.creature_reveal", "Creepy  Pack Transition 01"),
     ("D8CBBBDE-1C0F-438B-9DA6-FB08132959FD", "jb.face_slide", "Creepy Pack Transition 02"),
-    ("E797F112-31A7-4E50-A9B4-73BB5DB92EA3", "jb.lantern_sweep", "Creepy Pack Transition 03"),
     ("50C89935-C9C8-44a1-A4F4-99B8A29A517A", "jb.block_whisk", "Cross Whisk"),
     ("670D04F9-1196-1EB2-5AFF-D7D8E5B70F48", "jb.crystal_ball_iris", "Crystal Ball 1"),
     ("0A38FDBB-03A8-6FBD-0823-DD810646C8A8", "jb.crystal_ball_lens", "Crystal Ball 2"),
