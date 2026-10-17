@@ -58,23 +58,25 @@ is what the model leaves; ≲ 1.5 is at the floor. Stand-ins score far above
 it wherever the artwork covers the frame; "Before" is the first stand-in
 (global mix only, old harness) for comparison.
 
+**Summary.** 110 items mapped: 27 with a structural model, 83 light-field stand-ins. Mean MAD 12.88 (first stand-ins: 17.69); 9 items within 1.5 of the floor, 15 within 3.
+
 | Filmora item | Ours | Model | MAD mean | MAD max | Floor | Excess | Before | Notes |
 |---|---|---|---:|---:|---:|---:|---:|---|
 | Algorithm Combination Set 06 | `jb.warm_flare_flash` | stand-in: global mix + light field | 10.07 | 20.03 | 2.40 | +7.67 | 11.84 |  |
-| Ancient Civilization Egypt Pack Transition 04 | `jb.golden_dust_sweep` | stand-in: global mix + light field | 6.53 | 12.36 | 3.16 | +3.37 | 8.94 |  |
+| Ancient Civilization Egypt Pack Transition 04 | `jb.golden_dust_sweep` | stand-in: global mix + light field | 6.53 | 12.37 | 3.16 | +3.37 | 8.94 |  |
 | Animate Effect Transition 03 | `jb.ink_splash_burst` | stand-in: global mix + light field | 5.51 | 44.00 | 2.93 | +2.58 | 7.62 |  |
 | Anime Attack 03 | `jb.energy_ring_burst` | stand-in: global mix + light field | 19.15 | 55.11 | 2.62 | +16.52 | 22.67 |  |
 | Anime Flame Transition 09 | `jb.flame_wash` | stand-in: global mix + light field | 12.90 | 28.56 | 2.55 | +10.35 | 16.88 |  |
-| Anime Style Flow 01 | `jb.starburst_flash` | stand-in: global mix + light field | 11.01 | 28.29 | 2.51 | +8.50 | 15.31 |  |
+| Anime Style Flow 01 | `jb.starburst_flash` | stand-in: global mix + light field | 11.01 | 28.30 | 2.51 | +8.50 | 15.31 |  |
 | B&W Dissolve | `jb.mono_dissolve` | stand-in: global mix + light field | 8.13 | 13.95 | 3.50 | +4.63 | 9.72 |  |
 | Black Friday Sale 02 Transition 06 | `jb.chevron_sweep` | stand-in: global mix + light field | 12.26 | 51.62 | 2.44 | +9.82 | 17.80 |  |
 | Blind 1 | `jb.blind_bars` | edge front + procedural slats | 8.48 | 17.73 | 3.42 | +5.07 | 10.39 | slat band with hashed per-slat thresholds; slat pattern is not Filmora's; half-pixel offset |
 | Blue Sparkling Awards Transition 04 | `jb.gold_sparkle_burst` | stand-in: global mix + light field | 17.75 | 28.65 | 3.33 | +14.43 | 22.56 |  |
 | Burning Dash Transition 01 | `jb.fireball_dash_1` | stand-in: global mix + light field | 18.26 | 30.34 | 3.08 | +15.18 | 25.98 |  |
-| Burning Dash Transition 02 | `jb.fireball_dash_2` | stand-in: global mix + light field | 14.46 | 28.82 | 3.17 | +11.29 | 19.98 |  |
-| Burning Dash Transition 03 | `jb.fireball_dash_3` | stand-in: global mix + light field | 18.46 | 34.77 | 2.86 | +15.60 | 24.08 |  |
-| Burning Dash Transition 04 | `jb.fireball_dash_4` | stand-in: global mix + light field | 12.24 | 34.25 | 2.81 | +9.43 | 15.51 |  |
-| Business Presentation Vol 02 Transition 02 | `jb.stripe_slide_diagonal` | stand-in: global mix + light field | 25.40 | 58.31 | 2.43 | +22.97 | 31.97 |  |
+| Burning Dash Transition 02 | `jb.fireball_dash_2` | stand-in: global mix + light field | 14.46 | 28.83 | 3.17 | +11.29 | 19.98 |  |
+| Burning Dash Transition 03 | `jb.fireball_dash_3` | stand-in: global mix + light field | 18.46 | 34.76 | 2.86 | +15.60 | 24.08 |  |
+| Burning Dash Transition 04 | `jb.fireball_dash_4` | stand-in: global mix + light field | 12.24 | 34.26 | 2.81 | +9.43 | 15.51 |  |
+| Business Presentation Vol 02 Transition 02 | `jb.stripe_slide_diagonal` | stand-in: global mix + light field | 25.40 | 58.24 | 2.43 | +22.97 | 31.97 |  |
 | Carousel Down | `jb.carousel_down` | stand-in: global mix + light field | 21.09 | 31.87 | 3.60 | +17.49 | 37.12 |  |
 | Carousel Down Rebound | `jb.carousel_down_rebound` | stand-in: global mix + light field | 21.39 | 33.03 | 3.61 | +17.78 | 25.11 |  |
 | Carousel Left | `jb.carousel_left` | panel strip | 10.27 | 22.75 | 3.83 | +6.44 | 17.38 | flat panels; frames 22-31 (fast scroll) are off: the real panels turn in perspective |
@@ -82,22 +84,22 @@ it wherever the artwork covers the frame; "Before" is the first stand-in
 | Carousel Up | `jb.carousel_up` | stand-in: global mix + light field | 21.98 | 33.96 | 4.25 | +17.73 | 26.59 |  |
 | Cartoony Vlog Pack Transition 01 | `jb.candy_spiral` | stand-in: global mix + light field | 22.05 | 51.45 | 2.91 | +19.14 | 25.03 |  |
 | Chalk Swipe Left | `jb.chalk_swipe_left` | edge wipe | 3.29 | 5.53 | 3.84 | -0.55 | 5.25 | slanted edge in ~12 fps steps; the chalk texture of the edge is not drawn |
-| Christmas Gift Transition 03 | `jb.bokeh_flash` | stand-in: global mix + light field | 6.89 | 15.29 | 4.21 | +2.68 | 10.85 |  |
+| Christmas Gift Transition 03 | `jb.bokeh_flash` | stand-in: global mix + light field | 6.89 | 15.28 | 4.21 | +2.68 | 10.85 |  |
 | Cinematic Transition 03 | `jb.soft_light_leak` | stand-in: global mix + light field | 4.65 | 7.15 | 2.43 | +2.22 | 9.55 |  |
 | Cinematic Transition 09 | `jb.scratched_film_dip` | stand-in: global mix + light field | 6.04 | 17.44 | 2.56 | +3.48 | 7.93 |  |
-| Cinematic Travel Vlog Transition 01 | `jb.film_strip_slide` | stand-in: global mix + light field | 21.36 | 32.51 | 3.05 | +18.31 | 28.22 |  |
+| Cinematic Travel Vlog Transition 01 | `jb.film_strip_slide` | stand-in: global mix + light field | 21.36 | 32.50 | 3.05 | +18.31 | 28.22 |  |
 | Classic Movies Transition 06 | `jb.red_flare_flash` | stand-in: global mix + light field | 5.87 | 15.87 | 2.59 | +3.28 | 9.74 |  |
 | Col Merge | `jb.sides_merge` | edge wipe | 2.26 | 2.86 | 2.33 | -0.07 | 4.70 | two edges closing to the centre line |
 | Color Dissolve 3 | `jb.block_glow_dissolve` | stand-in: global mix + light field | 13.36 | 33.11 | 3.58 | +9.78 | 18.28 | half-pixel offset |
 | Color Distance | `jb.checker_scatter` | stand-in: global mix + light field | 7.65 | 22.87 | 3.19 | +4.46 | 9.78 |  |
 | Colorful Transition Pack Transition 01 | `jb.liquid_blob_wipe` | stand-in: global mix + light field | 7.44 | 26.97 | 2.50 | +4.95 | 11.73 |  |
 | Colorful Transitions Vol 06 Transition 16 | `jb.color_rings` | procedural rings | 24.73 | 45.02 | 2.36 | +22.37 | 47.83 | inner ring radii and colours measured, outer bands estimated; coverage from the global fit |
-| Comic Film Flash | `jb.ink_brush_sweep` | stand-in: global mix + light field | 13.78 | 27.14 | 2.73 | +11.05 | 21.79 |  |
+| Comic Film Flash | `jb.ink_brush_sweep` | stand-in: global mix + light field | 13.78 | 27.13 | 2.73 | +11.05 | 21.79 |  |
 | Comic Style 3 | `jb.comic_panels` | stand-in: global mix + light field | 35.33 | 42.83 | 3.81 | +31.52 | 40.53 |  |
 | Cosmic Gallery | `jb.floating_gallery` | stand-in: global mix + light field | 30.29 | 45.61 | 4.85 | +25.45 | 52.52 |  |
 | Creepy  Pack Transition 01 | `jb.creature_reveal` | stand-in: global mix + light field | 18.23 | 32.85 | 2.33 | +15.90 | 25.89 |  |
 | Creepy Pack Transition 02 | `jb.face_slide` | stand-in: global mix + light field | 17.42 | 26.60 | 2.37 | +15.06 | 25.77 |  |
-| Creepy Pack Transition 03 | `jb.lantern_sweep` | stand-in: global mix + light field | 25.05 | 44.46 | 2.35 | +22.70 | 36.01 |  |
+| Creepy Pack Transition 03 | `jb.lantern_sweep` | stand-in: global mix + light field | 25.04 | 44.46 | 2.35 | +22.68 | 36.01 |  |
 | Cross Whisk | `jb.block_whisk` | stand-in: global mix + light field | 12.48 | 26.77 | 2.82 | +9.66 | 15.43 |  |
 | Crystal Ball 1 | `jb.crystal_ball_iris` | lens ball | 7.20 | 13.36 | 3.59 | +3.61 | 7.37 | ellipse → circle iris with bulge and mid flash colours |
 | Crystal Ball 2 | `jb.crystal_ball_lens` | lens ball over clip | 15.70 | 35.22 | 3.24 | +12.46 | 17.76 | bulge only; the ball's rim highlight is not drawn |
@@ -125,7 +127,7 @@ it wherever the artwork covers the frame; "Before" is the first stand-in
 | Film Grit 2 | `jb.grit_frame` | stand-in: global mix + light field | 7.40 | 28.02 | 2.93 | +4.47 | 10.39 |  |
 | Flash | `jb.bright_flash` | flash (zoom + bloom) | 6.83 | 11.26 | 3.34 | +3.49 | 7.31 | bloom + overexposure, new clip lands at 1.11× zoom; mid frames ~10 |
 | Flashbulbs 02 | `jb.flashbulbs` | stand-in: global mix + light field | 6.10 | 22.37 | 2.51 | +3.58 | 9.74 |  |
-| Flora Collage Pack Transition 05 | `jb.diagonal_sweep` | stand-in: global mix + light field | 6.59 | 11.64 | 2.52 | +4.07 | 14.20 |  |
+| Flora Collage Pack Transition 05 | `jb.diagonal_sweep` | stand-in: global mix + light field | 6.59 | 11.63 | 2.52 | +4.07 | 14.20 |  |
 | Fluorescent Flash | `jb.neon_flicker_flash` | stand-in: global mix + light field | 10.64 | 27.20 | 5.19 | +5.46 | 12.35 |  |
 | Flyeye | `jb.fly_eye` | stand-in: global mix + light field | 20.45 | 25.30 | 4.15 | +16.30 | 20.56 |  |
 | Gaming Set Sports Transition 2 | `jb.chevron_wipe` | stand-in: global mix + light field | 10.47 | 20.01 | 2.48 | +7.99 | 16.27 |  |
@@ -137,9 +139,9 @@ it wherever the artwork covers the frame; "Before" is the first stand-in
 | Gold Blue Transition 06 | `jb.gold_blue_paint_6` | stand-in: global mix + light field | 9.21 | 29.48 | 2.83 | +6.39 | 12.51 |  |
 | Golden Awards Ceremony Transition 05 | `jb.gold_diamond_wipe` | stand-in: global mix + light field | 6.90 | 25.97 | 2.79 | +4.11 | 9.36 |  |
 | Golden Awards Pack Transition 04 | `jb.gold_ribbon_1` | stand-in: global mix + light field | 10.69 | 25.51 | 3.18 | +7.50 | 16.09 |  |
-| Golden Awards Transition 01 | `jb.gold_ribbon_2` | stand-in: global mix + light field | 12.21 | 23.16 | 2.45 | +9.76 | 19.03 |  |
-| Golden Awards Transition 02 | `jb.gold_ribbon_3` | stand-in: global mix + light field | 11.56 | 21.54 | 2.38 | +9.18 | 17.24 |  |
-| Golden Awards Transition 03 | `jb.gold_ribbon_4` | stand-in: global mix + light field | 10.71 | 25.55 | 2.41 | +8.30 | 16.33 |  |
+| Golden Awards Transition 01 | `jb.gold_ribbon_2` | stand-in: global mix + light field | 12.21 | 23.17 | 2.45 | +9.76 | 19.03 |  |
+| Golden Awards Transition 02 | `jb.gold_ribbon_3` | stand-in: global mix + light field | 11.56 | 21.55 | 2.38 | +9.18 | 17.24 |  |
+| Golden Awards Transition 03 | `jb.gold_ribbon_4` | stand-in: global mix + light field | 10.71 | 25.54 | 2.41 | +8.30 | 16.33 |  |
 | Golden Awards Transition 04 | `jb.golden_bloom_flash` | stand-in: global mix + light field | 7.45 | 16.02 | 3.01 | +4.44 | 12.79 |  |
 | Golden Awards Transition 05 | `jb.gold_glitter_flash` | stand-in: global mix + light field | 8.58 | 26.07 | 3.69 | +4.89 | 12.58 |  |
 | Grammy Award 2024 Transition 02 | `jb.gold_frames_zoom` | stand-in: global mix + light field | 13.67 | 31.89 | 2.55 | +11.12 | 15.91 |  |
@@ -160,12 +162,12 @@ it wherever the artwork covers the frame; "Before" is the first stand-in
 | Halloween Scary Pack Transition 06 | `jb.blue_fire_smoke` | stand-in: global mix + light field | 20.20 | 36.11 | 3.64 | +16.56 | 28.78 |  |
 | Horizontal Cutout 1 | `jb.bar_cutout` | procedural bars | 13.30 | 29.91 | 3.08 | +10.21 | 14.96 | bar layout and timing estimated by eye; the bars' content offsets are not reproduced |
 | Horizontal Reel | `jb.card_reel` | stand-in: global mix + light field | 14.42 | 28.25 | 3.06 | +11.36 | 15.24 |  |
-| Horizontal Screen Cutting | `jb.band_cut_zoom` | stand-in: global mix + light field | 14.85 | 24.61 | 3.16 | +11.70 | 21.35 |  |
+| Horizontal Screen Cutting | `jb.band_cut_zoom` | stand-in: global mix + light field | 14.85 | 24.60 | 3.16 | +11.70 | 21.35 |  |
 | Horizontal Slice | `jb.slice_slide` | strip slide | 8.25 | 18.11 | 2.78 | +5.47 | 9.41 | 10 strips, fitted edges and easing exponents; mid frames 15–19 (strip motion blur not modelled) |
-| Horrible Colorful Transition 02 | `jb.glitch_bands` | stand-in: global mix + light field | 10.73 | 27.88 | 2.33 | +8.41 | 15.69 |  |
+| Horrible Colorful Transition 02 | `jb.glitch_bands` | stand-in: global mix + light field | 10.73 | 27.87 | 2.33 | +8.41 | 15.69 |  |
 | Horrible Colorful Transition 13 | `jb.ghost_face_flash` | stand-in: global mix + light field | 22.67 | 44.49 | 2.40 | +20.27 | 29.39 |  |
 | Horrible Colorful Transition 24 | `jb.witch_silhouette_wipe` | radial wipe + light field | 10.61 | 15.46 | 2.43 | +8.18 | 12.36 | witch silhouette not drawn |
-| Horrible Film Pack Transition 03 | `jb.bloody_hand` | stand-in: global mix + light field | 8.45 | 32.60 | 3.60 | +4.85 | 10.66 |  |
+| Horrible Film Pack Transition 03 | `jb.bloody_hand` | stand-in: global mix + light field | 8.45 | 32.59 | 3.60 | +4.85 | 10.66 |  |
 | Horrible Neon Party Transition 01 | `jb.pumpkin_pile` | stand-in: global mix + light field | 29.65 | 46.24 | 4.18 | +25.46 | 33.08 |  |
 | Horrible Party Transition 01 | `jb.bandage_wrap` | stand-in: global mix + light field | 15.52 | 32.15 | 2.81 | +12.71 | 17.07 |  |
 | Horror Story Transition 01 | `jb.blood_splash` | stand-in: global mix + light field | 5.88 | 16.54 | 2.85 | +3.03 | 9.05 |  |
