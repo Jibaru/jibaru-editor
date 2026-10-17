@@ -119,6 +119,12 @@ fn render(
     settings.range = Some(range);
     settings.video_bit_rate = (size.0 as u64 * size.1 as u64 * 30).max(8_000_000);
     settings.prefetch_max_size = Some(size);
+    // `JB_FIDELITY_ENCODER=libx264`: the hardware encoder smears fine test-card
+    // detail (~4 MAD at 960x540 on the grid cards), which hides fitting errors.
+    if let Ok(enc) = std::env::var("JB_FIDELITY_ENCODER") {
+        settings.encoder = Some(enc);
+        settings.hardware = false;
+    }
     let mut unknown = std::collections::BTreeSet::new();
     let report = jb_export::export(
         project,
@@ -319,7 +325,15 @@ fn main() -> Result<()> {
         Some(p) => p.clone(),
         None => {
             let p = a.out.join("ours.mp4");
-            render(&project, range, a.size, &p, a.proxies)?;
+            // `JB_FIDELITY_RENDER_SIZE=1920x1080` renders (and encodes) at that size and
+            // compares at `--size`, like a full-resolution Filmora export decoded at
+            // `--size`: at 960x540 our own 4:2:0 encode halves chroma resolution again
+            // (Cb error ~3.4 vs ~1.2 on the grid cards).
+            let rs = std::env::var("JB_FIDELITY_RENDER_SIZE")
+                .ok()
+                .and_then(|v| v.split_once('x').and_then(|(w, h)| Some((w.parse().ok()?, h.parse().ok()?))))
+                .unwrap_or(a.size);
+            render(&project, range, rs, &p, a.proxies)?;
             p
         }
     };
