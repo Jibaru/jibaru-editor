@@ -300,6 +300,7 @@ pub const GROUPS: &[LibraryGroup] = &[
     g(T, "Motion Graphics", crate::fx::art3b::items::LIB_IDS),
     // Art 2: paint, brush, ink and torn-paper transitions.
     g(T, "Paint & Paper", crate::fx::art2_items::LIB_IDS),
+    g(T, "Light & Sparkle", crate::fx::art1_items::LIB_TRANSITIONS),
 ];
 
 /// [`GROUPS`] followed by the groups contributed by fitted item sets.
