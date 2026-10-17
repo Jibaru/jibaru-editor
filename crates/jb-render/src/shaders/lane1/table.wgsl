@@ -9,10 +9,12 @@
 // blurred over taps t in [-1, 1] that rotate Ps by rb * t, scale it by
 // exp(zb * t) and shift it by t * (bx, by) (spin, zoom and motion blur at once).
 // Edge mode: 0 = transparent (black), 1 = clamp, 2 = mirrored repeat.
-// The output is a per-channel display-space mix al * A' + be * B' + ga.
+// The output is a per-channel display-space mix (al + av q) * A' + (be + bv q) * B' + ga,
+// q = |2 (uv - 0.5)|^4 (the q terms are a radial vignette / glow).
 //
 // Uniforms (u.p): [0] A (tx, ty, k, phi), [1] A (bx, by, zb, rb), [2] A (px, py, dk, sw),
-// [3..5] the same for B, [6] al.rgb, [7] be.rgb, [8] ga.rgb, [9] (edge mode, layer order).
+// [3..5] the same for B, [6] al.rgb, [7] be.rgb, [8] ga.rgb, [9] (edge mode, layer order),
+// [10] av.rgb, [11] bv.rgb.
 
 const NTAP: i32 = 24;
 
@@ -70,11 +72,13 @@ fn side(use_b: bool, uv: vec2f, geo: vec4f, blur: vec4f, warp: vec4f, mode: i32)
     let order = i32(u.p[9].y);
     var a = vec4f(0.0);
     var b = vec4f(0.0);
-    if (any(u.p[6].rgb != vec3f(0.0))) { a = side(false, in.uv, u.p[0], u.p[1], u.p[2], mode); }
-    if (any(u.p[7].rgb != vec3f(0.0))) { b = side(true, in.uv, u.p[3], u.p[4], u.p[5], mode); }
+    if (any(u.p[6].rgb != vec3f(0.0)) || any(u.p[10].rgb != vec3f(0.0))) { a = side(false, in.uv, u.p[0], u.p[1], u.p[2], mode); }
+    if (any(u.p[7].rgb != vec3f(0.0)) || any(u.p[11].rgb != vec3f(0.0))) { b = side(true, in.uv, u.p[3], u.p[4], u.p[5], mode); }
     // Layer order: 0 sum, 1 A over B, 2 B over A.
     if (order == 1) { b = b * (1.0 - a.a); }
     if (order == 2) { a = a * (1.0 - b.a); }
-    let rgb = u.p[8].rgb + u.p[6].rgb * a.rgb + u.p[7].rgb * b.rgb;
+    let d = 2.0 * (in.uv - 0.5);
+    let q = dot(d, d) * dot(d, d);
+    let rgb = u.p[8].rgb + (u.p[6].rgb + u.p[10].rgb * q) * a.rgb + (u.p[7].rgb + u.p[11].rgb * q) * b.rgb;
     return from_disp(vec4f(clamp(rgb, vec3f(0.0), vec3f(1.0)), 1.0));
 }

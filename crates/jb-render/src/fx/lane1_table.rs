@@ -10,12 +10,13 @@
 //! interpolation needs. Other durations scale in progress.
 //!
 //! Row layout ([`ROW`] floats): `p`, A `[tx, ty, k, phi, bx, by, zb, rb, px, py, dk, sw]`,
-//! B the same, `al.rgb`, `be.rgb`, `ga.rgb`.
+//! B the same, `al.rgb`, `be.rgb`, `ga.rgb`, `av.rgb`, `bv.rgb` (vignette terms: the
+//! weights become `al + av * q` and `be + bv * q` with `q = |2 (uv - 0.5)|^4`).
 
 use super::{info, FxCx, ShaderSrc, Uniforms};
 use crate::registry::{Effect, FxInfo, FxIo, FxKind, Registry};
 
-pub const ROW: usize = 34;
+pub const ROW: usize = 40;
 
 /// Edge handling of a side's source.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -87,6 +88,8 @@ impl Effect for TableFx {
         u.p[6] = [r[25], r[26], r[27], 0.0];
         u.p[7] = [r[28], r[29], r[30], 0.0];
         u.p[8] = [r[31], r[32], r[33], 0.0];
+        u.p[10] = [r[34], r[35], r[36], 0.0];
+        u.p[11] = [r[37], r[38], r[39], 0.0];
         u.p[9] = [self.spec.edge as u32 as f32, self.spec.order as f32, 0.0, 0.0];
         cx.run(&self.shader, io.a, io.b, io.out, u);
     }
