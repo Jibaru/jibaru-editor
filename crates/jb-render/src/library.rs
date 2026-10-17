@@ -297,6 +297,7 @@ pub const GROUPS: &[LibraryGroup] = &[
     g(E, "Camera Motion", crate::fx::lane4_all::camera::LIB_IDS),
     g(E, "Stylized", crate::fx::lane4_all::LIB_STYLIZED),
     g(E, "Fitted Effects", crate::fx::lane4_all::looks::LIB_FX),
+    g(T, "Motion Graphics", crate::fx::art3b::items::LIB_IDS),
 ];
 
 /// [`GROUPS`] followed by the groups contributed by fitted item sets.

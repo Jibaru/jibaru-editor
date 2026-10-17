@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 pub mod animations;
+pub mod art3b;
 pub mod color;
 pub mod creative;
 pub mod distort;
@@ -757,6 +758,7 @@ pub fn register_builtin(r: &mut Registry) {
     lane1_mask::register(r);
     lane3::register(r);
     lane2_layers::register(r);
+    art3b::register(r);
     crate::aliases::register(r);
 }
 
