@@ -31,6 +31,11 @@ pub const LIB_TRANSITIONS: &[&str] = &[
     "jb.peach_orb_leak",
     "jb.sunlit_haze_leak",
     "jb.golden_bokeh_band",
+    "jb.glow_ink_rise",
+    "jb.flaming_ball_dash_1",
+    "jb.flaming_ball_dash_2",
+    "jb.flaming_ball_dash_3",
+    "jb.flaming_ball_dash_4",
 ];
 
 /// Library group of the art1 effects (`library.rs`).
@@ -72,6 +77,11 @@ pub fn specs() -> Vec<ArtSpec> {
         art!("jb.cine_scribble_leak", "Cine Scribble Leak", "Light", Effect, "cine_scribble_leak", "Hand-drawn loops of cream light scrawl across the picture between pink washes, a dark smeared band and a rainbow flare."),
         art!("jb.cine_scribble_aurora", "Cine Scribble Aurora", "Light", Effect, "cine_scribble_aurora", "Pink light washes, glowing film-edge smears, big hand-drawn loops of cream light and rippling aurora curtains."),
         art!("jb.cine_paint_ring", "Cine Paint Ring", "Light", Effect, "cine_paint_ring", "A magenta flash, a splash of white paint, a bleached pastel print with a rough ring of dark paint, and a streaked white flare."),
+        art!("jb.glow_ink_rise", "Glow Ink Rise", "Creative", Transition, "glow_ink_rise", "The new clip wells up from the bottom like soaking ink, its ragged front burning with a thin white glow."),
+        art!("jb.flaming_ball_dash_1", "Flaming Ball Dash 1", "Creative", Transition, "flaming_ball_dash_1", "A ball trailing a long tail of fire swells towards the camera until it fills the frame, then whips away to the new clip."),
+        art!("jb.flaming_ball_dash_2", "Flaming Ball Dash 2", "Creative", Transition, "flaming_ball_dash_2", "A ball bounces up from the lower left and rushes at the camera until it fills the frame, cutting to the new clip."),
+        art!("jb.flaming_ball_dash_3", "Flaming Ball Dash 3", "Creative", Transition, "flaming_ball_dash_3", "A small ball wrapped in fire streaks in from the distance and grows until it fills the frame, cutting to the new clip."),
+        art!("jb.flaming_ball_dash_4", "Flaming Ball Dash 4", "Creative", Transition, "flaming_ball_dash_4", "A ball flies straight at the camera in a ring of kicked-up dust until it fills the frame, then cuts to the new clip."),
     ]
 }
 

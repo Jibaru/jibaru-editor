@@ -31,6 +31,11 @@ pub const FILMORA_ART1: &[(&str, &str, &str)] = &[
     ("C6EAFE28-6D0B-46D5-A92B-DA22A986432F", "jb.cine_scribble_leak", "Movie Light Effects 4"),
     ("D03BAEF2-F8F6-4E6B-9E30-4F2C0B7D53AC", "jb.cine_scribble_aurora", "Movie Light Effects 5"),
     ("3D6A60D4-179C-47D2-BA55-4FA3AD3C0665", "jb.cine_paint_ring", "Movie Light Effects 8"),
+    ("ed8298c1-3a59-ef11-9cc6-50ebf65600b6", "jb.glow_ink_rise", "Glow Ink Up"),
+    ("758d17c3-eec2-f111-9ef4-50ebf65600b6", "jb.flaming_ball_dash_1", "Burning Dash Transition 01"),
+    ("748d17c3-eec2-f111-9ef4-50ebf65600b6", "jb.flaming_ball_dash_2", "Burning Dash Transition 02"),
+    ("738d17c3-eec2-f111-9ef4-50ebf65600b6", "jb.flaming_ball_dash_3", "Burning Dash Transition 03"),
+    ("728d17c3-eec2-f111-9ef4-50ebf65600b6", "jb.flaming_ball_dash_4", "Burning Dash Transition 04"),
 ];
 
 pub fn register(r: &mut Registry) {

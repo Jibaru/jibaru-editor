@@ -54,6 +54,11 @@ plus the rest of the project).
 | Light Leaks Transition 02 | `B288EAEA-E306-4E5A-8BBB-4AE8F52B65AC` | `jb.peach_orb_leak` | 14.37 / 25.0 | 13.75 / 20.6 | 4.38 |
 | Light Leaks Transition 11 | `5FCF4746-3646-415B-9884-A9ECED01EBE7` | `jb.sunlit_haze_leak` | 24.55 / 37.0 | 23.08 / 31.4 | 3.88 |
 | Light Leaks Transition Pack Transition 03 | `DE3A553C-34A6-4EA4-B65D-BAC68391C2A1` | `jb.golden_bokeh_band` | 20.12 / 45.8 | 17.03 / 28.7 | 3.19 |
+| Glow Ink Up | `ed8298c1-3a59-ef11-9cc6-50ebf65600b6` | `jb.glow_ink_rise` | 9.96 / 37.8 (unimplemented: cut) | 8.73 / 24.3 | 2.34 |
+| Burning Dash Transition 01 | `758d17c3-eec2-f111-9ef4-50ebf65600b6` | `jb.flaming_ball_dash_1` | 18.26 / 30.3 | 18.26 / 36.5 | 3.06 |
+| Burning Dash Transition 02 | `748d17c3-eec2-f111-9ef4-50ebf65600b6` | `jb.flaming_ball_dash_2` | 14.46 / 28.8 | 13.32 / 33.4 | 3.21 |
+| Burning Dash Transition 03 | `738d17c3-eec2-f111-9ef4-50ebf65600b6` | `jb.flaming_ball_dash_3` | 18.46 / 34.8 | 16.57 / 43.7 | 2.88 |
+| Burning Dash Transition 04 | `728d17c3-eec2-f111-9ef4-50ebf65600b6` | `jb.flaming_ball_dash_4` | 12.24 / 34.3 | 10.82 / 48.3 | 2.83 |
 <!-- transitions -->
 
 Effects (previously unimplemented, so "before" is the untouched clip), each

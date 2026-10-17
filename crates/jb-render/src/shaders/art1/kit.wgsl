@@ -303,3 +303,49 @@ fn a1_scribble(p: vec2f, seed: f32, c: vec2f, len: f32, ang: f32, loops: f32, r:
     // the pen pressure varies a little along the stroke
     return 1.0 - smoothstep(hw - 0.0025, hw + 0.0025, d);
 }
+
+// ---- a flying ball ----
+// Orange leather ball b = (x, y, radius, spin angle) seen at centred p:
+// vec4f(colour, coverage). Lit from the upper left, pebbled, with dark seams
+// (two great circles and two curved panel seams), dark at the rim.
+fn a1_ball(p: vec2f, b: vec4f) -> vec4f {
+    let q = (p - b.xy) / max(b.z, 1e-4);
+    let rr = dot(q, q);
+    let px = 1.5 / (540.0 * max(b.z, 1e-4));
+    let cover = 1.0 - smoothstep(1.0 - px, 1.0 + px, sqrt(rr));
+    if (cover <= 0.0) { return vec4f(0.0); }
+    let z = sqrt(max(1.0 - rr, 0.0));
+    let n0 = vec3f(q, z);
+    // spin about a tilted axis
+    let c = cos(b.w); let s = sin(b.w);
+    let n1 = vec3f(c * n0.x + s * n0.z, n0.y, -s * n0.x + c * n0.z);
+    let n = vec3f(n1.x, 0.94 * n1.y - 0.34 * n1.z, 0.34 * n1.y + 0.94 * n1.z);
+    // pebbled leather
+    let peb = vnoise(n.xy * 90.0 + n.z * 37.0) * 0.5 + vnoise(n.yz * 160.0) * 0.5;
+    var col = vec3f(0.74, 0.27, 0.07) * (0.88 + 0.2 * peb);
+    // seams
+    let w = 0.018 + 0.6 * px;
+    let curve = abs(abs(n.x) - 0.55 * (1.0 - n.y * n.y) - 0.1);
+    let seam = min(min(abs(n.y), abs(n.z)), curve);
+    col = mix(col, vec3f(0.05, 0.03, 0.02), 1.0 - smoothstep(w * 0.6, w, seam));
+    // light
+    let l = normalize(vec3f(-0.5, -0.6, 0.65));
+    let dif = max(dot(n0, l), 0.0);
+    let spec = pow(max(dot(reflect(-l, n0), vec3f(0.0, 0.0, 1.0)), 0.0), 18.0);
+    col = col * (0.3 + 0.7 * dif) + vec3f(1.0, 0.85, 0.7) * 0.18 * spec;
+    col = col * mix(0.55, 1.0, smoothstep(0.0, 0.45, z));
+    return vec4f(col, cover);
+}
+
+// Fire streaming behind a ball b moving along `dir` (unit): additive light.
+fn a1_ball_fire(p: vec2f, b: vec4f, dir: vec2f, len: f32, t: f32) -> vec3f {
+    let q = p - b.xy;
+    let along = -dot(q, dir) / max(b.z, 1e-4);
+    let side = dot(q, vec2f(-dir.y, dir.x)) / max(b.z, 1e-4);
+    if (along < -1.3 || along > len + 1.0) { return vec3f(0.0); }
+    let width = 1.05 + 0.25 * along;
+    let body = smoothstep(width, 0.3 * width, abs(side)) * smoothstep(len, 0.0, along) * smoothstep(-1.2, 0.2, along);
+    let fl = a1_flame(vec2f(side * 0.25, -along * 0.3) * b.z * 4.0, t * 2.0);
+    let heat = body * (0.45 + 0.9 * fl) * (1.0 - 0.5 * along / len);
+    return a1_fire_col(heat) * smoothstep(0.05, 0.4, heat);
+}
