@@ -29,7 +29,7 @@ just before and after the window. "Before" is the stand-in, "After" our item.
 An alias was switched only when the contact sheet (reference over ours) looks
 right and the mean MAD is lower than the stand-in's.
 
-18 of 31 items upgraded.
+21 of 31 items upgraded.
 
 | Item | GUID | Renders as | Floor | Before | After | Notes |
 |---|---|---|---|---|---|---|
@@ -48,14 +48,14 @@ right and the mean MAD is lower than the stand-in's.
 | Brush Drift Transition 07 | `8098be69-834b-f111-9e87-50ebf65600b6` | jb.closing_paint_edges | 2.27 | 8.06 / 28.63 | 5.01 / 18.58 |  |
 | Brush Drift Transition 08 | `8498be69-834b-f111-9e87-50ebf65600b6` | jb.watercolor_strips | 2.27 | 10.91 / 22.89 | 9.96 / 16.93 |  |
 | Brush Drift Transition 09 | `8598be69-834b-f111-9e87-50ebf65600b6` | jb.watercolor_bands | 2.31 | 6.32 / 23.02 | 5.72 / 21.07 |  |
-| Brush Drift Transition 10 | `8698be69-834b-f111-9e87-50ebf65600b6` | stand-in | 2.33 | 7.84 / 22.56 | — | stand-in: ink blooms draft measured worse (quick MAD 14.4 vs 13.3) |
+| Brush Drift Transition 10 | `8698be69-834b-f111-9e87-50ebf65600b6` | jb.ink_blooms | 2.33 | 7.84 / 22.56 | 6.08 / 15.60 |  |
 | Colorful Brush Transition 05 | `d1c03638-dc96-f111-b463-d8bbc19410ee` | stand-in | 2.54 | 8.19 / 20.86 | — |  |
 | Colorful Brush Transition 07 | `cfc03638-dc96-f111-b463-d8bbc19410ee` | stand-in | 2.70 | 6.86 / 20.79 | — |  |
 | Golden Brush Transition 01 | `c826f80c-db96-f111-b463-d8bbc19410ee` | jb.gold_tide | 2.62 | 19.18 / 38.46 | 15.40 / 28.25 |  |
 | Golden Brush Transition 02 | `de3499f9-d196-f111-b463-d8bbc19410ee` | jb.gold_curtain | 2.39 | 20.11 / 38.09 | 16.14 / 33.92 |  |
-| Golden Brush Transition 03 | `c726f80c-db96-f111-b463-d8bbc19410ee` | stand-in | 2.40 | 18.59 / 41.80 | — | stand-in: crossing gold strokes draft measured worse (quick MAD 27.2 vs 20.0) |
+| Golden Brush Transition 03 | `c726f80c-db96-f111-b463-d8bbc19410ee` | jb.gold_cross_strokes | 2.40 | 18.59 / 41.80 | 17.46 / 40.33 | full-gold frames are near the texture-noise limit (uncorrelated brushing) |
 | Golden Brush Transition 04 | `db3499f9-d196-f111-b463-d8bbc19410ee` | jb.gilded_edge_fall | 2.44 | 13.80 / 28.55 | 7.28 / 16.10 |  |
-| Golden Brush Transition 05 | `07868c04-ce96-f111-b463-d8bbc19410ee` | stand-in | 2.62 | 15.45 / 31.71 | — | stand-in: gold-led columns draft measured worse (quick MAD 21.4 vs 19.1) |
+| Golden Brush Transition 05 | `07868c04-ce96-f111-b463-d8bbc19410ee` | jb.gold_led_columns | 2.62 | 15.45 / 31.71 | 12.16 / 25.72 |  |
 | Golden Brush Transition 06 | `06868c04-ce96-f111-b463-d8bbc19410ee` | jb.gold_slash_run | 2.58 | 11.48 / 38.70 | 8.90 / 29.34 |  |
 | Golden Brush Transition 07 | `05868c04-ce96-f111-b463-d8bbc19410ee` | jb.gilded_torn_edge | 2.32 | 11.12 / 28.52 | 6.87 / 16.44 |  |
 | Golden Brush Transition 08 | `df3499f9-d196-f111-b463-d8bbc19410ee` | jb.gold_vortex | 2.59 | 23.17 / 39.47 | 20.71 / 43.67 | worst frame higher than the stand-in (the reference scatters speckles at the vortex edge) |

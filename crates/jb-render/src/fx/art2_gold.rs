@@ -55,24 +55,26 @@ fn gold_curtain() -> ArtItem {
 /// lay the new clip.
 fn gold_cross() -> ArtItem {
     let g = |deg: f32, o: f32, hw: f32, t0: f32, t1: f32| band(deg, o, hw, t0, t1).paint(0).rag(0.1).ease(Ease::Out);
-    let b = |deg: f32, o: f32, hw: f32, t0: f32, t1: f32| band(deg, o, hw, t0, t1).rag(0.12).dry(0.5).dry_until(t1 + 0.1).ease(Ease::Out);
-    gold(
+    let b = |deg: f32, o: f32, hw: f32, t0: f32, t1: f32| band(deg, o, hw, t0, t1).rag(0.12).dry(1.025).dry_until(t1 + 0.1).ease(Ease::Out);
+    let mut it = gold(
         "jb.gold_cross_strokes",
         "Gold Cross Strokes",
-        "Broad gold brush strokes cross the frame in an X and pile up until it is all gold, then diagonal strokes paint the new clip over it.",
-        0.76,
+        "Broad gold brush strokes cross the frame in an X and pile up until it is all gold, then streaky diagonal strokes paint the new clip over it.",
+        0.687,
         vec![
-            g(-30.0, 0.1, 0.3, 0.02, 0.13),
-            g(28.0, -0.15, 0.28, 0.05, 0.16),
-            g(-30.0, -0.5, 0.35, 0.1, 0.22),
-            g(-30.0, 0.6, 0.35, 0.12, 0.24),
-            g(28.0, 0.55, 0.35, 0.15, 0.27),
-            g(28.0, -0.7, 0.35, 0.17, 0.29),
-            b(-20.0, 0.0, 0.32, 0.4, 0.52),
-            b(-20.0, -0.5, 0.35, 0.47, 0.6),
-            b(-20.0, 0.5, 0.35, 0.5, 0.63),
+            g(-30.0, 0.1, 0.3, 0.108, 0.306),
+            g(28.0, -0.15, 0.28, 0.09, 0.275),
+            g(-30.0, -0.5, 0.35, 0.13, 0.28),
+            g(-30.0, 0.6, 0.35, 0.15, 0.285),
+            g(28.0, 0.55, 0.35, 0.105, 0.24),
+            g(28.0, -0.7, 0.35, 0.258, 0.45),
+            b(-20.0, 0.0, 0.32, 0.483, 0.516),
+            b(-20.0, -0.5, 0.35, 0.497, 0.56),
+            b(-20.0, 0.5, 0.35, 0.587, 0.804),
         ],
-    )
+    );
+    it.paints = vec![Paint::GOLD_SOFT];
+    it
 }
 
 /// The new clip slides down from the top behind a gilded edge.
@@ -89,25 +91,29 @@ fn gold_edge_fall() -> ArtItem {
 
 /// Vertical columns of paint close in from both sides, each led by gold.
 fn gold_columns() -> ArtItem {
+    // (x, upward, t0, duration)
     let cols: [(f32, bool, f32, f32); 9] = [
-        (0.06, true, 0.02, 0.12),
-        (0.93, false, 0.03, 0.13),
-        (0.19, false, 0.1, 0.2),
-        (0.8, true, 0.1, 0.2),
-        (0.31, true, 0.19, 0.3),
-        (0.67, false, 0.2, 0.32),
-        (0.41, false, 0.3, 0.42),
-        (0.56, true, 0.32, 0.44),
-        (0.48, true, 0.45, 0.68),
+        (0.06, true, 0.083, 0.188),
+        (0.93, false, 0.112, 0.188),
+        (0.19, false, 0.188, 0.188),
+        (0.8, true, 0.188, 0.188),
+        (0.31, true, 0.277, 0.197),
+        (0.67, false, 0.288, 0.207),
+        (0.41, false, 0.387, 0.207),
+        (0.56, true, 0.407, 0.207),
+        (0.48, true, 0.455, 0.245),
     ];
     let mut v = Vec::new();
-    for (k, &(x, up, t0, t1)) in cols.iter().enumerate() {
+    for (k, &(x, up, t0, dt)) in cols.iter().enumerate() {
+        let t1 = t0 + dt;
         let (a, b) = if up { ([x, 1.12], [x, -0.12]) } else { ([x, -0.12], [x, 1.12]) };
         let hw = if k == 8 { 0.09 } else { 0.13 };
-        v.push(Stroke::brush(a, b, hw * 1.05, t0 - 0.03, t1 - 0.02).paint(0).dry(0.5).rag(0.15).ease(Ease::Out).seed(k as f32 * 3.1));
+        v.push(Stroke::brush(a, b, hw * 1.05, t0 - 0.05, t1 - 0.035).paint(0).dry(0.5).rag(0.15).ease(Ease::Out).seed(k as f32 * 3.1));
         v.push(Stroke::brush(a, b, hw, t0, t1).rag(0.12).ease(Ease::Out).seed(k as f32 * 3.1 + 1.0));
     }
-    gold("jb.gold_led_columns", "Gold-Led Columns", "Vertical brush strokes, each led by a streak of gold, close in from both sides toward the middle until the new clip fills the frame.", 0.72, v)
+    let mut it = gold("jb.gold_led_columns", "Gold-Led Columns", "Vertical brush strokes, each led by a streak of gold, close in from both sides toward the middle until the new clip fills the frame.", 0.58, v);
+    it.paints = vec![Paint { alpha: 0.75, ..Paint::GOLD }];
+    it
 }
 
 /// Slanted gold strokes flash in from right to left; the new clip follows them.

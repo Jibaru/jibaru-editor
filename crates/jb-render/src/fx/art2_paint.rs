@@ -309,6 +309,17 @@ impl Paint {
         shade: 0.0,
         alpha: 1.0,
     };
+    /// Brighter, smoother gold (fine brushing, little streak contrast).
+    pub const GOLD_SOFT: Paint = Paint {
+        base: [0.78, 0.56, 0.18],
+        light: [0.98, 0.76, 0.32],
+        streak: 0.3,
+        sheen: 0.2,
+        wet: 0.1,
+        grain: 0.03,
+        shade: 0.0,
+        alpha: 1.0,
+    };
     /// Off-white paper fibres.
     pub const PAPER: Paint = Paint {
         base: [0.80, 0.80, 0.78],

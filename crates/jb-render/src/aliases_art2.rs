@@ -26,6 +26,9 @@ pub const FILMORA_ART2: &[(&str, &str, &str)] = &[
     ("06868c04-ce96-f111-b463-d8bbc19410ee", "jb.gold_slash_run", "Golden Brush Transition 06"),
     ("05868c04-ce96-f111-b463-d8bbc19410ee", "jb.gilded_torn_edge", "Golden Brush Transition 07"),
     ("df3499f9-d196-f111-b463-d8bbc19410ee", "jb.gold_vortex", "Golden Brush Transition 08"),
+    ("8698be69-834b-f111-9e87-50ebf65600b6", "jb.ink_blooms", "Brush Drift Transition 10"),
+    ("c726f80c-db96-f111-b463-d8bbc19410ee", "jb.gold_cross_strokes", "Golden Brush Transition 03"),
+    ("07868c04-ce96-f111-b463-d8bbc19410ee", "jb.gold_led_columns", "Golden Brush Transition 05"),
 ];
 
 pub fn register(r: &mut Registry) {
