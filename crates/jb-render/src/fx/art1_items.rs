@@ -37,6 +37,9 @@ pub const LIB_TRANSITIONS: &[&str] = &[
 pub const LIB_EFFECTS: &[&str] = &[
     "jb.fast_light_leaks",
     "jb.focus_pull_bokeh",
+    "jb.cine_film_burn",
+    "jb.cine_film_gate_sun",
+    "jb.cine_light_bands",
 ];
 
 /// Every art1 item.
@@ -54,6 +57,9 @@ pub fn specs() -> Vec<ArtSpec> {
         art!("jb.golden_bokeh_band", "Golden Bokeh Band", "Light", Transition, "golden_bokeh_band", "A band of golden light full of bokeh sweeps left to right, revealing the new clip."),
         art!("jb.fast_light_leaks", "Fast Light Leaks", "Light", Effect, "fast_light_leaks", "A short burst of burnt film light: churning cream flares and maroon smoke that bleach the picture and thin out."),
         art!("jb.focus_pull_bokeh", "Focus Pull Bokeh", "Light", Effect, "focus_pull_bokeh", "The lens racks out of focus and back while the highlights swell into glowing discs."),
+        art!("jb.cine_film_burn", "Cine Film Burn", "Light", Effect, "cine_film_burn", "A reel of burning film flickers over the picture: orange and white burns, a red flash-back and sprocket holes."),
+        art!("jb.cine_film_gate_sun", "Cine Film Gate Sun", "Light", Effect, "cine_film_gate_sun", "The picture becomes a film frame in a projector gate with a burning sun crescent, a swelling burn and a frame roll."),
+        art!("jb.cine_light_bands", "Cine Light Bands", "Light", Effect, "cine_light_bands", "Strobing vertical bands of white, yellow and orange stage light flash across the picture."),
     ]
 }
 

@@ -54,6 +54,7 @@ plus the rest of the project).
 | Light Leaks Transition 02 | `B288EAEA-E306-4E5A-8BBB-4AE8F52B65AC` | `jb.peach_orb_leak` | 14.37 / 25.0 | 13.75 / 20.6 | 4.38 |
 | Light Leaks Transition 11 | `5FCF4746-3646-415B-9884-A9ECED01EBE7` | `jb.sunlit_haze_leak` | 24.55 / 37.0 | 23.08 / 31.4 | 3.88 |
 | Light Leaks Transition Pack Transition 03 | `DE3A553C-34A6-4EA4-B65D-BAC68391C2A1` | `jb.golden_bokeh_band` | 20.12 / 45.8 | 17.03 / 28.7 | 3.19 |
+<!-- transitions -->
 
 Effects (previously unimplemented, so "before" is the untouched clip), each
 measured on its two 2 s windows of `fx003` / `fxfix1` (grid clip, then scene
@@ -63,6 +64,10 @@ clip; clip-local time):
 |---|---|---|---|---|
 | Fast Light Leaks 2 | `DF9D7C57-52C1-43D3-9723-6E4759D4134E` | `jb.fast_light_leaks` | 34.17 / 35.19 | 17.67 / 15.98 |
 | Camera Focus Bokeh | `CE74AA1F-07F6-46A9-9D59-C4B1D7802A53` | `jb.focus_pull_bokeh` | 35.06 / 7.31 | 19.26 / 7.27 |
+| Movie Light Effects 2 | `3F5DEB07-5EBC-493A-BF42-9B2C8B5AEC22` | `jb.cine_film_burn` | 78.95 / 88.92 | 36.22 / 38.10 |
+| Movie Light Effects 6 | `B619E435-F8D2-455C-8002-C31BEB023459` | `jb.cine_film_gate_sun` | 61.12 / 62.06 | 48.35 / 49.66 |
+| Movie Light Effects 7 | `19AC37E2-3DE3-45AA-8323-47076A75B5E8` | `jb.cine_light_bands` | 58.58 / 64.34 | 17.79 / 20.57 |
+<!-- effects -->
 
 Particle items (sparkles, glitter, bokeh) stay well above the floor even when
 they look right: individual sparks cannot land on the reference's pixels, so
