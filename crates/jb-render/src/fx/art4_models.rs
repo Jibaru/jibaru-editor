@@ -104,7 +104,34 @@ pub const ENGRAVE: Model = Model { name: "engrave", bodies: &[include_str!("../s
 /// `c15` and vanishes after `c13 + c14 · rnd`. The rest is black.
 pub const SHATTER: Model = Model { name: "shatter", bodies: &[include_str!("../shaders/art4/shatter.wgsl")], encode: encode_single };
 
-pub static MODELS: &[&Model] = &[&SHATTER, &ENGRAVE, &RGB_SPLIT, &MOSAIC, &PRISM, &SWIRL, &RIPPLE, &RING_WAVE, &WAVE_SPLIT, &UNSHARP, &GLOW];
+/// Colour glitch: the clip (outgoing mixed to incoming by `k14`; rows waved
+/// sideways by `k15` uv, `c1` cycles down, phase `c2 + c3 · progress`) with
+/// red/blue split `k11` 1080p px, smeared
+/// horizontally over `k5` px, posterized to `k8` levels (< 2: off), mixed
+/// by `k6` with a rainbow of its luminance (`c0` cycles, or `k12` when set,
+/// phase `k7`) where the luminance exceeds `k13`,
+/// inverted by `k0`, desaturated by `k1`, channel gains `1 + k2..k4`, then
+/// gain `1 + k9` and lift `k10`.
+pub const PSY: Model = Model { name: "psy", bodies: &[include_str!("../shaders/art4/psy.wgsl")], encode: encode_single };
+
+/// Signal glitch: the frame jitters by `k0, k1` 1080p px with a red/blue
+/// split of `k2` px; a fraction `k9` of horizontal bands (`c0` px high) is
+/// shifted by up to `±k8` px; `k3` seeded bars (height `c1 + c2 · rnd` px,
+/// width `c3 + c4 · rnd` of the frame, cyan with probability `c5`, else
+/// white) are drawn at opacity `k7`. The random layout changes with the
+/// integer beat `k4`. Then gain `1 + k5` and lift `k6`.
+pub const JITTER_BARS: Model =
+    Model { name: "jitter_bars", bodies: &[include_str!("../shaders/art4/jitter_bars.wgsl")], encode: encode_single };
+
+/// Block dissolve: square cells (`c0` across, seed `c12`) of the outgoing
+/// clip drop out to a flat colour `c2..c4` at progress `c5 + c6 · rnd +
+/// c7 · bias`, and cells of the incoming clip appear at `c8 + c9 · rnd' +
+/// c10 · bias`; bias is the horizontal position, or with `c11 > 0.5` the
+/// closeness to the vertical line at `x = c13` (0: centre; edges go first).
+pub const BLOCK_DISSOLVE: Model =
+    Model { name: "block_dissolve", bodies: &[include_str!("../shaders/art4/block_dissolve.wgsl")], encode: encode_single };
+
+pub static MODELS: &[&Model] = &[&BLOCK_DISSOLVE, &JITTER_BARS, &PSY, &SHATTER, &ENGRAVE, &RGB_SPLIT, &MOSAIC, &PRISM, &SWIRL, &RIPPLE, &RING_WAVE, &WAVE_SPLIT, &UNSHARP, &GLOW];
 
 pub fn model(name: &str) -> Option<&'static Model> {
     MODELS.iter().copied().find(|m| m.name == name)

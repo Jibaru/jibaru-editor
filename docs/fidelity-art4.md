@@ -39,6 +39,11 @@ MAD mean / max over the window (0–255 over RGB).
 | Money (grid / scene) | fx001 | `jb.a4.banknote_engrave` | 76.32 / 76.4 · 64.93 / 66.0 | 68.63 / 68.7 · 49.33 / 50.1 | high-contrast grey with a faint engraving screen; the binary line screen cannot be phase-matched, so a full-strength screen measures worse than grey |
 | Shattered 02 (grid / scene) | fx003 | `jb.a4.shard_sweep` | 100.45 / 112.3 · 89.81 / 100.8 | 12.21 / 46.3 · 10.49 / 39.7 | Voronoi shards released left to right, shrinking, over black; shard layout is seeded, not Filmora's |
 | Shattered 03 (grid / scene) | fx003 | `jb.a4.shard_burst` | 72.76 / 112.3 · 59.22 / 100.2 | 20.51 / 57.2 · 12.43 / 45.2 | same model, radial release from the centre |
+| Psychedelic Glitch (grid / scene) | fx003 | `jb.a4.acid_flash` | 25.12 / 127.7 · 21.15 / 120.8 | 16.50 / 70.2 · 9.22 / 49.1 | keyed flashes (grey negative, blue negative, smear, posterize, fringe); the rainbow solarization frames are not matched |
+| Stripe Glitch 01 (grid / scene) | fx003 | `jb.a4.stripe_jolt` | 11.33 / 23.1 · 4.32 / 17.6 | 9.77 / 20.0 · 4.12 / 17.3 | per-frame jitter fitted (same timing on both clips); bars are seeded, drawn on the frames where Filmora shows them |
+| No Signal Glitch 01 (grid / scene) | fx003 | `jb.a4.weak_signal` | 16.86 / 20.1 · 5.90 / 10.6 | 15.07 / 18.7 · 5.43 / 10.3 | same model; Filmora's blocky smearing of fine detail is not modelled |
+| Glitch line | tr001 | `jb.a4.glitch_flash_cut` | 45.84 / 123.5 | 16.03 / 36.2 | keyed colour-glitch rows (washes, negative, smear, swap, row wave) |
+| Pixel Game Transition 09 | tr003 | `jb.a4.pixel_fadeout_swap` | 33.38 / 89.2 | 10.33 / 21.1 | seeded square-cell dropout to a dark screen and back, edges first |
 
 ## Gaps
 
