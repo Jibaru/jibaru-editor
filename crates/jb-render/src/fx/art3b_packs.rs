@@ -379,3 +379,111 @@ pub fn card_carousel(t: f32, asp: f32) -> Scene {
     s.extend(cards.into_iter().map(|c| c.1));
     s
 }
+
+/// Track of positions given in 96ths of the frame width (as measured on
+/// the reference), converted to centred x.
+fn cols(f: f32, keys: &[(f32, f32)], asp: f32) -> f32 {
+    kf(f, keys) / 96.0 * asp - 0.5 * asp
+}
+
+/// Motion-blurred red paint streaks shoot across the frame from the left
+/// in horizontal lanes; the new clip follows their tails.
+pub fn red_streak_lanes(t: f32, asp: f32) -> Scene {
+    let f = t * 60.0;
+    let mut s = Scene::new();
+    // (top row, bottom row of 27, head track, new-clip frontier track)
+    type Keys = &'static [(f32, f32)];
+    let lanes: [(f32, f32, Keys, Keys); 7] = [
+        (0.0, 3.0, &[(33.0, -4.0), (34.0, 9.0), (35.0, 20.0), (36.0, 30.0), (37.0, 40.0), (38.0, 50.0), (40.0, 60.0), (41.0, 68.0), (42.0, 75.0), (43.0, 80.0), (44.0, 87.0), (46.0, 93.0), (47.0, 99.0)], &[(40.0, -6.0), (41.0, 8.0), (42.0, 20.0), (43.0, 36.0), (44.0, 51.0), (46.0, 66.0), (47.0, 81.0), (48.0, 93.0), (49.0, 100.0)]),
+        (3.0, 8.0, &[(28.0, -10.0), (29.0, 0.0), (30.0, 12.0), (31.0, 23.0), (32.0, 35.0), (34.0, 45.0), (35.0, 55.0), (36.0, 68.0), (37.0, 78.0), (38.0, 82.0), (40.0, 87.0), (41.0, 92.0), (42.0, 99.0)], &[(34.0, -6.0), (35.0, 8.0), (36.0, 20.0), (37.0, 30.0), (40.0, 48.0), (41.0, 55.0), (42.0, 60.0), (44.0, 63.0), (46.0, 70.0), (47.0, 82.0), (48.0, 94.0), (49.0, 100.0)]),
+        (8.0, 12.0, &[(25.0, -10.0), (26.0, 0.0), (28.0, 11.0), (29.0, 21.0), (30.0, 32.0), (31.0, 43.0), (32.0, 55.0), (34.0, 63.0), (35.0, 72.0), (36.0, 78.0), (37.0, 84.0), (38.0, 87.0), (40.0, 93.0), (41.0, 99.0)], &[(35.0, -6.0), (36.0, 7.0), (37.0, 20.0), (38.0, 35.0), (40.0, 50.0), (41.0, 62.0), (42.0, 66.0), (44.0, 69.0), (46.0, 79.0), (47.0, 87.0), (48.0, 96.0), (49.0, 100.0)]),
+        (12.0, 15.0, &[(29.0, -8.0), (30.0, 4.0), (31.0, 16.0), (32.0, 28.0), (34.0, 40.0), (35.0, 49.0), (36.0, 61.0), (37.0, 70.0), (38.0, 74.0), (40.0, 75.0), (41.0, 80.0), (42.0, 85.0), (43.0, 87.0), (44.0, 92.0), (46.0, 99.0)], &[(39.0, -6.0), (40.0, 5.0), (41.0, 21.0), (42.0, 35.0), (43.0, 50.0), (44.0, 66.0), (46.0, 81.0), (47.0, 90.0), (48.0, 100.0)]),
+        (15.0, 19.0, &[(31.0, -6.0), (32.0, 6.0), (33.0, 12.0), (34.0, 23.0), (35.0, 34.0), (36.0, 43.0), (38.0, 58.0), (40.0, 72.0), (41.0, 80.0), (42.0, 86.0), (43.0, 93.0), (44.0, 99.0)], &[(37.0, -6.0), (38.0, 3.0), (40.0, 20.0), (41.0, 35.0), (42.0, 50.0), (43.0, 65.0), (44.0, 80.0), (46.0, 88.0), (47.0, 94.0), (48.0, 100.0)]),
+        (19.0, 21.0, &[(33.0, -6.0), (35.0, 9.0), (36.0, 19.0), (37.0, 29.0), (38.0, 34.0), (40.0, 45.0), (41.0, 55.0), (42.0, 66.0), (43.0, 75.0), (44.0, 78.0), (46.0, 80.0), (47.0, 87.0), (48.0, 92.0), (49.0, 99.0)], &[(43.0, -6.0), (44.0, 5.0), (46.0, 20.0), (47.0, 35.0), (48.0, 50.0), (49.0, 66.0), (50.0, 81.0), (51.0, 100.0)]),
+        (21.0, 27.0, &[(30.0, -8.0), (31.0, 3.0), (32.0, 15.0), (34.0, 25.0), (35.0, 36.0), (36.0, 47.0), (37.0, 62.0), (38.0, 78.0), (40.0, 84.0), (41.0, 88.0), (42.0, 93.0), (43.0, 99.0)], &[(37.0, -6.0), (38.0, 9.0), (40.0, 33.0), (41.0, 49.0), (42.0, 61.0), (43.0, 72.0), (44.0, 84.0), (46.0, 88.0), (47.0, 92.0), (48.0, 100.0)]),
+    ];
+    let mut done = true;
+    for (r0, r1, head, front) in lanes {
+        let (y0, y1) = (r0 / 27.0 - 0.5, r1 / 27.0 - 0.5);
+        let (cy, hh) = (0.5 * (y0 + y1), 0.5 * (y1 - y0));
+        let hx = cols(f, head, asp);
+        let bx = cols(f, front, asp);
+        if bx < 0.5 * asp + 0.02 {
+            done = false;
+        }
+        if bx > -0.5 * asp - 0.05 {
+            s.push(Prim::rect_xy(-2.0, cy - hh - 0.003, bx, cy + hh + 0.003).tex_b().soft(0.012));
+        }
+        if f >= head[0].0 && hx > bx && bx < 0.5 * asp + 0.05 {
+            let x0 = (bx - 0.06).max(-0.5 * asp - 0.3);
+            let x1 = hx.min(0.5 * asp + 0.3);
+            // Glow ahead of the head, then the streak body as a few
+            // sub-streaks of slightly different lengths.
+            s.push(Prim::rect_xy(x1 - 0.02, cy - hh * 0.8, x1 + 0.09, cy + hh * 0.8).col(0xF0484A).gradx(0xC9787A, -0.05, 0.055).alpha(0.45).soft(0.04));
+            let n = ((r1 - r0) * 1.5).round().max(2.0) as u32;
+            for k in 0..n {
+                let (sy0, sy1) = (y0 + (y1 - y0) * k as f32 / n as f32, y0 + (y1 - y0) * (k + 1) as f32 / n as f32);
+                let jit = 0.07 * (rnd(k + 7 * r0 as u32, 5) - 0.5);
+                let xe = (x1 + jit).min(0.5 * asp + 0.3);
+                if xe > x0 {
+                    s.push(Prim::rect_xy(x0, sy0 - 0.004, xe, sy1 + 0.004).col(0xE33A40).gradx(0xF34248, -0.5 * (xe - x0), 0.5 * (xe - x0)).soft(0.012));
+                }
+            }
+        }
+    }
+    if done {
+        s.prims.clear();
+        s.mix = 1.0;
+    }
+    s
+}
+
+/// The camera pans and turns across a paper desk from the old clip's
+/// photo print to the new clip's print (each print a window onto its clip), passing a red string tied into a
+/// heart; the new print ends up filling the frame.
+pub fn photo_desk_pan(t: f32, asp: f32) -> Scene {
+    let f = t * 60.0;
+    if f >= 59.5 {
+        return Scene::cut(t, 0.0);
+    }
+    let mut s = Scene::new().dip(hexc(0xF2ECE7), 1.0);
+    // Camera over the desk (world units: the old print is centred at the
+    // origin, one unit tall): position, zoom and roll.
+    let camx = kf(f, &[(0.0, 0.0), (4.0, 0.17), (8.0, 0.31), (12.0, 0.51), (16.0, 0.65), (20.0, 0.76), (24.0, 0.98), (28.0, 1.13), (32.0, 1.26), (36.0, 1.45), (40.0, 1.6), (44.0, 1.71), (48.0, 1.86), (52.0, 1.96), (56.0, 2.02), (60.0, 2.06)]);
+    let camy = kf(f, &[(0.0, 0.0), (4.0, 0.02), (8.0, 0.034), (12.0, 0.024), (16.0, 0.012), (20.0, 0.0), (24.0, -0.027), (28.0, -0.057), (32.0, -0.1), (36.0, -0.167), (40.0, -0.227), (44.0, -0.28), (48.0, -0.344), (52.0, -0.406), (56.0, -0.45), (60.0, -0.5)]);
+    let z = kf(f, &[(0.0, 1.0), (4.0, 0.93), (8.0, 0.89), (12.0, 0.83), (16.0, 0.8), (20.0, 0.77), (24.0, 0.73), (28.0, 0.7), (32.0, 0.7), (36.0, 0.72), (40.0, 0.75), (44.0, 0.82), (48.0, 0.9), (52.0, 0.96), (56.0, 1.0)]);
+    let rho = kf(f, &[(0.0, 0.0), (20.0, 1.5), (40.0, 2.8), (60.0, 3.0)]).to_radians();
+    let (c, sn) = (rho.cos(), rho.sin());
+    let to_s = |w: [f32; 2]| {
+        let (x, y) = (w[0] - camx, w[1] - camy);
+        [z * (c * x - sn * y), z * (sn * x + c * y)]
+    };
+    // Faint paper grain.
+    s.push(Prim::rect(0.0, 0.0, 2.0, 1.0).col(0xF3EDE8).noise(0xE8E0DA, 26.0, 0.0).alpha(0.6));
+    let hw = 0.5 * asp;
+    // (world centre, own rotation, is the new clip)
+    for (wc, rot, new) in [([0.0f32, 0.0f32], 0.0f32, false), ([2.06, -0.5], -3.0f32.to_radians(), true)] {
+        let ctr = to_s(wc);
+        let a = rot + rho;
+        if ctr[0].abs() > 2.6 || ctr[1].abs() > 1.8 {
+            continue;
+        }
+        let b = 0.019 * z;
+        let (w2, h2) = (hw * z, 0.5 * z);
+        s.push(Prim::rect(ctr[0] + 0.012, ctr[1] + 0.016, w2 + b, h2 + b).rot(a).col(0x5A4A40).alpha(0.28).soft(0.025));
+        s.push(Prim::rect(ctr[0], ctr[1], w2 + b, h2 + b).rot(a).col(0xFBFAF8));
+        // The print is a window onto its clip as it is on screen.
+        let win = Prim::rect(ctr[0], ctr[1], w2, h2).rot(a);
+        s.push(if new { win.tex_b() } else { win.tex_a() });
+    }
+    // Red string tied into a heart, lying on the desk between the prints.
+    let red = 0xB3283E;
+    let hp = to_s([1.2, 0.32]);
+    s.push(Prim::heart_wide(hp[0], hp[1], 0.075 * z, 1.35).rot(rho - 0.15).stroke(0.0065 * z).col(red));
+    for (w0, w1, w2) in [([1.2, 0.37], [1.32, 0.5], [1.5, 0.47]), ([1.19, 0.37], [1.1, 0.5], [1.02, 0.62]), ([0.75, 0.6], [0.95, 0.56], [1.1, 0.48])] {
+        let (p0, p1, p2) = (to_s(w0), to_s(w1), to_s(w2));
+        s.push(Prim::seg(p0[0], p0[1], p1[0], p1[1], 0.0032 * z).col(red));
+        s.push(Prim::seg(p1[0], p1[1], p2[0], p2[1], 0.0032 * z).col(red));
+    }
+    s
+}

@@ -4,7 +4,7 @@ Art3b replaces stand-ins of the earlier lanes (a global A/B mix plus a smooth
 colour field: right timing and average colour, no shapes) for graphic,
 cartoon and themed motion transitions (shapes, comic bursts, holiday,
 seasonal, sports and business graphics, motion-graphics packs) with
-recreations drawn with **our own original vector art**. **19 of 66**
+recreations drawn with **our own original vector art**. **21 of 66**
 items are upgraded; imported projects reach them through the
 `filmora:<GUID>` aliases in `crates/jb-render/src/aliases_art3b.rs` (the
 stand-in alias of each upgraded GUID was removed from the older lane file,
@@ -84,8 +84,8 @@ be higher where a hard-edged shape is a few pixels off).
 | Plain Shape 22 | `554FEC3F-E022-46A6-B763-67E2E9D6BA7B` | tr004 | `jb.shape_burst_wash_17` | `jb.white_ring_iris` | 2.43 | 9.41 / 34.2 (+6.98) | 6.32 / 18.2 (+3.89) | upgraded |  |
 | Plain Shape 8 | `33745F8B-AE5A-4DC2-8C1B-1C61735B5A85` | tr004 | `jb.shape_burst_wash_18` | `jb.orange_ring_rise` | 2.45 | 12.39 / 39.5 (+9.94) | 11.03 / 35.4 (+8.58) | upgraded |  |
 | Plain Shape 9 | `1E111A76-BC1D-4BE8-9315-79CB49CC8C36` | tr004 | `jb.shape_burst_wash_19` | `jb.red_ring_iris` | 2.46 | 13.85 / 34.4 (+11.39) | 8.21 / 21.9 (+5.75) | upgraded |  |
-| Powerful Sports Team Transition 02 | `CE1BB859-98C2-4E9F-90D0-DE880C931F12` | tr001 | `jb.shape_burst_wash_20` | — | 2.95 | 11.30 / 34.7 (+8.35) | — | stand-in |  |
-| Profile Movie Transition 01 | `CAD04901-7A9A-4172-A68F-82F3E1781E52` | tr002 | `jb.film_frame_wash_04` | — | 2.79 | 46.40 / 61.7 (+43.61) | — | stand-in |  |
+| Powerful Sports Team Transition 02 | `CE1BB859-98C2-4E9F-90D0-DE880C931F12` | tr001 | `jb.shape_burst_wash_20` | `jb.red_streak_lanes` | 2.95 | 11.30 / 34.7 (+8.35) | 7.86 / 27.1 (+4.91) | upgraded |  |
+| Profile Movie Transition 01 | `CAD04901-7A9A-4172-A68F-82F3E1781E52` | tr002 | `jb.film_frame_wash_04` | `jb.photo_desk_pan` | 2.79 | 46.40 / 61.7 (+43.61) | 10.90 / 15.0 (+8.11) | upgraded |  |
 | Random Dissolve 01 | `6CAAC772-2684-4C71-94A3-CAF24434F4C2` | tr006 | `jb.cell_dissolve_wash_01` | — | 2.92 | 8.39 / 18.4 (+5.47) | — | stand-in |  |
 | Retro blockbusters 1 | `2C7ED650-4815-402C-9A04-B88F4CE70A2E` | tr012 | `jb.film_frame_wash_05` | — | 4.08 | 25.09 / 57.6 (+21.01) | — | stand-in |  |
 | Retro blockbusters 2 | `AFE78312-109F-4F35-9A33-F8A59AA71F6F` | tr012 | `jb.film_frame_wash_06` | — | 2.92 | 14.75 / 57.5 (+11.83) | — | stand-in |  |

@@ -54,8 +54,6 @@ pub const FILMORA_LANE1: &[(&str, &str)] = &[
     ("3A028B8F-68ED-4E6C-8BA2-C17FE60FEB89", "jb.snapshot_flash"),
     ("8DCB22B3-BF4F-4523-AF46-E121A5F0E4EB", "jb.film_frame_wash_03"),
     ("29F21952-1298-4615-A5FA-A4FC3D024A42", "jb.photo_flip_left"),
-    ("CE1BB859-98C2-4E9F-90D0-DE880C931F12", "jb.shape_burst_wash_20"),
-    ("CAD04901-7A9A-4172-A68F-82F3E1781E52", "jb.film_frame_wash_04"),
     ("6CAAC772-2684-4C71-94A3-CAF24434F4C2", "jb.cell_dissolve_wash_01"),
     ("2C7ED650-4815-402C-9A04-B88F4CE70A2E", "jb.film_frame_wash_05"),
     ("AFE78312-109F-4F35-9A33-F8A59AA71F6F", "jb.film_frame_wash_06"),

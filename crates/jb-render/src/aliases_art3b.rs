@@ -24,6 +24,8 @@ pub const FILMORA_ART3B: &[(&str, &str)] = &[
     ("554FEC3F-E022-46A6-B763-67E2E9D6BA7B", "jb.white_ring_iris"), // Plain Shape 22
     ("33745F8B-AE5A-4DC2-8C1B-1C61735B5A85", "jb.orange_ring_rise"), // Plain Shape 8
     ("1E111A76-BC1D-4BE8-9315-79CB49CC8C36", "jb.red_ring_iris"), // Plain Shape 9
+    ("CE1BB859-98C2-4E9F-90D0-DE880C931F12", "jb.red_streak_lanes"), // Powerful Sports Team Transition 02
+    ("CAD04901-7A9A-4172-A68F-82F3E1781E52", "jb.photo_desk_pan"), // Profile Movie Transition 01
     ("5DC77869-75E6-45F6-9BCA-9B96CBA83DEC", "jb.red_x_panels"), // Scoreboard Transition 01
     ("108B1920-9128-4983-BAC9-FB4100603A8E", "jb.diagonal_streak_sweep"), // Shape Gradient Transitions Transition 25
 ];
