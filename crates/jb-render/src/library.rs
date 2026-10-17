@@ -291,6 +291,7 @@ pub const GROUPS: &[LibraryGroup] = &[
     // Lane 4: fitted looks, camera effects and reveal transitions.
     g(F, "Fitted Looks", crate::fx::lane4_all::looks::LIB_IDS),
     g(T, "Ink & Brush", crate::fx::lane4_all::reveal::LIB_IDS),
+    g(T, "Zoom Warps", crate::fx::lane4_all::camtr::LIB_IDS),
     g(E, "Camera Motion", crate::fx::lane4_all::camera::LIB_IDS),
     g(E, "Stylized", crate::fx::lane4_all::LIB_STYLIZED),
     g(E, "Fitted Effects", crate::fx::lane4_all::looks::LIB_FX),

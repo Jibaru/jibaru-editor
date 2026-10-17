@@ -3,7 +3,7 @@
 Lane 4 of the fidelity work against Filmora 15.7.3 covers 71 glitch,
 distortion, warp, ink and creative transitions and 87 video effects,
 filters and overlays from the reference batches
-(`docs/filmora-references.md`). **79 of 158** items have an
+(`docs/filmora-references.md`). **98 of 158** items have an
 implementation that imported projects reach through `filmora:<GUID>`
 aliases (`crates/jb-render/src/aliases_lane4.rs`). Everything was fitted to
 Filmora's *exported output* only (pairs of known input frames and the
@@ -47,28 +47,28 @@ read.
 | Exposure | fx001 | `jb.l4.look_overexposed` | 8.47 / 8.7 | 5.16 / 5.6 | approximation: soft bloom not modelled |
 | Glitch Effect 4 | fx001 | — | — | — | not implemented |
 | 1977 | fx001 | `jb.l4.look_rose_fade` | 5.43 / 5.8 | 2.31 / 6.2 |  |
-| Amaro | fx001 | `jb.l4.look_glow_matte` | 6.55 / 7.0 | 4.33 / 7.2 | LUT + field; residual light-map detail finer than 16×9 |
+| Amaro | fx001 | `jb.l4.look_glow_matte` | 6.03 / 6.4 | 3.86 / 6.7 | LUT + field; residual light-map detail finer than 16×9 |
 | Baltan | fx001 | — | — | — | not implemented |
 | BlueSkies | fx001 | `jb.l4.look_blue_sky` | 5.00 / 5.2 | 2.63 / 2.9 |  |
 | Brannan | fx001 | `jb.l4.look_warm_contrast_fade` | 5.32 / 5.5 | 2.96 / 3.4 |  |
 | Bright Lights | fx001 | `jb.l4.look_airy_blue_lift` | 5.66 / 5.7 | 3.17 / 3.5 |  |
 | Classic | fx001 | — | — | — | not implemented |
-| Earlybird | fx001 | `jb.l4.look_golden_morning` | 5.76 / 6.0 | 4.04 / 4.4 |  |
+| Earlybird | fx001 | `jb.l4.look_golden_morning` | 5.24 / 5.5 | 3.53 / 3.9 |  |
 | Hefe | fx001 | `jb.l4.look_warm_punch` | 6.82 / 6.9 | 3.56 / 7.3 |  |
-| Hudson | fx001 | `jb.l4.look_icy_vignette` | 6.51 / 6.7 | 4.47 / 7.1 |  |
+| Hudson | fx001 | `jb.l4.look_icy_vignette` | 5.85 / 6.0 | 3.92 / 6.4 |  |
 | InkWell | fx001 | `jb.l4.look_mono_classic` | 4.58 / 5.1 | 2.71 / 4.9 |  |
 | Lomo | fx001 | `jb.l4.look_contrast_vignette` | 6.26 / 6.4 | 3.34 / 6.9 |  |
 | LordKelvin | fx001 | `jb.l4.look_hot_amber` | 7.04 / 7.2 | 3.18 / 7.9 |  |
-| Mild | fx001 | `jb.l4.cam_gentle_sway` | — | — |  |
+| Mild | fx001 | `jb.l4.cam_gentle_sway` | 8.95 / 10.8 | 3.66 / 13.4 |  |
 | Money | fx001 | — | — | — | not implemented |
 | Nashville | fx001 | `jb.l4.look_pink_pastel` | 6.56 / 7.4 | 2.92 / 3.3 |  |
 | Sierra | fx002 | `jb.l4.look_faded_vignette` | 5.02 / 5.4 | 3.45 / 5.7 |  |
 | SunSet | fx002 | `jb.l4.look_dusk_fade` | 5.11 / 5.3 | 3.02 / 3.3 |  |
-| Sunrise | fx002 | `jb.l4.look_warm_haze` | 7.19 / 7.4 | 3.87 / 4.2 |  |
+| Sunrise | fx002 | `jb.l4.look_warm_haze` | 6.74 / 7.0 | 3.53 / 3.9 |  |
 | Sutro | fx002 | `jb.l4.look_dark_moody` | 5.13 / 5.3 | 3.56 / 4.0 |  |
-| Toaster | fx002 | `jb.l4.look_toasted` | 6.56 / 6.7 | 4.60 / 5.0 |  |
+| Toaster | fx002 | `jb.l4.look_toasted` | 6.07 / 6.2 | 3.93 / 4.4 |  |
 | Valencia | fx002 | `jb.l4.look_soft_warm_fade` | 4.94 / 5.2 | 2.44 / 2.8 |  |
-| Vivid | fx002 | `jb.l4.look_vivid_warm` | 9.65 / 9.8 | 5.21 / 5.7 | LUT + field; residual light-map detail finer than 16×9 |
+| Vivid | fx002 | `jb.l4.look_vivid_warm` | 9.04 / 9.2 | 4.64 / 5.2 | LUT + field; residual light-map detail finer than 16×9 |
 | Walden | fx002 | `jb.l4.look_pale_cyan` | 5.91 / 6.0 | 3.19 / 3.6 |  |
 | Wash | fx002 | — | — | — | not implemented |
 | XproII | fx002 | `jb.l4.look_cross_process` | 6.83 / 6.9 | 3.62 / 4.0 |  |
@@ -76,9 +76,9 @@ read.
 | B&W Style | fx002 | `jb.l4.look_mono_bright` | 3.83 / 4.3 | 2.55 / 4.3 |  |
 | Sunny Days | fx002 | `jb.l4.look_clear_day` | 4.76 / 5.0 | 2.43 / 5.4 |  |
 | Chromatic Aberration | fx002 | — | — | — | not implemented |
-| Mosaic | fx002 | — | — | — | not implemented: random block glitches, a pixelate + mix fit stays at MAD 20–58 |
+| Mosaic | fx002 | `jb.l4.region_smear` | 4.85 / 5.5 | 2.38 / 2.5 | not implemented: random block glitches, a pixelate + mix fit stays at MAD 20–58 |
 | Tilt-shift Circle | fx002 | — | — | — | not implemented |
-| Canvas | fx003 | — | — | — | not implemented |
+| Canvas | fx003 | `jb.l4.look_canvas_tone` | 11.81 / 11.9 | 11.94 / 12.0 |  |
 | Fast Light Leaks 2 | fx003 | — | — | — | not implemented |
 | Lut Process | fx003 | `jb.l4.look_dark_muted` | 3.16 / 3.7 | 1.90 / 2.3 |  |
 | Flashlight | fx003 | — | — | — | not implemented |
@@ -91,8 +91,8 @@ read.
 | Movie Light Effects 6 | fx003 | — | — | — | not implemented |
 | Movie Light Effects 7 | fx003 | — | — | — | not implemented |
 | Movie Light Effects 8 | fx003 | — | — | — | not implemented |
-| Color Flash | fx003 | — | — | — | not implemented |
-| Elasticity Jitter | fx003 | — | — | — | not implemented |
+| Color Flash | fx003 | `jb.l4.cam_color_pulse` | 11.30 / 16.4 | 7.93 / 19.1 |  |
+| Elasticity Jitter | fx003 | `jb.l4.cam_elastic_jitter` | 11.13 / 15.3 | 4.70 / 6.8 |  |
 | Flicker Jitter 03 | fx003 | — | — | — | not implemented |
 | Glow Vibrate | fx003 | — | — | — | not implemented |
 | Pulse Jitter | fx003 | — | — | — | not implemented |
@@ -105,31 +105,31 @@ read.
 | Strong Sharpening | fx003 | — | — | — | not implemented |
 | Highlight Glow | fx003 | `jb.l4.look_highlight_lift` | 6.38 / 6.5 | 5.25 / 5.9 | approximation: bloom not modelled |
 | Old Movie 2 | fx003 | — | — | — | not implemented |
-| Old TV Border | fx003 | `jb.l4.look_old_tv_border` | 8.35 / 8.9 | 5.43 / 8.5 | approximation: border shape finer than 16×9 field |
+| Old TV Border | fx003 | `jb.l4.look_old_tv_border` | 4.49 / 5.3 | 3.49 / 4.7 | approximation: border shape finer than 16×9 field |
 | Edge Glow 01 | fx003 | — | — | — | not implemented |
-| Scanline Effect 1 | fx003 | — | — | — | not implemented |
-| Chaos Shake | fx003 | `jb.l4.cam_rgb_jolt` | 10.00 / 16.8 | 3.70 / 6.5 |  |
-| Collision | fx003 | — | — | — | not implemented |
-| Crash Into | fx003 | — | — | — | not implemented |
-| Earthquake Shake | fx003 | `jb.l4.cam_rumble` | 6.50 / 12.7 | 2.63 / 4.5 |  |
-| Extreme | fx003 | `jb.l4.cam_hard_shake` | 10.09 / 15.5 | 3.41 / 5.8 |  |
-| Flash Exposure | fx003 | — | — | — | not implemented |
+| Scanline Effect 1 | fx003 | `jb.l4.look_scanlines` | 6.13 / 6.2 | 3.02 / 6.9 |  |
+| Chaos Shake | fx003 | `jb.l4.cam_rgb_jolt` | 9.67 / 16.5 | 3.68 / 6.4 |  |
+| Collision | fx003 | `jb.l4.cam_impact_flash` | 8.24 / 23.0 | 4.91 / 23.0 |  |
+| Crash Into | fx003 | `jb.l4.cam_crash_zoom` | 8.00 / 24.6 | 5.53 / 38.5 |  |
+| Earthquake Shake | fx003 | `jb.l4.cam_rumble` | 6.34 / 12.8 | 2.59 / 4.5 |  |
+| Extreme | fx003 | `jb.l4.cam_hard_shake` | 10.14 / 14.6 | 3.43 / 5.4 |  |
+| Flash Exposure | fx003 | `jb.l4.cam_flash_pop` | 6.45 / 21.4 | 3.92 / 21.8 |  |
 | Ripple Shake 02 | fx003 | — | — | — | not implemented |
-| Up-Down 1 | fx003 | — | — | — | not implemented |
+| Up-Down 1 | fx003 | `jb.l4.cam_vertical_whip` | 9.90 / 16.8 | 5.12 / 15.7 |  |
 | Shattered 02 | fx003 | — | — | — | not implemented |
 | Shattered 03 | fx003 | — | — | — | not implemented |
-| Exposure Zoom | fx003 | — | — | — | not implemented |
-| Fast Zoom | fx003 | `jb.l4.cam_zoom_burst` | 5.31 / 11.5 | 2.74 / 4.3 |  |
+| Exposure Zoom | fx003 | `jb.l4.cam_bright_zoom` | 18.22 / 26.3 | 10.51 / 18.0 |  |
+| Fast Zoom | fx003 | `jb.l4.cam_zoom_burst` | 5.26 / 11.5 | 2.75 / 4.4 |  |
 | Heart Zoom | fx003 | — | — | — | not implemented |
 | Parallax Smooth Zoom In | fx003 | `jb.l4.cam_slow_push` | 5.09 / 5.7 | 2.46 / 2.7 |  |
 | Rabid Camera 1 | fx003 | — | — | — | not implemented |
-| Zoom Lens | fx003 | — | — | — | not implemented |
+| Zoom Lens | fx003 | `jb.l4.cam_lens_punch` | 5.43 / 6.1 | 2.55 / 2.7 |  |
 | Aesthetic Light Leak 04 16-9 | fxfix1 | — | — | — | not implemented |
-| CALIFORNIA VINTAGE FILM LOOK | fxfix1 | — | — | — | not implemented |
-| Vintage Film Pack GRUNGE FILM VINTAGE | fxfix1 | — | — | — | not implemented |
-| Four Seasons | fxfix1 | `jb.l4.look_season_tint` | 10.10 / 10.4 | 8.78 / 9.3 | approximation: overlay finer than the field |
+| CALIFORNIA VINTAGE FILM LOOK | fxfix1 | `jb.l4.look_sunbaked_vintage` | 12.22 / 17.7 | 9.80 / 14.9 |  |
+| Vintage Film Pack GRUNGE FILM VINTAGE | fxfix1 | `jb.l4.look_grunge_vintage` | 17.92 / 25.0 | 15.02 / 21.7 |  |
+| Four Seasons | fxfix1 | `jb.l4.look_season_tint` | 8.35 / 8.7 | 6.86 / 7.5 | approximation: overlay finer than the field |
 | Glow | fxfix1 | `jb.l4.look_bright_glow` | 7.14 / 7.4 | 3.55 / 7.6 | approximation: bloom not modelled |
-| Radio Explike FX | fxfix1 | — | — | — | not implemented |
+| Radio Explike FX | fxfix1 | `jb.l4.look_prism_rays` | 8.83 / 9.2 | 6.26 / 9.4 |  |
 | TV Wall | fxfix1 | `jb.l4.video_wall_3x3` | 12.24 / 37.7 | 3.83 / 12.3 | grid: tiny downscaled text/checker, encoder-dominated |
 
 ### Transitions
@@ -144,16 +144,16 @@ read.
 | Ripple | tr005 | — | — | not implemented |
 | Swirl | tr005 | — | — | not implemented |
 | Wave | tr005 | — | — | not implemented |
-| Orb Twist 1 | tr005 | — | — | not implemented |
-| Orb Twist 3 | tr005 | — | — | not implemented |
+| Orb Twist 1 | tr005 | `jb.l4.warp_twist_roll_1` | 18.57 / 26.9 |  |
+| Orb Twist 3 | tr005 | `jb.l4.warp_twist_roll_2` | 18.86 / 35.8 |  |
 | Orb Twist 4 | tr005 | — | — | not implemented |
 | Liquid Bodies Pack Transition 03 | tr006 | `jb.l4.reveal_clean_sweep_down_1` | 8.61 / 29.7 |  |
 | Neon Mosaic 03 | tr006 | — | — | not implemented |
 | Neon Mosaic 04 | tr006 | — | — | not implemented |
 | Neon Mosaic Down | tr006 | — | — | not implemented |
-| Warp 3 | tr006 | — | — | not implemented |
-| Warp 6 | tr006 | — | — | not implemented |
-| Warp 7 | tr006 | — | — | not implemented |
+| Warp 3 | tr006 | `jb.l4.warp_zoom_burst_1` | 7.62 / 19.7 |  |
+| Warp 6 | tr006 | `jb.l4.warp_zoom_burst_2` | 9.94 / 22.2 |  |
+| Warp 7 | tr006 | `jb.l4.warp_zoom_burst_3` | 5.29 / 11.1 |  |
 | 3D Warp Box Distortion Left | tr008 | — | — | not implemented |
 | 3D Warp Box Distortion Right | tr008 | — | — | not implemented |
 | 3D Warp Box Distortion Up | tr008 | — | — | not implemented |

@@ -10,6 +10,7 @@ pub static LOOKS: &[LookSpec] = &[
         lut: Some(include_bytes!("luts/look_rose_fade.lut") as &[u8]),
         field: None,
         tiles: 1,
+        lines: None,
     },
     LookSpec {
         id: "jb.l4.look_glow_matte",
@@ -20,6 +21,7 @@ pub static LOOKS: &[LookSpec] = &[
         lut: Some(include_bytes!("luts/look_glow_matte.lut") as &[u8]),
         field: Some(include_bytes!("luts/look_glow_matte.field") as &[u8]),
         tiles: 1,
+        lines: None,
     },
     LookSpec {
         id: "jb.l4.look_mono_bright",
@@ -30,6 +32,7 @@ pub static LOOKS: &[LookSpec] = &[
         lut: Some(include_bytes!("luts/look_mono_bright.lut") as &[u8]),
         field: None,
         tiles: 1,
+        lines: None,
     },
     LookSpec {
         id: "jb.l4.look_blue_sky",
@@ -40,6 +43,7 @@ pub static LOOKS: &[LookSpec] = &[
         lut: Some(include_bytes!("luts/look_blue_sky.lut") as &[u8]),
         field: None,
         tiles: 1,
+        lines: None,
     },
     LookSpec {
         id: "jb.l4.look_warm_contrast_fade",
@@ -50,6 +54,7 @@ pub static LOOKS: &[LookSpec] = &[
         lut: Some(include_bytes!("luts/look_warm_contrast_fade.lut") as &[u8]),
         field: Some(include_bytes!("luts/look_warm_contrast_fade.field") as &[u8]),
         tiles: 1,
+        lines: None,
     },
     LookSpec {
         id: "jb.l4.look_airy_blue_lift",
@@ -60,6 +65,7 @@ pub static LOOKS: &[LookSpec] = &[
         lut: Some(include_bytes!("luts/look_airy_blue_lift.lut") as &[u8]),
         field: None,
         tiles: 1,
+        lines: None,
     },
     LookSpec {
         id: "jb.l4.look_golden_morning",
@@ -70,6 +76,7 @@ pub static LOOKS: &[LookSpec] = &[
         lut: Some(include_bytes!("luts/look_golden_morning.lut") as &[u8]),
         field: Some(include_bytes!("luts/look_golden_morning.field") as &[u8]),
         tiles: 1,
+        lines: None,
     },
     LookSpec {
         id: "jb.l4.look_warm_punch",
@@ -80,6 +87,7 @@ pub static LOOKS: &[LookSpec] = &[
         lut: Some(include_bytes!("luts/look_warm_punch.lut") as &[u8]),
         field: Some(include_bytes!("luts/look_warm_punch.field") as &[u8]),
         tiles: 1,
+        lines: None,
     },
     LookSpec {
         id: "jb.l4.look_icy_vignette",
@@ -90,6 +98,7 @@ pub static LOOKS: &[LookSpec] = &[
         lut: Some(include_bytes!("luts/look_icy_vignette.lut") as &[u8]),
         field: Some(include_bytes!("luts/look_icy_vignette.field") as &[u8]),
         tiles: 1,
+        lines: None,
     },
     LookSpec {
         id: "jb.l4.look_mono_classic",
@@ -100,6 +109,7 @@ pub static LOOKS: &[LookSpec] = &[
         lut: Some(include_bytes!("luts/look_mono_classic.lut") as &[u8]),
         field: None,
         tiles: 1,
+        lines: None,
     },
     LookSpec {
         id: "jb.l4.look_contrast_vignette",
@@ -110,6 +120,7 @@ pub static LOOKS: &[LookSpec] = &[
         lut: Some(include_bytes!("luts/look_contrast_vignette.lut") as &[u8]),
         field: Some(include_bytes!("luts/look_contrast_vignette.field") as &[u8]),
         tiles: 1,
+        lines: None,
     },
     LookSpec {
         id: "jb.l4.look_hot_amber",
@@ -120,6 +131,7 @@ pub static LOOKS: &[LookSpec] = &[
         lut: Some(include_bytes!("luts/look_hot_amber.lut") as &[u8]),
         field: Some(include_bytes!("luts/look_hot_amber.field") as &[u8]),
         tiles: 1,
+        lines: None,
     },
     LookSpec {
         id: "jb.l4.look_dark_muted",
@@ -130,6 +142,7 @@ pub static LOOKS: &[LookSpec] = &[
         lut: Some(include_bytes!("luts/look_dark_muted.lut") as &[u8]),
         field: None,
         tiles: 1,
+        lines: None,
     },
     LookSpec {
         id: "jb.l4.look_pink_pastel",
@@ -140,6 +153,7 @@ pub static LOOKS: &[LookSpec] = &[
         lut: Some(include_bytes!("luts/look_pink_pastel.lut") as &[u8]),
         field: None,
         tiles: 1,
+        lines: None,
     },
     LookSpec {
         id: "jb.l4.look_faded_vignette",
@@ -150,6 +164,7 @@ pub static LOOKS: &[LookSpec] = &[
         lut: Some(include_bytes!("luts/look_faded_vignette.lut") as &[u8]),
         field: Some(include_bytes!("luts/look_faded_vignette.field") as &[u8]),
         tiles: 1,
+        lines: None,
     },
     LookSpec {
         id: "jb.l4.look_dusk_fade",
@@ -160,6 +175,7 @@ pub static LOOKS: &[LookSpec] = &[
         lut: Some(include_bytes!("luts/look_dusk_fade.lut") as &[u8]),
         field: Some(include_bytes!("luts/look_dusk_fade.field") as &[u8]),
         tiles: 1,
+        lines: None,
     },
     LookSpec {
         id: "jb.l4.look_clear_day",
@@ -170,6 +186,7 @@ pub static LOOKS: &[LookSpec] = &[
         lut: Some(include_bytes!("luts/look_clear_day.lut") as &[u8]),
         field: None,
         tiles: 1,
+        lines: None,
     },
     LookSpec {
         id: "jb.l4.look_warm_haze",
@@ -180,6 +197,7 @@ pub static LOOKS: &[LookSpec] = &[
         lut: Some(include_bytes!("luts/look_warm_haze.lut") as &[u8]),
         field: Some(include_bytes!("luts/look_warm_haze.field") as &[u8]),
         tiles: 1,
+        lines: None,
     },
     LookSpec {
         id: "jb.l4.look_dark_moody",
@@ -190,6 +208,7 @@ pub static LOOKS: &[LookSpec] = &[
         lut: Some(include_bytes!("luts/look_dark_moody.lut") as &[u8]),
         field: Some(include_bytes!("luts/look_dark_moody.field") as &[u8]),
         tiles: 1,
+        lines: None,
     },
     LookSpec {
         id: "jb.l4.look_toasted",
@@ -200,6 +219,7 @@ pub static LOOKS: &[LookSpec] = &[
         lut: Some(include_bytes!("luts/look_toasted.lut") as &[u8]),
         field: Some(include_bytes!("luts/look_toasted.field") as &[u8]),
         tiles: 1,
+        lines: None,
     },
     LookSpec {
         id: "jb.l4.look_soft_warm_fade",
@@ -210,6 +230,7 @@ pub static LOOKS: &[LookSpec] = &[
         lut: Some(include_bytes!("luts/look_soft_warm_fade.lut") as &[u8]),
         field: None,
         tiles: 1,
+        lines: None,
     },
     LookSpec {
         id: "jb.l4.look_vivid_warm",
@@ -220,6 +241,7 @@ pub static LOOKS: &[LookSpec] = &[
         lut: Some(include_bytes!("luts/look_vivid_warm.lut") as &[u8]),
         field: Some(include_bytes!("luts/look_vivid_warm.field") as &[u8]),
         tiles: 1,
+        lines: None,
     },
     LookSpec {
         id: "jb.l4.look_pale_cyan",
@@ -230,6 +252,7 @@ pub static LOOKS: &[LookSpec] = &[
         lut: Some(include_bytes!("luts/look_pale_cyan.lut") as &[u8]),
         field: Some(include_bytes!("luts/look_pale_cyan.field") as &[u8]),
         tiles: 1,
+        lines: None,
     },
     LookSpec {
         id: "jb.l4.video_wall_3x3",
@@ -240,6 +263,7 @@ pub static LOOKS: &[LookSpec] = &[
         lut: Some(include_bytes!("luts/video_wall_3x3.lut") as &[u8]),
         field: None,
         tiles: 3,
+        lines: None,
     },
     LookSpec {
         id: "jb.l4.look_old_tv_border",
@@ -250,6 +274,7 @@ pub static LOOKS: &[LookSpec] = &[
         lut: Some(include_bytes!("luts/look_old_tv_border.lut") as &[u8]),
         field: Some(include_bytes!("luts/look_old_tv_border.field") as &[u8]),
         tiles: 1,
+        lines: None,
     },
     LookSpec {
         id: "jb.l4.look_overexposed",
@@ -260,6 +285,7 @@ pub static LOOKS: &[LookSpec] = &[
         lut: Some(include_bytes!("luts/look_overexposed.lut") as &[u8]),
         field: Some(include_bytes!("luts/look_overexposed.field") as &[u8]),
         tiles: 1,
+        lines: None,
     },
     LookSpec {
         id: "jb.l4.look_bright_glow",
@@ -270,6 +296,7 @@ pub static LOOKS: &[LookSpec] = &[
         lut: Some(include_bytes!("luts/look_bright_glow.lut") as &[u8]),
         field: Some(include_bytes!("luts/look_bright_glow.field") as &[u8]),
         tiles: 1,
+        lines: None,
     },
     LookSpec {
         id: "jb.l4.look_highlight_lift",
@@ -280,6 +307,7 @@ pub static LOOKS: &[LookSpec] = &[
         lut: Some(include_bytes!("luts/look_highlight_lift.lut") as &[u8]),
         field: Some(include_bytes!("luts/look_highlight_lift.field") as &[u8]),
         tiles: 1,
+        lines: None,
     },
     LookSpec {
         id: "jb.l4.look_season_tint",
@@ -290,6 +318,62 @@ pub static LOOKS: &[LookSpec] = &[
         lut: Some(include_bytes!("luts/look_season_tint.lut") as &[u8]),
         field: Some(include_bytes!("luts/look_season_tint.field") as &[u8]),
         tiles: 1,
+        lines: None,
+    },
+    LookSpec {
+        id: "jb.l4.look_sunbaked_vintage",
+        name: "Sunbaked Vintage",
+        kind: FxKind::Effect,
+        category: "Fitted Looks",
+        description: "Warm vintage film grade (grain not modelled).",
+        lut: Some(include_bytes!("luts/look_sunbaked_vintage.lut") as &[u8]),
+        field: Some(include_bytes!("luts/look_sunbaked_vintage.field") as &[u8]),
+        tiles: 1,
+        lines: None,
+    },
+    LookSpec {
+        id: "jb.l4.look_grunge_vintage",
+        name: "Grunge Vintage",
+        kind: FxKind::Effect,
+        category: "Fitted Looks",
+        description: "Dark grungy vintage grade (texture not modelled).",
+        lut: Some(include_bytes!("luts/look_grunge_vintage.lut") as &[u8]),
+        field: Some(include_bytes!("luts/look_grunge_vintage.field") as &[u8]),
+        tiles: 1,
+        lines: None,
+    },
+    LookSpec {
+        id: "jb.l4.look_canvas_tone",
+        name: "Canvas Tone",
+        kind: FxKind::Effect,
+        category: "Fitted Looks",
+        description: "Canvas-like tone and light map (texture not modelled).",
+        lut: Some(include_bytes!("luts/look_canvas_tone.lut") as &[u8]),
+        field: Some(include_bytes!("luts/look_canvas_tone.field") as &[u8]),
+        tiles: 1,
+        lines: None,
+    },
+    LookSpec {
+        id: "jb.l4.look_prism_rays",
+        name: "Prism Rays",
+        kind: FxKind::Effect,
+        category: "Fitted Looks",
+        description: "Colored ray light map (low-resolution approximation).",
+        lut: Some(include_bytes!("luts/look_prism_rays.lut") as &[u8]),
+        field: Some(include_bytes!("luts/look_prism_rays.field") as &[u8]),
+        tiles: 1,
+        lines: None,
+    },
+    LookSpec {
+        id: "jb.l4.look_scanlines",
+        name: "Scanlines",
+        kind: FxKind::Effect,
+        category: "Fitted Looks",
+        description: "Dim grade with horizontal scanlines.",
+        lut: Some(include_bytes!("luts/look_scanlines.lut") as &[u8]),
+        field: None,
+        tiles: 1,
+        lines: Some((12.9860, [1.0805, 1.0612, 0.9194, 0.9058, 0.8968, 0.8930, 0.8922, 0.8974, 0.8930, 0.9045, 0.9837, 1.0727, 1.0969, 1.0870, 1.0907, 1.0859])),
     },
     LookSpec {
         id: "jb.l4.look_cross_process",
@@ -300,6 +384,7 @@ pub static LOOKS: &[LookSpec] = &[
         lut: Some(include_bytes!("luts/look_cross_process.lut") as &[u8]),
         field: Some(include_bytes!("luts/look_cross_process.field") as &[u8]),
         tiles: 1,
+        lines: None,
     },
 ];
 
@@ -339,4 +424,9 @@ pub const LIB_FX: &[&str] = &[
     "jb.l4.look_overexposed",
     "jb.l4.look_bright_glow",
     "jb.l4.look_highlight_lift",
+    "jb.l4.look_sunbaked_vintage",
+    "jb.l4.look_grunge_vintage",
+    "jb.l4.look_canvas_tone",
+    "jb.l4.look_prism_rays",
+    "jb.l4.look_scanlines",
 ];
