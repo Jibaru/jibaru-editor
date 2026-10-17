@@ -4,7 +4,7 @@ Art3b replaces stand-ins of the earlier lanes (a global A/B mix plus a smooth
 colour field: right timing and average colour, no shapes) for graphic,
 cartoon and themed motion transitions (shapes, comic bursts, holiday,
 seasonal, sports and business graphics, motion-graphics packs) with
-recreations drawn with **our own original vector art**. **21 of 66**
+recreations drawn with **our own original vector art**. **22 of 66**
 items are upgraded; imported projects reach them through the
 `filmora:<GUID>` aliases in `crates/jb-render/src/aliases_art3b.rs` (the
 stand-in alias of each upgraded GUID was removed from the older lane file,
@@ -102,7 +102,7 @@ be higher where a hard-edged shape is a few pixels off).
 | Shape Transition 106 | `D8775488-C02D-4661-937D-4C3C937D4ACB` | tr005 | `jb.cell_dissolve_wash_02` | — | 2.38 | 7.06 / 29.3 (+4.68) | — | stand-in |  |
 | Space Rotation Left | `401962DA-6B63-4EB0-95C5-5C43A04601DE` | tr009 | `jb.panel_shuffle_wash_03` | — | 4.12 | 41.18 / 71.4 (+37.06) | — | stand-in |  |
 | Special Effects Skill Pack Transition 01 | `E943F100-16E7-4F2D-8821-A26E4C94A201` | tr010 | `jb.cartoon_burst_wash_04` | — | 3.68 | 16.44 / 52.2 (+12.76) | — | stand-in |  |
-| Special Effects Skill Transition 03 | `D9AEBB98-B58B-4EC1-9750-F17BC822E7CB` | tr010 | `jb.cartoon_burst_wash_05` | — | 2.77 | 23.95 / 63.4 (+21.18) | — | stand-in |  |
+| Special Effects Skill Transition 03 | `D9AEBB98-B58B-4EC1-9750-F17BC822E7CB` | tr010 | `jb.cartoon_burst_wash_05` | `jb.cloud_puff_cover` | 2.77 | 23.95 / 63.4 (+21.18) | 20.46 / 59.0 (+17.69) | upgraded |  |
 | Special Effects Skill Transition 04 | `AE4878F8-8587-448A-9065-37C631D0AB51` | tr010 | `jb.cartoon_burst_wash_06` | — | 2.48 | 12.57 / 45.4 (+10.09) | — | stand-in |  |
 | Special Effects Skill Transition 05 | `58BDBBA2-D53A-4331-83BF-9C0BF0AA1D48` | tr010 | `jb.cartoon_burst_wash_07` | — | 2.86 | 30.37 / 59.4 (+27.51) | — | stand-in |  |
 | Special FX Motion Transition 04 | `efbf96b4-211e-ef11-ba94-8045dd702285` | tr010 | `jb.cartoon_burst_wash_01` | — | 3.02 | 15.54 / 62.4 (+12.52) | — | stand-in |  |

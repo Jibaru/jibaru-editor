@@ -487,3 +487,37 @@ pub fn photo_desk_pan(t: f32, asp: f32) -> Scene {
     }
     s
 }
+
+/// Cartoon cloud puffs pop in from the edges until they fill the frame,
+/// hold, then pop away from a gap near the top to uncover the new clip.
+pub fn cloud_puff_cover(t: f32, asp: f32) -> Scene {
+    let f = t * 60.0;
+    let mut s = Scene::cut(t, 0.5);
+    let (nx, ny) = (10, 6);
+    let (sx, sy) = (asp / (nx - 1) as f32, 1.0 / (ny - 1) as f32);
+    let mut puffs: Vec<(f32, f32, f32, f32)> = Vec::new();
+    for j in 0..ny {
+        for i in 0..nx {
+            let id = (j * nx + i) as u32;
+            let x = -0.5 * asp + sx * (i as f32 + 0.5 * (j % 2) as f32) + 0.06 * (rnd(id, 1) - 0.5);
+            let y = -0.5 + sy * j as f32 + 0.05 * (rnd(id, 2) - 0.5);
+            // Distance from the nearest edge (0 at the border, ~0.5 at the centre).
+            let edge = (0.5 * asp - x.abs()).min(0.5 - y.abs()).max(0.0) / 0.5;
+            let t_in = 1.0 + 10.0 * edge.powf(0.7) + 2.0 * rnd(id, 3);
+            // Leaving: from a gap at the upper middle outwards, the bottom last.
+            let d = ((x - 0.05).powi(2) + (1.6 * (y + 0.3)).powi(2)).sqrt();
+            let t_out = 41.0 + 11.0 * (d / 1.3).min(1.0) + 2.0 * rnd(id, 4);
+            let r = 0.15 + 0.08 * rnd(id, 5);
+            let k = ease_out(seg(f, t_in, t_in + 4.0)).min(1.0 - ease_in2(seg(f, t_out, t_out + 4.0)));
+            if k > 0.0 {
+                puffs.push((x, y, r * (0.4 + 0.6 * k), t_in));
+            }
+        }
+    }
+    puffs.sort_by(|a, b| a.3.partial_cmp(&b.3).unwrap_or(std::cmp::Ordering::Equal));
+    for (x, y, r, _) in puffs {
+        s.push(Prim::circle(x + 0.06 * r, y + 0.08 * r, r).col(0xB4D4E4));
+        s.push(Prim::circle(x, y, 0.96 * r).col(0xFCFCFC));
+    }
+    s
+}

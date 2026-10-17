@@ -28,6 +28,7 @@ pub const FILMORA_ART3B: &[(&str, &str)] = &[
     ("CAD04901-7A9A-4172-A68F-82F3E1781E52", "jb.photo_desk_pan"), // Profile Movie Transition 01
     ("5DC77869-75E6-45F6-9BCA-9B96CBA83DEC", "jb.red_x_panels"), // Scoreboard Transition 01
     ("108B1920-9128-4983-BAC9-FB4100603A8E", "jb.diagonal_streak_sweep"), // Shape Gradient Transitions Transition 25
+    ("D9AEBB98-B58B-4EC1-9750-F17BC822E7CB", "jb.cloud_puff_cover"), // Special Effects Skill Transition 03
 ];
 
 pub fn register(r: &mut Registry) {

@@ -74,7 +74,6 @@ pub const FILMORA_LANE1: &[(&str, &str)] = &[
     ("A0616F4C-89FE-468A-87B0-BC03F1B1AE98", "jb.card_slide_left"),
     ("401962DA-6B63-4EB0-95C5-5C43A04601DE", "jb.panel_shuffle_wash_03"),
     ("E943F100-16E7-4F2D-8821-A26E4C94A201", "jb.cartoon_burst_wash_04"),
-    ("D9AEBB98-B58B-4EC1-9750-F17BC822E7CB", "jb.cartoon_burst_wash_05"),
     ("AE4878F8-8587-448A-9065-37C631D0AB51", "jb.cartoon_burst_wash_06"),
     ("58BDBBA2-D53A-4331-83BF-9C0BF0AA1D48", "jb.cartoon_burst_wash_07"),
     ("34F473F4-EEB9-4606-926D-8FE2540CF7AB", "jb.panel_shuffle_wash_04"),
