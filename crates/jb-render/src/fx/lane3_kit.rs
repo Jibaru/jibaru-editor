@@ -103,7 +103,7 @@ fn l3_glow(uv: vec2f, c: vec2f, r: f32) -> f32 {
     return exp(-dot(d, d) / max(r * r, 1e-6));
 }
 // Smooth noise field in 0..1 (fbm), at scale k (cells per frame height), drifting with t.
-fn l3_field(uv: vec2f, k: f32, t: vec2f) -> f32 {
+fn l3_noise(uv: vec2f, k: f32, t: vec2f) -> f32 {
     return fbm(to_c(uv) * k + t);
 }
 "#;
@@ -161,20 +161,42 @@ fn fx(uv: vec2f) -> vec4f {{
 /// `x^i y^j`, `i` outer, `j` inner, `i + j <= deg`) added to the global mix.
 /// The field reproduces the broad shape of glows, leaks and colour washes.
 pub fn field_mix<const K: usize>(rows: &[[f32; K]], deg: usize) -> String {
+    format!(
+        r#"{}
+{}
+fn fx(uv: vec2f) -> vec4f {{
+    let p = prog();
+    let k0 = kf_g(p);
+    let a = l3_da(uv);
+    let bb = l3_db(uv);
+    let c = k0.x * a + k0.y * l3_luma(a) + k0.z * bb + k0.w * l3_luma(bb) + l3_field(uv, p);
+    return l3_out(c);
+}}
+"#,
+        table("g", rows),
+        field_fn("g", K, 4, deg)
+    )
+}
+
+/// WGSL `fn l3_field(uv, p) -> vec3f`: the polynomial light field whose
+/// coefficients are values `first..` of table `name` (rows `K` wide):
+/// per channel (r, g, b in turn) the coefficients of the terms `x^i y^j`,
+/// `x = u - 1/2`, `y = v - 1/2`, `i` outer, `j` inner, `i + j <= deg`.
+pub fn field_fn(name: &str, k: usize, first: usize, deg: usize) -> String {
     let nb = (deg + 1) * (deg + 2) / 2;
-    assert_eq!(K, 5 + 3 * nb, "field_mix: row width");
-    let chunks = (K - 1).div_ceil(4);
+    assert_eq!(k, 1 + first + 3 * nb, "field {name}: row width");
+    let chunks = (k - 1).div_ceil(4);
     // Unrolled: value i of the row is component i % 4 of chunk i / 4.
     let val = |i: usize| format!("k{}.{}", i / 4, ["x", "y", "z", "w"][i % 4]);
     let mut body = String::new();
-    for j in 0..chunks {
-        let f = if j == 0 { "kf_g(p)".to_string() } else { format!("kf_g_{j}(p)") };
+    for j in first / 4..chunks {
+        let f = if j == 0 { format!("kf_{name}(p)") } else { format!("kf_{name}_{j}(p)") };
         body.push_str(&format!("    let k{j} = {f};\n"));
     }
     let mut t = 0;
     for i in 0..=deg {
         for j in 0..=(deg - i) {
-            let (r, g, b) = (val(4 + t), val(4 + nb + t), val(4 + 2 * nb + t));
+            let (r, g, b) = (val(first + t), val(first + nb + t), val(first + 2 * nb + t));
             let term = (0..i).map(|_| "x").chain((0..j).map(|_| "y")).collect::<Vec<_>>().join(" * ");
             let term = if term.is_empty() { "1.0".to_string() } else { term };
             body.push_str(&format!("    f = f + ({term}) * vec3f({r}, {g}, {b});\n"));
@@ -182,23 +204,34 @@ pub fn field_mix<const K: usize>(rows: &[[f32; K]], deg: usize) -> String {
         }
     }
     format!(
+        "fn l3_field(uv: vec2f, p: f32) -> vec3f {{\n    let x = uv.x - 0.5;\n    let y = uv.y - 0.5;\n    var f = vec3f(0.0);\n{body}    return f;\n}}\n"
+    )
+}
+
+/// [`edge_wipe`] followed by a per-frame gain and light field: rows of
+/// `field` are `[p, a, field.r.., field.g.., field.b..]` and
+/// `out = a W + field(uv)` (display space). The field carries the broad
+/// colour and brightness of overlay artwork that rides on the wipe.
+pub fn edge_wipe_field<const K: usize>(mask: &str, rows: &[[f32; 3]], field: &[[f32; K]], deg: usize) -> String {
+    format!(
         r#"{}
+{}
+{}
+fn l3_mask(uv: vec2f) -> f32 {{
+    let c = to_c(uv);
+    let A = aspect();
+    return {mask};
+}}
 fn fx(uv: vec2f) -> vec4f {{
     let p = prog();
-    let x = uv.x - 0.5;
-    let y = uv.y - 0.5;
-    var f = vec3f(0.0);
-{body}    let a = l3_da(uv);
-    let bb = l3_db(uv);
-    let c = {} * a + {} * l3_luma(a) + {} * bb + {} * l3_luma(bb) + f;
-    return l3_out(c);
+    let k = kf_g(p);
+    let w = to_disp(l3_mix(sa(uv), sb(uv), l3_ramp(l3_mask(uv), k.x, k.y))).rgb;
+    return l3_out(kf_h(p).x * w + l3_field(uv, p));
 }}
 "#,
         table("g", rows),
-        val(0),
-        val(1),
-        val(2),
-        val(3)
+        table("h", field),
+        field_fn("h", K, 1, deg)
     )
 }
 

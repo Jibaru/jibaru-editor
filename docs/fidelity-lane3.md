@@ -67,8 +67,8 @@ it wherever the artwork covers the frame; "Before" is the first stand-in
 | Business Presentation Vol 02 Transition 02 | `jb.stripe_slide_diagonal` | stand-in: global mix + light field | 25.40 | 58.31 | 2.43 | +22.97 | 31.97 |  |
 | Carousel Down | `jb.carousel_down` | stand-in: global mix + light field | 21.09 | 31.87 | 3.60 | +17.49 | 37.12 |  |
 | Carousel Down Rebound | `jb.carousel_down_rebound` | stand-in: global mix + light field | 21.39 | 33.03 | 3.61 | +17.78 | 25.11 |  |
-| Carousel Left | `jb.carousel_left` | panel strip | 17.08 | 47.42 | 3.83 | +13.25 | 17.38 | fitted at 192 px; frames 21–31 (fast scroll) still off |
-| Carousel Right | `jb.carousel_right` | stand-in: global mix + light field | 26.34 | 43.45 | 4.49 | +21.85 | 34.99 |  |
+| Carousel Left | `jb.carousel_left` | panel strip | 10.27 | 22.75 | 3.83 | +6.44 | 17.38 | flat panels; frames 22-31 (fast scroll) are off: the real panels turn in perspective |
+| Carousel Right | `jb.carousel_right` | panel strip | 11.30 | 21.82 | 4.49 | +6.81 | 34.99 | flat panels; the fast-scroll frames (26-35, 47-53) are off: the real panels turn in perspective |
 | Carousel Up | `jb.carousel_up` | stand-in: global mix + light field | 21.98 | 33.96 | 4.25 | +17.73 | 26.59 |  |
 | Cartoony Vlog Pack Transition 01 | `jb.candy_spiral` | stand-in: global mix + light field | 22.05 | 51.45 | 2.91 | +19.14 | 25.03 |  |
 | Chalk Swipe Left | `jb.chalk_swipe_left` | edge wipe | 3.29 | 5.53 | 3.84 | -0.55 | 5.25 | slanted edge in ~12 fps steps; the chalk texture of the edge is not drawn |
@@ -135,13 +135,13 @@ it wherever the artwork covers the frame; "Before" is the first stand-in
 | Grammy Award 2024 Transition 02 | `jb.gold_frames_zoom` | stand-in: global mix + light field | 13.67 | 31.89 | 2.55 | +11.12 | 15.91 |  |
 | Grunge Scribble Vlog Transition 02 | `jb.torn_paper_wipe` | stand-in: global mix + light field | 7.01 | 32.17 | 2.54 | +4.47 | 10.30 |  |
 | Halloween Colorful Transition 04 | `jb.pumpkin_face_wipe` | stand-in: global mix + light field | 31.61 | 54.39 | 2.30 | +29.31 | 38.93 |  |
-| Halloween Colorful Transition 06 | `jb.skull_wedge_wipe` | radial wipe + grade | 9.74 | 15.13 | 2.31 | +7.43 | 19.82 | skull sprite not drawn |
-| Halloween Colorful Transition 09 | `jb.witch_hat_wipe` | radial wipe + grade | 6.67 | 16.41 | 2.29 | +4.38 | 8.44 | hat sprite not drawn; the stand-in scored 8.07 (the sprite's average was in it) |
+| Halloween Colorful Transition 06 | `jb.skull_wedge_wipe` | radial wipe + light field | 9.54 | 14.49 | 2.31 | +7.23 | 19.82 | skull sprite not drawn |
+| Halloween Colorful Transition 09 | `jb.witch_hat_wipe` | radial wipe + light field | 6.22 | 12.52 | 2.29 | +3.92 | 8.44 | hat sprite not drawn; the stand-in scored 8.07 (the sprite's average was in it) |
 | Halloween Colorful Transition 15 | `jb.pumpkin_pop_wipe` | radial wipe | 9.47 | 16.08 | 2.31 | +7.16 | 11.42 | pumpkin sprite not drawn |
 | Halloween Colorful Transition 17 | `jb.skull_hat_sweep` | stand-in: global mix + light field | 15.71 | 32.29 | 2.33 | +13.39 | 19.58 |  |
 | Halloween Colorful Transition 21 | `jb.bat_wing_wipe` | stand-in: global mix + light field | 9.79 | 31.65 | 2.30 | +7.48 | 14.18 |  |
-| Halloween Colorful Transition 23 | `jb.ghost_curve_wipe` | radial wipe + grade | 11.42 | 17.06 | 2.31 | +9.12 | 12.92 | ghost sprite not drawn |
-| Halloween Colorful Transition 25 | `jb.cat_curve_wipe` | radial wipe + grade | 11.68 | 16.65 | 2.32 | +9.36 | 23.14 | cat sprite not drawn |
+| Halloween Colorful Transition 23 | `jb.ghost_curve_wipe` | radial wipe + light field | 11.52 | 18.57 | 2.31 | +9.21 | 12.92 | ghost sprite not drawn |
+| Halloween Colorful Transition 25 | `jb.cat_curve_wipe` | radial wipe + light field | 11.32 | 16.00 | 2.32 | +9.00 | 23.14 | cat sprite not drawn |
 | Halloween Film Pack Transition 02 | `jb.rust_slash` | stand-in: global mix + light field | 6.94 | 33.26 | 2.92 | +4.03 | 10.15 |  |
 | Halloween Film Transition 01 | `jb.rust_smear` | stand-in: global mix + light field | 7.37 | 28.13 | 3.46 | +3.91 | 9.40 |  |
 | Halloween Horrors Pack Transition 02 | `jb.ghost_crowd_rise` | stand-in: global mix + light field | 19.01 | 39.53 | 2.98 | +16.03 | 23.87 |  |
@@ -154,7 +154,7 @@ it wherever the artwork covers the frame; "Before" is the first stand-in
 | Horizontal Slice | `jb.slice_slide` | strip slide | 8.25 | 18.11 | 2.78 | +5.47 | 9.41 | 10 strips, fitted edges and easing exponents; mid frames 15–19 (strip motion blur not modelled) |
 | Horrible Colorful Transition 02 | `jb.glitch_bands` | stand-in: global mix + light field | 10.73 | 27.88 | 2.33 | +8.41 | 15.69 |  |
 | Horrible Colorful Transition 13 | `jb.ghost_face_flash` | stand-in: global mix + light field | 22.67 | 44.49 | 2.40 | +20.27 | 29.39 |  |
-| Horrible Colorful Transition 24 | `jb.witch_silhouette_wipe` | radial wipe + grade | 10.77 | 15.30 | 2.43 | +8.34 | 12.36 | witch silhouette not drawn |
+| Horrible Colorful Transition 24 | `jb.witch_silhouette_wipe` | radial wipe + light field | 10.61 | 15.46 | 2.43 | +8.18 | 12.36 | witch silhouette not drawn |
 | Horrible Film Pack Transition 03 | `jb.bloody_hand` | stand-in: global mix + light field | 8.45 | 32.60 | 3.60 | +4.85 | 10.66 |  |
 | Horrible Neon Party Transition 01 | `jb.pumpkin_pile` | stand-in: global mix + light field | 29.65 | 46.24 | 4.18 | +25.46 | 33.08 |  |
 | Horrible Party Transition 01 | `jb.bandage_wrap` | stand-in: global mix + light field | 15.52 | 32.15 | 2.81 | +12.71 | 17.07 |  |

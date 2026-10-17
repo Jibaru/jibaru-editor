@@ -93,6 +93,15 @@ fn items() -> Vec<Item> {
             panel_strip(D::CAROUSEL_LEFT, false, 1.0),
         ),
         Item::new(
+            "jb.carousel_right",
+            "Carousel Right",
+            "Motion",
+            "Mirror of Carousel Left: the frame shrinks onto a black stage and the row of panels scrolls right \
+             two panels with a motion blur, dipping in scale as each panel passes. Fitted frame by frame on \
+             Filmora's export of Carousel Right.",
+            panel_strip(D::CAROUSEL_RIGHT, false, -1.0),
+        ),
+        Item::new(
         "jb.crystal_ball_iris",
         "Crystal Ball Iris",
         "Shapes",

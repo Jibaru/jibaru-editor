@@ -5,7 +5,7 @@
 //! the wipe in Filmora (ghosts, cats, bats, ...) are left out.
 
 use super::data as D;
-use super::kit::{edge_wipe_graded, register_items, table, Item};
+use super::kit::{edge_wipe_field, edge_wipe_graded, register_items, table, Item};
 use crate::registry::Registry;
 
 /// Circular front around `(cx, cy)` (uv, aspect-corrected distance); B inside
@@ -13,6 +13,12 @@ use crate::registry::Registry;
 fn radial(cx: f32, cy: f32, inv: bool, rows: &[[f32; 3]], grade: &[[f32; 5]]) -> String {
     let sign = if inv { "-" } else { "" };
     edge_wipe_graded(&format!("{sign}length((uv - vec2f({cx:?}, {cy:?})) * vec2f(A, 1.0))"), rows, grade)
+}
+
+/// [`radial`] (B inside the circle) followed by a fitted gain and cubic light
+/// field standing in for the sprite and tint layered over the wipe.
+fn radial_field(cx: f32, cy: f32, rows: &[[f32; 3]], field: &[[f32; 32]]) -> String {
+    edge_wipe_field(&format!("length((uv - vec2f({cx:?}, {cy:?})) * vec2f(A, 1.0))"), rows, field, 3)
 }
 
 /// Colour rings: concentric bands around (0.505, 0.522) uv with outer radii
@@ -67,7 +73,7 @@ fn items() -> Vec<Item> {
         "A gently curved front rises from the bottom right and sweeps up over the frame to the new clip, in \
          the stepped rhythm of a hand-animated cartoon. Wipe fitted on Filmora's export of Halloween Colorful \
          Transition 23 (its ghost sprite is not drawn).",
-        radial(1.129, 3.599, false, D::HC23_EDGE, D::HC23_GRADE),
+        radial_field(1.129, 3.599, D::HC23_EDGE, D::HC23_FIELD),
     ),
     Item::new(
         "jb.skull_wedge_wipe",
@@ -75,7 +81,7 @@ fn items() -> Vec<Item> {
         "Creative",
         "A round front opens from a point right of the centre and widens over the frame to the new clip. Wipe \
          fitted on Filmora's export of Halloween Colorful Transition 06 (the skull sprite is not drawn).",
-        radial(0.858, 0.506, false, D::HC06_EDGE, D::HC06_GRADE),
+        radial_field(0.858, 0.506, D::HC06_EDGE, D::HC06_FIELD),
     ),
     Item::new(
         "jb.cat_curve_wipe",
@@ -83,7 +89,7 @@ fn items() -> Vec<Item> {
         "Creative",
         "A curved front sweeps in from the right and across the frame to the new clip. Wipe fitted on \
          Filmora's export of Halloween Colorful Transition 25 (the cat sprite is not drawn).",
-        radial(2.034, 3.0, false, D::HC25_EDGE, D::HC25_GRADE),
+        radial_field(2.034, 3.0, D::HC25_EDGE, D::HC25_FIELD),
     ),
     Item::new(
         "jb.witch_hat_wipe",
@@ -92,7 +98,7 @@ fn items() -> Vec<Item> {
         "The old clip holds while a small sprite flies over it, then a round front bursts up from the lower \
          left and covers the frame with the new clip in a few frames. Wipe fitted on Filmora's export of \
          Halloween Colorful Transition 09 (the hat sprite is not drawn).",
-        radial(0.281, 1.123, false, D::HC09_EDGE, D::HC09_GRADE),
+        radial_field(0.281, 1.123, D::HC09_EDGE, D::HC09_FIELD),
     ),
     Item::new(
         "jb.pumpkin_pop_wipe",
@@ -109,7 +115,7 @@ fn items() -> Vec<Item> {
         "Creative",
         "A round front grows from the top-left corner and sweeps the new clip across the frame. Wipe fitted on \
          Filmora's export of Horrible Colorful Transition 24 (the witch silhouette is not drawn).",
-        radial(0.116, 0.356, false, D::HRC24_EDGE, D::HRC24_GRADE),
+        radial_field(0.116, 0.356, D::HRC24_EDGE, D::HRC24_FIELD),
     ),
     ]
 }
