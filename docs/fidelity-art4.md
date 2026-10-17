@@ -48,5 +48,16 @@ MAD mean / max over the window (0–255 over RGB).
 
 ## Gaps
 
-Items of the group not listed above are still rendered by their previous
-mapping; see the table history in this file as they land.
+Still on their previous mapping (hard cut / lane stand-in), not yet fitted:
+3D Warp Box Distortion Left / Right / Up, 3D Warp Box Open Left / Right,
+3D Warp Box Rebound, 3D Warp Box Right (the `patch2` model used for 3D Warp
+Box Left applies; each needs its own per-frame fit), Depth Mosaic and Depth
+Slice (floating cards; Depth Slice keeps the lane 3 `jb.depth_panels`
+stand-in), Kaleidoscope, Pixel Sorting Up and Ripple Shake 02 (the ripple
+model fitted worse than the plain clip, so no alias was added).
+
+Known residuals: Money's binary engraving screen cannot be phase-matched
+(a faint screen over grey measures best); Mosaic's cell grid misaligns on
+the fine grid media; Heart Zoom's heart bokeh and particles are not drawn;
+glitch items match timing (fitted per frame, deterministic in clip time) and
+statistics, not Filmora's exact bar positions.
