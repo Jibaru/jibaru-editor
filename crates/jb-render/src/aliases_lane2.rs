@@ -7,6 +7,8 @@ use crate::registry::Registry;
 
 /// (Filmora resource GUID, our id).
 pub const FILMORA_LANE2: &[(&str, &str)] = &[
+    // Arc Slide
+    ("949113DB-25F5-4C3C-81FC-A8AB3E6C93DC", "jb.arc_slide"),
     // 3D Box Close
     ("16BFABD5-AC48-42AF-BAF9-149934D9B990", "jb.box_close_3d"),
     // 3D Box Down
@@ -41,6 +43,8 @@ pub const FILMORA_LANE2: &[(&str, &str)] = &[
     ("75E87EE4-EC9E-4398-BA61-0653057F144A", "jb.box_left_3d"),
     // 3D Box Split 1
     ("3B28FE15-13ED-4BF8-A844-9DFDAC64816B", "jb.box_split_3d_1"),
+    // 3D Box Split 2
+    ("93020E77-3F2E-4A15-BE14-A2C09970408D", "jb.box_split_3d_2"),
     // 3D Box Right
     ("9BF9CABE-864C-43D2-A282-24A578AF699F", "jb.box_turn_right_3d"),
     // 3D Box Up
@@ -67,6 +71,20 @@ pub const FILMORA_LANE2: &[(&str, &str)] = &[
     ("e25b66ac-d8a8-4732-8777-09bef4648e00", "jb.carousel_card_spin_left"),
     // 3D Carousel Card Spin Right
     ("0a336063-7e21-4c2e-9884-22ef56fe59c1", "jb.carousel_card_spin_right"),
+    // 3D Carousel Cylinder Roll Down
+    ("8A956534-D1A6-4CC8-ACA6-43614CAB526A", "jb.carousel_cylinder_roll_down"),
+    // 3D Carousel Cylinder Roll Up
+    ("c6347070-6721-4523-8a5e-51f84b36f3e7", "jb.carousel_cylinder_roll_up"),
+    // 3D Carousel Dual Axis Spin Down
+    ("F7FA07EF-4B62-453A-9A17-6B217F6336D6", "jb.carousel_dual_spin_down"),
+    // 3D Carousel Dual Axis Spin Up
+    ("50AEC96D-D30D-47FE-BE99-B00FEE8C9B15", "jb.carousel_dual_spin_up"),
+    // 3D Carousel Ring Roll Diagonal Left
+    ("8C854521-0CBA-4879-802E-DA284ECEF9E1", "jb.carousel_ring_diagonal_left"),
+    // 3D Carousel Ring Roll Down
+    ("0A4A76AB-5541-4802-9B35-98A2812DD9A6", "jb.carousel_ring_roll_down"),
+    // 3D Carousel Ring Roll Up
+    ("0EEC266A-D417-461C-B4E0-3F71650478E8", "jb.carousel_ring_roll_up"),
     // 3D Carousel Spin Left
     ("8E484E8F-4097-45F5-9857-90E0646776D6", "jb.carousel_spin_left"),
     // 3D Carousel Spin Left Close
@@ -75,6 +93,8 @@ pub const FILMORA_LANE2: &[(&str, &str)] = &[
     ("1D999F3D-EA93-43EC-8CAB-A9694AF03CC8", "jb.carousel_spin_right"),
     // 3D Carousel Spin Right Close
     ("0BC474A4-AFFE-470D-8E52-6981F32C7003", "jb.carousel_spin_right_close"),
+    // Collage Turn
+    ("17B92348-899F-4BDA-B020-C5CA9081B00F", "jb.collage_turn"),
     // Cross Split
     ("75A09E8D-21D1-4c4e-AEA9-EB9CEC11A644", "jb.cross_split"),
     // Cube Facets Down
@@ -97,6 +117,10 @@ pub const FILMORA_LANE2: &[(&str, &str)] = &[
     ("5107B490-0EA4-47E1-8343-BD779895685F", "jb.cube_turn_up"),
     // Diagonal Slice Reveal
     ("E5C74593-D113-47B5-B174-252E1716826C", "jb.diagonal_slice_reveal"),
+    // Diagonal Slide
+    ("FC0A3B6C-84ED-40EA-B83C-E8043A8BD880", "jb.diagonal_slide"),
+    // Domino Scroll
+    ("64129C4C-9142-481B-B3AF-933947088D7C", "jb.domino_scroll"),
     // DoorWay
     ("976B2502-3B22-4dd4-AEB4-0AAA2C1E5AC8", "jb.doorway"),
     // Erase Slide Right
@@ -155,20 +179,28 @@ pub const FILMORA_LANE2: &[(&str, &str)] = &[
     ("75729E2E-A47F-4E0C-8AC8-4DDA210C158B", "jb.fold_4"),
     // Fold Transition 05
     ("D1BA4DE3-3FCA-480B-B8EA-4A1048A389DF", "jb.fold_5"),
+    // Fold Transition 06
+    ("93816AC5-40CA-4C4F-980A-B12B0E4DD2EF", "jb.fold_6"),
     // Fold Transition 07
     ("02413DD1-31AC-4BE0-8334-E7067BBB9EE8", "jb.fold_7"),
     // Fold Transition 08
     ("96262F03-7368-4610-91AB-6B25D29322D2", "jb.fold_8"),
+    // 3D Frame Shift
+    ("8C84620F-C904-4702-B697-F87B224048B9", "jb.frame_shift_3d"),
     // Glass Panel Flash
     ("293A55BF-E78C-4F2A-A0C5-2B8E2B023C51", "jb.glass_panel_flash"),
     // Grid Flip 3D
     ("D314281B-DD2C-4662-8A52-A955B8A7E54B", "jb.grid_flip_3d"),
+    // Magic Card
+    ("52730ECE-003C-40A3-A880-2A2E23A10295", "jb.magic_card"),
     // Paper Page Curl
     ("81527EAA-3AD1-418D-8C56-B7BC4E174D03", "jb.page_curl"),
     // 3D Page Flip Left
     ("A985CC65-0A2B-440F-B437-6F802A0305B0", "jb.page_flip_left_3d"),
     // Luminous Page Turning
     ("C8D169E4-A8B6-470C-872E-9CA9A09D7134", "jb.page_turn_luminous"),
+    // Panel Collapse
+    ("7C0FB782-E755-4BFE-96B5-CA90BA997B9D", "jb.panel_collapse"),
     // 3D Horizontal Closing
     ("B070D206-0B16-4B67-BCF6-98414767AEA8", "jb.panels_close_3d"),
     // Photo Slide 1
@@ -209,6 +241,8 @@ pub const FILMORA_LANE2: &[(&str, &str)] = &[
     ("d8867ccc-4762-49c4-93fd-616208d056cf", "jb.roll_down_2"),
     // Simple Roll 3
     ("f03e2971-f66f-4481-b308-a640d451d2ca", "jb.roll_left_3"),
+    // Rolling Screen
+    ("D4E2B8C1-3A5F-4E7B-9C2D-6F8A1B0E7C3F", "jb.rolling_screen"),
     // Screen Flip 3D
     ("8D3025A8-8F60-42E7-B0AA-0C06F5608C76", "jb.screen_flip_3d"),
     // 3D Screens
@@ -229,8 +263,12 @@ pub const FILMORA_LANE2: &[(&str, &str)] = &[
     ("82F40844-1371-4C82-A822-40DB348B8A8C", "jb.slideshow_tilt_1"),
     // 3D Slideshow Style 2
     ("DE2B8F85-34CE-43B3-A326-293F597C2B0F", "jb.slideshow_tilt_2"),
+    // Spatial Stack
+    ("C46E1588-00C1-428E-A7D4-5835F7522DDE", "jb.spatial_stack"),
     // Split Dimension
     ("92936B8A-B906-4E4C-B4C3-8664A15D9246", "jb.split_dimension"),
+    // Tear Paper Recovery
+    ("BE9481E4-EE77-4040-B059-42844D024AEC", "jb.tear_paper_recovery"),
 ];
 
 pub fn register(r: &mut Registry) {
