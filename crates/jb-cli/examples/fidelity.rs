@@ -113,6 +113,12 @@ fn render(
     }
     let mut renderer = jb_render::Renderer::new(size.0, size.1)?;
     renderer.options.source_max_size = Some(size);
+    // `JB_FIDELITY_LEVELS=none`: no Filmora level offsets (the reference batch exports
+    // of synthetic cards do not carry the offset measured on the user projects).
+    if std::env::var("JB_FIDELITY_LEVELS").as_deref() == Ok("none") {
+        renderer.options.output_bias = [0.0; 3];
+        renderer.options.input_bias = [0.0; 3];
+    }
     let mut settings = jb_export::ExportSettings::new(out);
     settings.width = size.0;
     settings.height = size.1;

@@ -123,6 +123,7 @@ pub const GROUPS: &[LibraryGroup] = &[
     g(T, "Flash & Fade", crate::fx::lane1_tables::LIB_FLASH_FADE),
     g(T, "Overlay Washes", crate::fx::lane1_tables::LIB_OVERLAY_WASHES),
     g(T, "3D Turns", crate::fx::lane2_layers::LIB_3D),
+    g(T, "Slides & Rolls", crate::fx::lane2_layers::LIB_SLIDES),
     g(
         T,
         "Glitch",

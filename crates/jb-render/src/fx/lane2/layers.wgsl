@@ -9,6 +9,8 @@
 //   6: gain d/dv rgb, edge (0 clip, 1 mirror, 2 wrap)
 //   7: offset rgb (display 0..1), blur taps
 //   8: source rect u0 v0 u1 v1
+//   9: strip mask in source uv: lo <= dot(n, q) <= hi (n = xy, lo = z, hi = w); |n| is
+//      1 / feather, so the edges ramp over one unit of dot(n, q) (or one pixel if wider)
 // Corners are where the source rect's corners (TL, TR, BR, BL) land; the
 // clip is mapped with a bilinear corner pin (what Filmora's 3D transitions
 // measure as), sampled 2x2 per pixel. Compositing is in display space.
@@ -81,7 +83,7 @@ fn l2_mirror(x: vec2f) -> vec2f {
     return select(f, 2.0 - f, f > vec2f(1.0));
 }
 
-fn slot(l: i32, k: i32) -> vec4f { return u.p[l * 9 + k]; }
+fn slot(l: i32, k: i32) -> vec4f { return u.p[l * 10 + k]; }
 
 fn l2_src(s: f32, q: vec2f) -> vec3f {
     if (s < 0.5) { return to_disp(sa(q)).rgb; }
@@ -109,6 +111,13 @@ fn l2_layer(l: i32, p: vec2f, t: f32, fw: vec2f) -> vec4f {
         let e = min(st, 1.0 - st) / max(fw, vec2f(1e-6));
         let k = clamp(0.5 + e, vec2f(0.0), vec2f(1.0));
         cov = k.x * k.y;
+        // Strip clip (pieces cut along parallel lines), antialiased over the footprint.
+        let sp = slot(l, 9);
+        if (sp.x != 0.0 || sp.y != 0.0) {
+            let dn = dot(sp.xy, q);
+            let fwn = max(abs(sp.x) * fw.x * (rect.z - rect.x) + abs(sp.y) * fw.y * (rect.w - rect.y), 1.0);
+            cov = cov * clamp(0.5 + (dn - sp.z) / fwn, 0.0, 1.0) * clamp(0.5 + (sp.w - dn) / fwn, 0.0, 1.0);
+        }
         // Degenerate pins (slivers) can invert to a wrong root: reject points the pin does not map back.
         if (!persp) {
             let back = fwd_bilinear(clamp(st, vec2f(-0.5), vec2f(1.5)), c01.xy, c01.zw, c23.xy, c23.zw);

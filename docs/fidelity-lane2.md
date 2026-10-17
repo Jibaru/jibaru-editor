@@ -44,15 +44,22 @@ item. Floor reflections are mirrored layers with one gain field per item.
 exhaustively per frame instead.
 
 **Measurement.** `crates/jb-cli/examples/fidelity.rs` on the item window.
-Two harness options were added for these test cards:
+Three harness options were added for these test cards:
 `JB_FIDELITY_RENDER_SIZE=1920x1080` renders at full resolution and compares
 at `--size` (at 960x540 our own 4:2:0 encode halves chroma again: Cb error
-3.4 vs 1.2 on the cards), and `JB_FIDELITY_ENCODER=libx264` (the hardware
-encoder smears the 10 px checker).
+3.4 vs 1.2 on the cards), `JB_FIDELITY_ENCODER=libx264` (the hardware
+encoder smears the 10 px checker), and `JB_FIDELITY_LEVELS=none` (no Filmora
+level offsets: the batch exports of the synthetic cards do not carry the
+offset measured on the user projects; with it plain frames measure 3.5 with a
+bias of -2.5 on R and B, without it 2.7 and no bias).
+
+**Timing.** Fitting decodes the reference exactly like the harness
+(`-fps_mode passthrough`): without it FFmpeg can duplicate the first frame
+after a seek, which shifts a fit by one frame.
 
 ## Results
 
-MAD mean / worst frame over the item window at 960x540 (harness with `JB_FIDELITY_ENCODER=libx264`, `JB_FIDELITY_RENDER_SIZE=1920x1080`, `--search 0`). Plain frames of these batches measure 2.5-3.5 (trfix1 ~3.1) through the same path, mostly a constant level bias of the output offset.
+MAD mean / worst frame over the item window at 960x540 (harness with `JB_FIDELITY_LEVELS=none`, `JB_FIDELITY_ENCODER=libx264`, `JB_FIDELITY_RENDER_SIZE=1920x1080`, `--search 0`, range starting half a frame into the window). Plain frames of the batches measure about 2.7 through the same path.
 
 | Filmora item | GUID | Our id | Mean | Worst | Notes |
 |---|---|---|---:|---:|---|
@@ -63,9 +70,9 @@ MAD mean / worst frame over the item window at 960x540 (harness with `JB_FIDELIT
 | 3D Box Horizontal | `EBC160A4-C522-4DEE-8FF2-24596EFF5CDA` | — |  |  | not implemented |
 | 3D Box Left | `75E87EE4-EC9E-4398-BA61-0653057F144A` | — |  |  | not implemented |
 | 3D Box Vertical | `1C7CC9AD-ACD1-4D08-9A39-82682F5BE775` | — |  |  | not implemented |
-| 3D Flip Right | `B04A402D-5C04-4110-AEAD-2E3DBEC1FEFF` | `jb.flip_3d_right` | 3.04 | 4.6 |  |
+| 3D Flip Right | `B04A402D-5C04-4110-AEAD-2E3DBEC1FEFF` | `jb.flip_3d_right` | 2.65 | 4.0 |  |
 | Pivot Flip | `D9864B5B-CAF1-4C24-9124-49B8F7926046` | — |  |  | not implemented |
-| Fast Push Left | `2DD72324-4654-456D-9EA8-9931F6B6A1FD` | — |  |  | not implemented |
+| Fast Push Left | `2DD72324-4654-456D-9EA8-9931F6B6A1FD` | `jb.push_left_fast` | 3.24 | 10.7 |  |
 | Fast Push Right | `95DF8005-6F31-48DD-9713-3FB2EECF102F` | — |  |  | not implemented |
 | Split Slide 1 | `50040234-1ACA-48DB-BB67-935A5014D92B` | — |  |  | not implemented |
 | Roll_clockwise | `1EE81222-189E-4159-A917-D15EE518D2FF` | — |  |  | not implemented |
@@ -81,28 +88,28 @@ MAD mean / worst frame over the item window at 960x540 (harness with `JB_FIDELIT
 | Erase Slide Right | `4CA4EF88-5997-41a6-AAE6-0C2226D5A96E` | — |  |  | not implemented |
 | Box Flip Left | `B0FA9DF9-6C71-4B4D-8102-8F106A9E1385` | — |  |  | not implemented |
 | Box Flip Right | `6C491663-ADFE-49B5-855F-FF2AE53E8F34` | — |  |  | not implemented |
-| Flip Roll Down | `4057dc68-ff07-4561-90b7-97762af89945` | — |  |  | not implemented |
-| Flip Roll Left | `ae8e58de-6e52-4fca-851f-f8a6dfd41647` | — |  |  | not implemented |
+| Flip Roll Down | `4057dc68-ff07-4561-90b7-97762af89945` | `jb.flip_roll_down` | 3.76 | 7.9 |  |
+| Flip Roll Left | `ae8e58de-6e52-4fca-851f-f8a6dfd41647` | `jb.flip_roll_left` | 4.46 | 11.3 |  |
 | Flip Roll Right | `2787c059-6baa-4819-9298-9ee22071cc95` | — |  |  | not implemented |
-| Flip Roll Up | `af113622-985e-4ce3-a807-9601607ee43f` | — |  |  | not implemented |
+| Flip Roll Up | `af113622-985e-4ce3-a807-9601607ee43f` | `jb.flip_roll_up` | 4.31 | 10.8 |  |
 | Simple Roll 10 | `691302d8-de75-4f40-82e3-5dd30fc0dc55` | — |  |  | not implemented |
-| Simple Roll 11 | `490e0bdb-f7b7-4fb2-a92a-ed5927ca13b3` | — |  |  | not implemented |
-| Simple Roll 2 | `d8867ccc-4762-49c4-93fd-616208d056cf` | — |  |  | not implemented |
+| Simple Roll 11 | `490e0bdb-f7b7-4fb2-a92a-ed5927ca13b3` | `jb.roll_11` | 4.23 | 8.6 |  |
+| Simple Roll 2 | `d8867ccc-4762-49c4-93fd-616208d056cf` | `jb.roll_down_2` | 5.27 | 9.4 |  |
 | Simple Roll 3 | `f03e2971-f66f-4481-b308-a640d451d2ca` | — |  |  | not implemented |
-| Simple Roll 6 | `3e2c9408-4b1e-4e78-afc4-4d6c837f6c6e` | — |  |  | not implemented |
-| Simple Roll 7 | `0fbaebd7-c224-4ca5-a9f0-d16307f19854` | — |  |  | not implemented |
+| Simple Roll 6 | `3e2c9408-4b1e-4e78-afc4-4d6c837f6c6e` | `jb.roll_6` | 4.99 | 9.2 |  |
+| Simple Roll 7 | `0fbaebd7-c224-4ca5-a9f0-d16307f19854` | `jb.roll_7` | 4.85 | 10.2 |  |
 | Simple Roll 8 | `93a969d4-9108-45d6-9c09-f08350b2dca7` | — |  |  | not implemented |
 | Simple Roll 9 | `1568e098-ca48-4861-9667-6d3d6ed19b60` | — |  |  | not implemented |
 | Retro Box 01 | `7DB28C3E-D012-470E-B872-F71BA20437E2` | — |  |  | not implemented |
 | 3D Box Close | `16BFABD5-AC48-42AF-BAF9-149934D9B990` | — |  |  | not implemented |
 | 3D Box Down | `86437F55-4674-4809-9B7A-0D39DCF9E313` | — |  |  | not implemented |
-| 3D Box Drop | `3B310488-6093-4A52-B87E-0367ADF1641A` | — |  |  | not implemented |
-| 3D Box Fall | `0C615FD6-6C3D-469A-955C-5FDF8FA6A23A` | — |  |  | not implemented |
+| 3D Box Drop | `3B310488-6093-4A52-B87E-0367ADF1641A` | `jb.box_drop_3d` | 3.93 | 6.9 |  |
+| 3D Box Fall | `0C615FD6-6C3D-469A-955C-5FDF8FA6A23A` | `jb.box_fall_3d` | 5.77 | 48.9 |  |
 | 3D Box Flip 1 | `A84BB82F-36F0-4E6A-8488-FBC2F1AA0BD0` | — |  |  | not implemented |
 | 3D Box Flip 2 | `D1334A82-581D-42C6-B3CD-7B0DF3E5F565` | — |  |  | not implemented |
 | 3D Box Flip 3 | `E23C0AF1-1BCB-4083-908D-1952E6FC7494` | — |  |  | not implemented |
 | 3D Box Flip 4 | `B88000C0-71DF-4B92-B4DE-A63C7733978D` | — |  |  | not implemented |
-| 3D Box Flip 5 | `64D165BC-C38F-400F-965D-A9E33BA1128C` | — |  |  | not implemented |
+| 3D Box Flip 5 | `64D165BC-C38F-400F-965D-A9E33BA1128C` | `jb.box_flip_3d_5` | 3.73 | 5.5 |  |
 | 3D Box Flip 6 | `95EB31D4-DA7A-4642-8E35-CEA17DD93B35` | — |  |  | not implemented |
 | 3D Box Right | `9BF9CABE-864C-43D2-A282-24A578AF699F` | — |  |  | not implemented |
 | 3D Box Split 1 | `3B28FE15-13ED-4BF8-A844-9DFDAC64816B` | — |  |  | not implemented |
@@ -128,7 +135,7 @@ MAD mean / worst frame over the item window at 960x540 (harness with `JB_FIDELIT
 | 3D Carousel Spin Right Close | `0BC474A4-AFFE-470D-8E52-6981F32C7003` | — |  |  | not implemented |
 | 3D Fast Box Right 01 | `93240F33-7900-4971-B90D-442502ED3A48` | — |  |  | not implemented |
 | 3D Fast Box Right 02 | `A9CD0FFC-0A62-42BC-B595-2E85DD1F8F3A` | — |  |  | not implemented |
-| 3D Flip | `EC14B694-D0AD-425A-806C-BA9D288341CC` | — |  |  | not implemented |
+| 3D Flip | `EC14B694-D0AD-425A-806C-BA9D288341CC` | `jb.flip_3d_tilt` | 2.88 | 4.3 |  |
 | 3D Frame Shift | `8C84620F-C904-4702-B697-F87B224048B9` | — |  |  | not implemented |
 | 3D Page Flip Left | `A985CC65-0A2B-440F-B437-6F802A0305B0` | — |  |  | not implemented |
 | 3D Screens | `94860FC5-0D3E-42F4-A8BB-AE99CFBE5DF5` | — |  |  | not implemented |
@@ -143,21 +150,21 @@ MAD mean / worst frame over the item window at 960x540 (harness with `JB_FIDELIT
 | Card Spin Left | `50ADFEE2-1269-4B1E-8D44-33CC0620070D` | — |  |  | not implemented |
 | Card Switch | `7F1B4870-2C3C-4E61-9066-2F993F00594E` | — |  |  | not implemented |
 | Collage Turn | `17B92348-899F-4BDA-B020-C5CA9081B00F` | — |  |  | not implemented |
-| Cube Down | `59A8A58F-31CB-4740-9F9D-0DCD3CB7AF92` | — |  |  | not implemented |
+| Cube Down | `59A8A58F-31CB-4740-9F9D-0DCD3CB7AF92` | `jb.cube_turn_down` | 6.47 | 8.4 |  |
 | Cube Facets Down | `FAC11A67-7C08-497E-B979-1EF1F923DEF6` | — |  |  | not implemented |
 | Cube Facets Left | `55C7899F-8326-4E0E-8A14-BAD17A8757E5` | — |  |  | not implemented |
 | Cube Facets Right | `C73CB5B2-6885-48E1-A97D-9DC8C8D1E3BD` | — |  |  | not implemented |
 | Cube Facets Up | `09FB622E-E770-4E86-BC86-A6F3BDFACF75` | — |  |  | not implemented |
-| Cube Left | `A6B6286F-F9FE-4F9F-8C45-538EEC05F620` | — |  |  | not implemented |
-| Cube Up | `5107B490-0EA4-47E1-8343-BD779895685F` | — |  |  | not implemented |
-| Diagonal Slice Reveal | `E5C74593-D113-47B5-B174-252E1716826C` | — |  |  | not implemented |
+| Cube Left | `A6B6286F-F9FE-4F9F-8C45-538EEC05F620` | `jb.cube_turn_left` | 5.26 | 7.1 |  |
+| Cube Up | `5107B490-0EA4-47E1-8343-BD779895685F` | `jb.cube_turn_up` | 6.23 | 7.8 |  |
+| Diagonal Slice Reveal | `E5C74593-D113-47B5-B174-252E1716826C` | `jb.diagonal_slice_reveal` | 3.18 | 11.4 |  |
 | Diagonal Slide | `FC0A3B6C-84ED-40EA-B83C-E8043A8BD880` | — |  |  | not implemented |
 | Domino Scroll | `64129C4C-9142-481B-B3AF-933947088D7C` | — |  |  | not implemented |
-| Flip Down | `804982E3-3FC8-425E-B43A-6444F2C53B79` | — |  |  | not implemented |
+| Flip Down | `804982E3-3FC8-425E-B43A-6444F2C53B79` | `jb.flip_down` | 3.62 | 5.1 |  |
 | Flip Down | `0A8EF5CE-6993-474F-9609-F0C3B2ADF0C1` | — |  |  | not implemented |
-| Flip Left | `F309557C-8B97-499A-9696-29B0FDD6367C` | — |  |  | not implemented |
+| Flip Left | `F309557C-8B97-499A-9696-29B0FDD6367C` | `jb.flip_left` | 2.99 | 3.8 |  |
 | Flip Pages Right | `BE89907B-B1DB-4D6B-A00C-D0F268F3F852` | — |  |  | not implemented |
-| Flip Right | `7B680F51-1B11-480D-A4DE-C5065188BBCC` | — |  |  | not implemented |
+| Flip Right | `7B680F51-1B11-480D-A4DE-C5065188BBCC` | `jb.flip_right` | 2.91 | 3.7 |  |
 | Fold Transition 01 | `6912AFD8-AF5E-4E98-9C99-1D627627B4D6` | — |  |  | not implemented |
 | Fold Transition 02 | `381884E7-ADD2-43EE-9316-D0C7F159C3B5` | — |  |  | not implemented |
 | Fold Transition 03 | `621D9BE3-3FBD-488E-823E-A48E37FE24F7` | — |  |  | not implemented |
@@ -191,8 +198,8 @@ MAD mean / worst frame over the item window at 960x540 (harness with `JB_FIDELIT
 | Fisheye Roll Up Right | `464f09fe-10cd-4701-b2f5-8c5ae4463086` | — |  |  | not implemented |
 | Cross Split | `75A09E8D-21D1-4c4e-AEA9-EB9CEC11A644` | — |  |  | not implemented |
 | DoorWay | `976B2502-3B22-4dd4-AEB4-0AAA2C1E5AC8` | — |  |  | not implemented |
-| Skew Left Split | `5003D879-7930-44fa-A333-F21F62564709` | — |  |  | not implemented |
-| Skew Right Split | `2D4099D2-9B28-437f-8FEB-2A7E25C0B549` | — |  |  | not implemented |
-| Cube Right | `0FCB240F-5328-4e85-869A-2D989F50D387` | `jb.cube_turn_right` | 5.36 | 6.3 |  |
+| Skew Left Split | `5003D879-7930-44fa-A333-F21F62564709` | `jb.skew_split_left` | 2.22 | 3.1 |  |
+| Skew Right Split | `2D4099D2-9B28-437f-8FEB-2A7E25C0B549` | `jb.skew_split_right` | 2.09 | 2.8 |  |
+| Cube Right | `0FCB240F-5328-4e85-869A-2D989F50D387` | `jb.cube_turn_right` | 4.85 | 5.7 |  |
 
-2 of 138 items implemented; 0 within mean < 3 and worst < 10.
+23 of 138 items implemented; 6 within mean < 3 and worst < 10.

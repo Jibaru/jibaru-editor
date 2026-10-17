@@ -31,7 +31,7 @@ const SHADER: &str = include_str!("lane2/layers.wgsl");
 include!("lane2/library_ids.rs");
 const TABLES: &str = include_str!("lane2/tables.txt");
 
-/// Layers per pass (9 uniform slots each, 32 available).
+/// Layers per pass (10 uniform slots each, 32 available).
 const PER_PASS: usize = 3;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -62,6 +62,8 @@ pub struct Key {
     pub a: f32,
     /// Corner displacement over the shutter (motion blur), screen uv.
     pub bc: [f32; 8],
+    /// Strip mask `[nx, ny, lo, hi]` in source uv (see layers.wgsl); zero n: the layer's own.
+    pub strip: [f32; 4],
 }
 
 impl Key {
@@ -78,6 +80,7 @@ impl Key {
             o: m3(self.o, b.o),
             a: m(self.a, b.a),
             bc: m8(self.bc, b.bc),
+            strip: std::array::from_fn(|i| m(self.strip[i], b.strip[i])),
         }
     }
 }
@@ -89,6 +92,8 @@ pub struct Layer {
     /// Perspective (homography) pin instead of the bilinear one.
     pub perspective: bool,
     pub rect: [f32; 4],
+    /// Strip clip in source uv `lo <= n . q <= hi` as `[nx, ny, lo, hi]` (zero n: none).
+    pub strip: [f32; 4],
     pub keys: Vec<Key>,
 }
 
@@ -130,8 +135,8 @@ impl Table {
 }
 
 /// Parses `lane2/tables.txt`: `item <id>` sections with `bg r g b`, `dp x`,
-/// `layer <A|B|S> <clip|mirror|wrap> [homo] u0 v0 u1 v1` and `k` key lines
-/// `p c0x c0y c1x c1y c2x c2y c3x c3y gr gg gb gur gug gub gvr gvg gvb or og ob a [bc x8]`
+/// `layer <A|B|S> <clip|mirror|wrap> [homo] u0 v0 u1 v1 [nx ny lo hi]` and `k` key lines
+/// `p c0x c0y c1x c1y c2x c2y c3x c3y gr gg gb gur gug gub gvr gvg gvb or og ob a [bc x8 [strip x4]]`
 /// (gains and offsets in display 0..1).
 pub fn parse_tables(text: &str) -> Result<Vec<Table>, String> {
     let mut out: Vec<Table> = Vec::new();
@@ -197,7 +202,8 @@ pub fn parse_tables(text: &str) -> Result<Vec<Table>, String> {
                         let perspective = rest.get(2) == Some(&"homo");
                         let v = nums(&rest[if perspective { 3 } else { 2 }..])?;
                         let rect = if v.len() >= 4 { [v[0], v[1], v[2], v[3]] } else { [0.0, 0.0, 1.0, 1.0] };
-                        t.layers.push(Layer { src, edge, perspective, rect, keys: Vec::new() });
+                        let strip = if v.len() >= 8 { [v[4], v[5], v[6], v[7]] } else { [0.0; 4] };
+                        t.layers.push(Layer { src, edge, perspective, rect, strip, keys: Vec::new() });
                     }
                     "k" => {
                         let v = nums(&rest)?;
@@ -214,8 +220,10 @@ pub fn parse_tables(text: &str) -> Result<Vec<Table>, String> {
                             o: a3(18),
                             a: v[21],
                             bc: std::array::from_fn(|i| v.get(22 + i).copied().unwrap_or(0.0)),
+                            strip: std::array::from_fn(|i| v.get(30 + i).copied().unwrap_or(0.0)),
                         };
                         let key = if v.len() >= 30 { key } else { Key { bc: [0.0; 8], ..key } };
+                        let key = if v.len() >= 34 { key } else { Key { strip: [0.0; 4], ..key } };
                         t.layers.last_mut().ok_or(format!("line {}: key before layer", n + 1))?.keys.push(key);
                     }
                     other => return Err(format!("line {}: unknown record {other:?}", n + 1)),
@@ -262,7 +270,7 @@ pub fn encode_table(table: &Table, cx: &mut FxCx<'_>, io: &FxIo<'_>) {
         u.e[0] = [table.bg[0], table.bg[1], table.bg[2], chunk.len() as f32];
         u.e[1] = [if prev.is_some() { 1.0 } else { 0.0 }, 0.0, 0.0, 0.0];
         for (li, (l, k)) in chunk.iter().enumerate() {
-            let s = li * 9;
+            let s = li * 10;
             let taps = blur_taps(&k.bc);
             let src = match l.src {
                 Src::A => 0.0,
@@ -283,6 +291,7 @@ pub fn encode_table(table: &Table, cx: &mut FxCx<'_>, io: &FxIo<'_>) {
             u.p[s + 6] = [k.gv[0], k.gv[1], k.gv[2], edge + if l.perspective { 4.0 } else { 0.0 }];
             u.p[s + 7] = [k.o[0], k.o[1], k.o[2], taps as f32];
             u.p[s + 8] = l.rect;
+            u.p[s + 9] = if k.strip[..2] != [0.0, 0.0] { k.strip } else { l.strip };
         }
         let target = if ci == last { io.out.clone() } else { cx.temp_like(io.out) };
         let mut pass = Pass::full(shader(), &target, u);
