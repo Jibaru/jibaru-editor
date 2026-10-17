@@ -373,7 +373,7 @@ pub static LOOKS: &[LookSpec] = &[
         lut: Some(include_bytes!("luts/look_scanlines.lut") as &[u8]),
         field: None,
         tiles: 1,
-        lines: Some((12.9860, [1.0805, 1.0612, 0.9194, 0.9058, 0.8968, 0.8930, 0.8922, 0.8974, 0.8930, 0.9045, 0.9837, 1.0727, 1.0969, 1.0870, 1.0907, 1.0859])),
+        lines: Some((12.9860, [1.0773, 1.0597, 0.9129, 0.9020, 0.8911, 0.8868, 0.8860, 0.8933, 0.8867, 0.8994, 0.9795, 1.0703, 1.0967, 1.0850, 1.0862, 1.0832])),
     },
     LookSpec {
         id: "jb.l4.look_bright_wash",
@@ -416,6 +416,17 @@ pub static LOOKS: &[LookSpec] = &[
         description: "Dark frame with a central spotlight (static approximation).",
         lut: Some(include_bytes!("luts/look_spotlight.lut") as &[u8]),
         field: Some(include_bytes!("luts/look_spotlight.field") as &[u8]),
+        tiles: 1,
+        lines: None,
+    },
+    LookSpec {
+        id: "jb.l4.look_mono_signal",
+        name: "Mono Signal",
+        kind: FxKind::Effect,
+        category: "Fitted Looks",
+        description: "Monochrome signal grade (the periodic row glitches are not reproduced).",
+        lut: Some(include_bytes!("luts/look_mono_signal.lut") as &[u8]),
+        field: None,
         tiles: 1,
         lines: None,
     },
@@ -477,4 +488,5 @@ pub const LIB_FX: &[&str] = &[
     "jb.l4.look_old_movie_tone",
     "jb.l4.look_pencil_tone",
     "jb.l4.look_spotlight",
+    "jb.l4.look_mono_signal",
 ];

@@ -75,7 +75,7 @@ floor. Stand-ins score far above it wherever the artwork covers the frame.
 | Color Dissolve 3 | `jb.block_glow_dissolve` | global mix stand-in | 18.28 | 51.78 | 5.04 | +13.24 |  |
 | Color Distance | `jb.checker_scatter` | global mix stand-in | 9.78 | 28.52 | 5.07 | +4.71 |  |
 | Colorful Transition Pack Transition 01 | `jb.liquid_blob_wipe` | global mix stand-in | 11.73 | 50.88 | 4.89 | +6.84 |  |
-| Colorful Transitions Vol 06 Transition 16 | `jb.color_rings` | procedural rings | 25.72 | 46.10 | 4.80 | +20.92 | inner ring radii and colours measured, outer bands estimated; coverage from the global fit |
+| Colorful Transitions Vol 06 Transition 16 | `jb.color_rings` | global mix stand-in | 47.83 | 69.98 | 4.80 | +43.03 |  |
 | Comic Film Flash | `jb.ink_brush_sweep` | global mix stand-in | 21.79 | 53.22 | 4.71 | +17.09 |  |
 | Comic Style 3 | `jb.comic_panels` | global mix stand-in | 40.53 | 51.20 | 5.21 | +35.32 |  |
 | Cosmic Gallery | `jb.floating_gallery` | global mix stand-in | 52.52 | 84.30 | 5.28 | +47.24 |  |
@@ -84,7 +84,7 @@ floor. Stand-ins score far above it wherever the artwork covers the frame.
 | Creepy Pack Transition 03 | `jb.lantern_sweep` | global mix stand-in | 36.01 | 64.97 | 4.85 | +31.16 |  |
 | Cross Whisk | `jb.block_whisk` | global mix stand-in | 15.43 | 31.54 | 4.54 | +10.89 |  |
 | Crystal Ball 1 | `jb.crystal_ball_iris` | lens ball | 7.37 | 13.62 | 4.78 | +2.59 | ellipse → circle iris with bulge and mid flash colours |
-| Crystal Ball 2 | `jb.crystal_ball_lens` | lens ball over clip | 15.58 | 35.19 | 4.64 | +10.94 | bulge only; the ball's rim highlight is not drawn |
+| Crystal Ball 2 | `jb.crystal_ball_lens` | global mix stand-in | 17.76 | 34.50 | 4.64 | +13.12 |  |
 | Cut Off | `jb.cut_off` | global mix stand-in | 12.52 | 37.13 | 4.82 | +7.70 |  |
 | Depth Slice | `jb.depth_panels` | global mix stand-in | 43.24 | 66.01 | 4.58 | +38.66 |  |
 | Diagonal Slice | `jb.split_slide` | global mix stand-in | 12.27 | 36.47 | 5.10 | +7.17 |  |
@@ -129,13 +129,13 @@ floor. Stand-ins score far above it wherever the artwork covers the frame.
 | Grammy Award 2024 Transition 02 | `jb.gold_frames_zoom` | global mix stand-in | 15.91 | 41.89 | 4.79 | +11.12 |  |
 | Grunge Scribble Vlog Transition 02 | `jb.torn_paper_wipe` | global mix stand-in | 10.30 | 42.70 | 4.81 | +5.49 |  |
 | Halloween Colorful Transition 04 | `jb.pumpkin_face_wipe` | global mix stand-in | 38.93 | 64.98 | 4.69 | +34.24 |  |
-| Halloween Colorful Transition 06 | `jb.skull_wedge_wipe` | radial wipe + grade | 11.19 | 15.68 | 4.69 | +6.50 | skull sprite not drawn |
-| Halloween Colorful Transition 09 | `jb.witch_hat_wipe` | radial wipe + grade | 8.44 | 17.36 | 4.69 | +3.75 | hat sprite not drawn; the stand-in scored 8.07 (the sprite's average was in it) |
-| Halloween Colorful Transition 15 | `jb.pumpkin_pop_wipe` | radial wipe | 11.42 | 16.52 | 4.70 | +6.72 | pumpkin sprite not drawn |
+| Halloween Colorful Transition 06 | `jb.skull_wedge_wipe` | global mix stand-in | 19.82 | 32.39 | 4.69 | +15.13 |  |
+| Halloween Colorful Transition 09 | `jb.witch_hat_wipe` | global mix stand-in | 8.07 | 28.01 | 4.69 | +3.38 |  |
+| Halloween Colorful Transition 15 | `jb.pumpkin_pop_wipe` | global mix stand-in | 14.89 | 34.98 | 4.70 | +10.19 |  |
 | Halloween Colorful Transition 17 | `jb.skull_hat_sweep` | global mix stand-in | 19.58 | 40.38 | 4.68 | +14.90 |  |
 | Halloween Colorful Transition 21 | `jb.bat_wing_wipe` | global mix stand-in | 14.18 | 45.53 | 4.67 | +9.51 |  |
 | Halloween Colorful Transition 23 | `jb.ghost_curve_wipe` | radial wipe + grade | 12.92 | 18.19 | 4.69 | +8.23 | ghost sprite not drawn |
-| Halloween Colorful Transition 25 | `jb.cat_curve_wipe` | radial wipe + grade | 13.02 | 17.73 | 4.70 | +8.32 | cat sprite not drawn |
+| Halloween Colorful Transition 25 | `jb.cat_curve_wipe` | global mix stand-in | 23.14 | 33.85 | 4.70 | +18.45 |  |
 | Halloween Film Pack Transition 02 | `jb.rust_slash` | global mix stand-in | 10.15 | 38.29 | 4.82 | +5.33 |  |
 | Halloween Film Transition 01 | `jb.rust_smear` | global mix stand-in | 9.40 | 46.79 | 4.96 | +4.44 |  |
 | Halloween Horrors Pack Transition 02 | `jb.ghost_crowd_rise` | global mix stand-in | 23.87 | 46.77 | 4.87 | +19.00 |  |
@@ -148,7 +148,7 @@ floor. Stand-ins score far above it wherever the artwork covers the frame.
 | Horizontal Slice | `jb.slice_slide` | strip slide | 9.41 | 19.11 | 4.97 | +4.44 | 10 strips, fitted edges and easing exponents; mid frames 15–19 (strip motion blur not modelled) |
 | Horrible Colorful Transition 02 | `jb.glitch_bands` | global mix stand-in | 15.69 | 39.61 | 4.70 | +10.99 |  |
 | Horrible Colorful Transition 13 | `jb.ghost_face_flash` | global mix stand-in | 29.39 | 68.68 | 4.71 | +24.68 |  |
-| Horrible Colorful Transition 24 | `jb.witch_silhouette_wipe` | radial wipe + grade | 12.36 | 16.53 | 4.67 | +7.69 | witch silhouette not drawn |
+| Horrible Colorful Transition 24 | `jb.witch_silhouette_wipe` | global mix stand-in | 20.30 | 30.50 | 4.67 | +15.64 |  |
 | Horrible Film Pack Transition 03 | `jb.bloody_hand` | global mix stand-in | 10.66 | 38.74 | 4.95 | +5.71 |  |
 | Horrible Neon Party Transition 01 | `jb.pumpkin_pile` | global mix stand-in | 33.08 | 50.55 | 5.21 | +27.86 |  |
 | Horrible Party Transition 01 | `jb.bandage_wrap` | global mix stand-in | 17.07 | 38.39 | 4.66 | +12.41 |  |
