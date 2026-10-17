@@ -13,7 +13,6 @@ pub const FILMORA_LANE3: &[(&str, &str, &str)] = &[
     ("F10812CF-3557-4FD2-93F6-A00497F1D2C8", "jb.mono_dissolve", "B&W Dissolve"),
     ("0CB4F843-C944-4AF9-8180-ECEC83648E3B", "jb.chevron_sweep", "Black Friday Sale 02 Transition 06"),
     ("14FA525B-900A-402f-88B3-F28EEAFC31D8", "jb.blind_bars", "Blind 1"),
-    ("A3BE2831-4AE8-46C4-9253-BB1744C6E67D", "jb.gold_sparkle_burst", "Blue Sparkling Awards Transition 04"),
     ("E104563D-569C-4C06-8923-927B7BBDBF32", "jb.carousel_down", "Carousel Down"),
     ("A5E8B3CC-4492-4170-90F3-8DE7ADE80232", "jb.carousel_down_rebound", "Carousel Down Rebound"),
     ("89215005-F2DC-4D85-8EE2-1F514EB42263", "jb.carousel_left", "Carousel Left"),

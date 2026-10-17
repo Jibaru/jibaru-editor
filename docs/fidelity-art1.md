@@ -59,6 +59,7 @@ plus the rest of the project).
 | Burning Dash Transition 02 | `748d17c3-eec2-f111-9ef4-50ebf65600b6` | `jb.flaming_ball_dash_2` | 14.46 / 28.8 | 13.32 / 33.4 | 3.21 |
 | Burning Dash Transition 03 | `738d17c3-eec2-f111-9ef4-50ebf65600b6` | `jb.flaming_ball_dash_3` | 18.46 / 34.8 | 16.57 / 43.7 | 2.88 |
 | Burning Dash Transition 04 | `728d17c3-eec2-f111-9ef4-50ebf65600b6` | `jb.flaming_ball_dash_4` | 12.24 / 34.3 | 10.82 / 48.3 | 2.83 |
+| Blue Sparkling Awards Transition 04 | `A3BE2831-4AE8-46C4-9253-BB1744C6E67D` | `jb.gold_bokeh_beam` | 17.53 / 28.7 | 17.49 / 28.2 | 3.25 |
 <!-- transitions -->
 
 Effects (previously unimplemented, so "before" is the untouched clip), each
@@ -88,5 +89,15 @@ and when the reference has it); the contact sheets are the main check.
 
 ## Remaining items
 
-Still on their stand-in (or unimplemented) until an art1 version passes both
-checks; see the lane docs for their current mapping.
+Still on their stand-in (or unimplemented), with the reason. Drafts were
+tried for several; an alias moves only when the draft looks right *and*
+measures no worse.
+
+| Filmora item | current mapping | why it stays |
+|---|---|---|
+| Light Letters Pack Transition 02 | `jb.leak_wash_05` | own-art bokeh bloom drafted (23.2 vs 20.6): soft blobs cost MAD wherever they miss the reference's blobs |
+| Comic Film Flash | `jb.ink_brush_sweep` (lane 3) | procedural ink-streak wipe looks closer but measures 22.2 vs 13.8: stroke edges do not land on the reference's |
+| Cosmic Gallery | `jb.floating_gallery` (lane 3) | floating-card gallery drafted, 32.9 vs 30.0: card paths are approximate |
+| Technology Light Transition 05 | `jb.shape_burst_wash_25` | ray burst over the colour field drafted, 16.1 vs 14.9 |
+| Neon Valentine Promo 07, Old Film 02, Horrible Neon Party 01, Energy Sports 02, Halloween Film 01/02, Horrible Film 03 | lane 1 / lane 3 stand-ins | dense drawn objects (hearts, pumpkins, claws, debris, bars, film footage) whose shapes would have to match per pixel; not attempted yet |
+| Film Grain Style 01, Film Grit 1/2, Flashbulbs 02, Fluorescent Flash | lane 3 stand-ins | stand-ins already within 1-3x the floor (3.6-10.6 MAD); grain/flash art would add MAD |

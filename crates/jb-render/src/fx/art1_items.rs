@@ -36,6 +36,7 @@ pub const LIB_TRANSITIONS: &[&str] = &[
     "jb.flaming_ball_dash_2",
     "jb.flaming_ball_dash_3",
     "jb.flaming_ball_dash_4",
+    "jb.gold_bokeh_beam",
 ];
 
 /// Library group of the art1 effects (`library.rs`).
@@ -82,6 +83,7 @@ pub fn specs() -> Vec<ArtSpec> {
         art!("jb.flaming_ball_dash_2", "Flaming Ball Dash 2", "Creative", Transition, "flaming_ball_dash_2", "A ball bounces up from the lower left and rushes at the camera until it fills the frame, cutting to the new clip."),
         art!("jb.flaming_ball_dash_3", "Flaming Ball Dash 3", "Creative", Transition, "flaming_ball_dash_3", "A small ball wrapped in fire streaks in from the distance and grows until it fills the frame, cutting to the new clip."),
         art!("jb.flaming_ball_dash_4", "Flaming Ball Dash 4", "Creative", Transition, "flaming_ball_dash_4", "A ball flies straight at the camera in a ring of kicked-up dust until it fills the frame, then cuts to the new clip."),
+        art!("jb.gold_bokeh_beam", "Gold Bokeh Beam", "Light", Transition, "gold_bokeh_beam", "A star flares and a thin beam drops through the frame, which floods with golden bokeh while a bright outline tumbles past."),
     ]
 }
 

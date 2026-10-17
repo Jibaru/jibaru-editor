@@ -36,6 +36,7 @@ pub const FILMORA_ART1: &[(&str, &str, &str)] = &[
     ("748d17c3-eec2-f111-9ef4-50ebf65600b6", "jb.flaming_ball_dash_2", "Burning Dash Transition 02"),
     ("738d17c3-eec2-f111-9ef4-50ebf65600b6", "jb.flaming_ball_dash_3", "Burning Dash Transition 03"),
     ("728d17c3-eec2-f111-9ef4-50ebf65600b6", "jb.flaming_ball_dash_4", "Burning Dash Transition 04"),
+    ("A3BE2831-4AE8-46C4-9253-BB1744C6E67D", "jb.gold_bokeh_beam", "Blue Sparkling Awards Transition 04"),
 ];
 
 pub fn register(r: &mut Registry) {
