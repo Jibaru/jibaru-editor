@@ -12,10 +12,10 @@ use crate::fx::{info, shader, FxCx, ShaderSrc, Uniforms};
 use crate::registry::{Effect, FxInfo, FxIo, FxKind, ParamSpec, Registry};
 
 /// Emits a keyframe table as WGSL: `fn kf_<name>(p) -> vec4f` (values 0..3)
-/// and, for rows with more than four values, `fn kf_<name>_1(p) -> vec4f`
-/// (values 4..7). Missing values read as 0.
+/// and, for wider rows, `fn kf_<name>_<j>(p) -> vec4f` (values 4j..4j+3).
+/// Missing values read as 0.
 pub fn table<const K: usize>(name: &str, rows: &[[f32; K]]) -> String {
-    assert!((2..=9).contains(&K) && !rows.is_empty(), "table {name}: 1..8 values per row");
+    assert!(K >= 2 && !rows.is_empty(), "table {name}: at least one value per row");
     let n = rows.len();
     let v4 = |r: &[f32; K], o: usize| {
         let g = |i: usize| r.get(1 + o + i).copied().unwrap_or(0.0);
@@ -25,7 +25,7 @@ pub fn table<const K: usize>(name: &str, rows: &[[f32; K]]) -> String {
     // read back stale values on Metal (interpolation stuck on the row).
     let ps: Vec<String> = rows.iter().map(|r| format!("vec4f({:?}, 0.0, 0.0, 0.0)", r[0])).collect();
     let mut s = format!("var<private> KP_{name}: array<vec4f, {n}> = array<vec4f, {n}>({});\n", ps.join(", "));
-    let halves = if K > 5 { 2 } else { 1 };
+    let halves = (K - 1).div_ceil(4);
     for h in 0..halves {
         let vals: Vec<String> = rows.iter().map(|r| v4(r, 4 * h)).collect();
         s.push_str(&format!(
@@ -51,12 +51,12 @@ fn kf_{name}(p: f32) -> vec4f {{
 "#,
         last = n - 1
     ));
-    if halves == 2 {
+    for h in 1..halves {
         s.push_str(&format!(
-            r#"fn kf_{name}_1(p: f32) -> vec4f {{
+            r#"fn kf_{name}_{h}(p: f32) -> vec4f {{
     let r = kfi_{name}(p);
     let i = i32(r.x);
-    return mix(KV1_{name}[i], KV1_{name}[min(i + 1, {last})], r.y);
+    return mix(KV{h}_{name}[i], KV{h}_{name}[min(i + 1, {last})], r.y);
 }}
 "#,
             last = n - 1
@@ -152,6 +152,53 @@ fn fx(uv: vec2f) -> vec4f {{
 }}
 "#,
         table("g", rows)
+    )
+}
+
+/// Global mix plus a smooth light field: rows `[p, aA, aL, bB, bL, c...]`
+/// where `c` holds, per channel (r, g, b in turn), the coefficients of a
+/// polynomial of degree `deg` in `x = u - 1/2`, `y = v - 1/2` (terms
+/// `x^i y^j`, `i` outer, `j` inner, `i + j <= deg`) added to the global mix.
+/// The field reproduces the broad shape of glows, leaks and colour washes.
+pub fn field_mix<const K: usize>(rows: &[[f32; K]], deg: usize) -> String {
+    let nb = (deg + 1) * (deg + 2) / 2;
+    assert_eq!(K, 5 + 3 * nb, "field_mix: row width");
+    let chunks = (K - 1).div_ceil(4);
+    // Unrolled: value i of the row is component i % 4 of chunk i / 4.
+    let val = |i: usize| format!("k{}.{}", i / 4, ["x", "y", "z", "w"][i % 4]);
+    let mut body = String::new();
+    for j in 0..chunks {
+        let f = if j == 0 { "kf_g(p)".to_string() } else { format!("kf_g_{j}(p)") };
+        body.push_str(&format!("    let k{j} = {f};\n"));
+    }
+    let mut t = 0;
+    for i in 0..=deg {
+        for j in 0..=(deg - i) {
+            let (r, g, b) = (val(4 + t), val(4 + nb + t), val(4 + 2 * nb + t));
+            let term = (0..i).map(|_| "x").chain((0..j).map(|_| "y")).collect::<Vec<_>>().join(" * ");
+            let term = if term.is_empty() { "1.0".to_string() } else { term };
+            body.push_str(&format!("    f = f + ({term}) * vec3f({r}, {g}, {b});\n"));
+            t += 1;
+        }
+    }
+    format!(
+        r#"{}
+fn fx(uv: vec2f) -> vec4f {{
+    let p = prog();
+    let x = uv.x - 0.5;
+    let y = uv.y - 0.5;
+    var f = vec3f(0.0);
+{body}    let a = l3_da(uv);
+    let bb = l3_db(uv);
+    let c = {} * a + {} * l3_luma(a) + {} * bb + {} * l3_luma(bb) + f;
+    return l3_out(c);
+}}
+"#,
+        table("g", rows),
+        val(0),
+        val(1),
+        val(2),
+        val(3)
     )
 }
 
