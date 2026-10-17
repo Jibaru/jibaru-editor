@@ -9,9 +9,11 @@ use crate::registry::Registry;
 /// units, `ax = R (1 + m (aspect - 1))`, `ay = R`, so `m = 1` has the frame's
 /// proportions and `m = 0` is a circle of radius `R`) the current clip is seen through a bulge: at normalised radius `r`
 /// the sample point is divided by `k (1 - b + b sqrt(1 - r^2))`; the colour is
-/// `g X + o` (display space) and the outside is black. Rows
+/// `g X + o` (display space) and the outside is black (or the plain clip with
+/// `clip_outside`). Rows
 /// `[p, R, m, k, b, g, o.rgb]`; `cut` is the progress of the switch to B.
-fn lens_ball(rows: &[[f32; 9]], cut: f32) -> String {
+fn lens_ball(rows: &[[f32; 9]], cut: f32, clip_outside: bool) -> String {
+    let outside = if clip_outside { format!("l3_side(p >= {cut:?}, uv)") } else { "vec4f(0.0, 0.0, 0.0, 1.0)".to_string() };
     format!(
         r#"{}
 fn fx(uv: vec2f) -> vec4f {{
@@ -24,7 +26,7 @@ fn fx(uv: vec2f) -> vec4f {{
     let ax = ay * (1.0 + m * (A - 1.0));
     let c = to_c(uv);
     let rr = length(vec2f(c.x / ax, c.y / ay));
-    if (rr > 1.0) {{ return vec4f(0.0, 0.0, 0.0, 1.0); }}
+    if (rr > 1.0) {{ return {outside}; }}
     let z = sqrt(max(1.0 - rr * rr, 0.0));
     let mm = max(k0.z * (1.0 - k0.w + k0.w * z), 1e-3);
     let q = clamp(from_c(c / mm), vec2f(0.0), vec2f(1.0));
@@ -97,7 +99,15 @@ fn items() -> Vec<Item> {
         "The clip rounds its corners and shrinks into a glass ball on black, seen magnified through the lens; \
          the ball flares to a bright tinted glow, switches to the new clip and grows back out to full frame. \
          Fitted frame by frame on Filmora's export of Crystal Ball 1.",
-        lens_ball(D::CRYSTAL_BALL_IRIS, 29.5 / 60.0),
+        lens_ball(D::CRYSTAL_BALL_IRIS, 29.5 / 60.0, false),
+    ),
+    Item::new(
+        "jb.crystal_ball_lens",
+        "Crystal Ball Lens",
+        "Shapes",
+        "A glass lens swells in the middle of the clip, magnifying it, glows into a bright ball at the cut and \
+         opens again over the new clip. Fitted frame by frame on Filmora's export of Crystal Ball 2.",
+        lens_ball(D::CRYSTAL_BALL_LENS, 29.5 / 60.0, true),
     ),
     ]
 }
