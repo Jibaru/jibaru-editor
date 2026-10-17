@@ -55,6 +55,8 @@ pub const FILMORA_LANE2: &[(&str, &str)] = &[
     ("BCD1F0EA-3EEA-EBE7-EAC8-6FE53723769E", "jb.camera_cards_8"),
     // 3D Card
     ("1C56ABE1-F948-4426-AC71-6710D6362312", "jb.card_3d"),
+    // Card Spin Left
+    ("50ADFEE2-1269-4B1E-8D44-33CC0620070D", "jb.card_spin_left"),
     // Card Switch
     ("7F1B4870-2C3C-4E61-9066-2F993F00594E", "jb.card_switch"),
     // 3D Carousel Card Slide Left
@@ -151,6 +153,8 @@ pub const FILMORA_LANE2: &[(&str, &str)] = &[
     ("75729E2E-A47F-4E0C-8AC8-4DDA210C158B", "jb.fold_4"),
     // Fold Transition 05
     ("D1BA4DE3-3FCA-480B-B8EA-4A1048A389DF", "jb.fold_5"),
+    // Fold Transition 07
+    ("02413DD1-31AC-4BE0-8334-E7067BBB9EE8", "jb.fold_7"),
     // Fold Transition 08
     ("96262F03-7368-4610-91AB-6B25D29322D2", "jb.fold_8"),
     // Glass Panel Flash
@@ -215,6 +219,8 @@ pub const FILMORA_LANE2: &[(&str, &str)] = &[
     ("563C3469-9210-4B7F-97D9-95C27A1105FA", "jb.slice_transform_3d"),
     // History Slideshow Transition 01
     ("770A5643-34DC-435D-B35B-722B21A5A27D", "jb.slideshow_history"),
+    // Study And Education Slideshow Transition 01
+    ("6BFD47C0-51ED-472B-9CB2-510D21FCA254", "jb.slideshow_shapes"),
     // Smooth Slideshow Transition 05
     ("DD93DBBA-7FB8-474A-B599-71E4E08B69D5", "jb.slideshow_smooth_5"),
     // 3D Slideshow Style 1
