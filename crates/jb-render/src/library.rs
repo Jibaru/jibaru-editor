@@ -290,6 +290,10 @@ pub const GROUPS: &[LibraryGroup] = &[
     g(F, "Travel", &["jb.tropical", "jb.bosque", "jb.playa", "jb.neon_noche", "jb.nordico"]),
     // Lane 4: fitted looks, camera effects and reveal transitions.
     g(F, "Fitted Looks", crate::fx::lane4_all::looks::LIB_IDS),
+    g(T, "Ink & Brush", crate::fx::lane4_all::reveal::LIB_IDS),
+    g(E, "Camera Motion", crate::fx::lane4_all::camera::LIB_IDS),
+    g(E, "Stylized", crate::fx::lane4_all::LIB_STYLIZED),
+    g(E, "Fitted Effects", crate::fx::lane4_all::looks::LIB_FX),
 ];
 
 /// [`GROUPS`] followed by the groups contributed by fitted item sets.

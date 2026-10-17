@@ -36,6 +36,8 @@ pub struct LookSpec {
     pub lut: Option<&'static [u8]>,
     /// Spatial gain/offset field blob (see the module docs).
     pub field: Option<&'static [u8]>,
+    /// The frame repeated `tiles × tiles` times (video wall), 1 = off.
+    pub tiles: u32,
 }
 
 const BODY: &str = r#"
@@ -51,7 +53,10 @@ fn l4_field(uv: vec2f, row0: i32) -> vec3f {
     return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
 }
 fn fx(uv: vec2f) -> vec4f {
-    let d = to_disp(sa(uv));
+    var d = to_disp(sa(uv));
+    if (u.e0.z > 1.5) {
+        d = to_disp(sa(fract(uv * u.e0.z)));
+    }
     var c = clamp(d.rgb, vec3f(0.0), vec3f(1.0));
     let n = u.e0.x;
     if (n > 1.5) {
@@ -104,8 +109,25 @@ pub fn encode_look(cx: &mut FxCx<'_>, spec: &LookSpec, a: &crate::pool::Tex, out
     u.e[0][0] = if lut.is_some() { LUT_N as f32 } else { 0.0 };
     let field = spec.field.map(|bytes| cx.aux_texture(&format!("l4field:{}", spec.id), || field_image(bytes)));
     u.e[0][1] = if field.is_some() { 1.0 } else { 0.0 };
+    let small;
+    let mut src = a;
+    if spec.tiles > 1 {
+        // Box-filtered downscale first, so the tiles do not alias.
+        u.e[0][2] = spec.tiles as f32;
+        let n = spec.tiles;
+        let (w, h) = ((a.width / n).max(1), (a.height / n).max(1));
+        let mut cur = a.clone();
+        while cur.width / 2 >= w {
+            let half = cx.temp((cur.width / 2).max(1), (cur.height / 2).max(1));
+            cx.copy(&cur, &half);
+            cur = half;
+        }
+        small = cx.temp(w, h);
+        cx.copy(&cur, &small);
+        src = &small;
+    }
     let mut pass = Pass::full(shader_src(), out, u);
-    pass.a = Bind::Tex(a);
+    pass.a = Bind::Tex(src);
     pass.lut = lut.as_ref();
     if let Some(v) = &field {
         pass.aux = Bind::View(v, [FIELD_W, 2 * FIELD_H]);

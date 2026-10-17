@@ -5,8 +5,13 @@
 //! split), then a per-channel display-space gain and offset:
 //!
 //! ```text
-//! q    = R(−rot) (p − t) / s                 p = centred, aspect-correct coords
+//! q    = R(−rot) (p − t) / s · (1 + k1 |·|²)  p = centred, aspect-correct coords
 //! out  = g · mean_k src((q + d_c + k m)(1 + k z)) + o     k ∈ [−½, ½]
+//! ```
+//!
+//! (`k1` is a radial lens distortion applied after the similarity.)
+//!
+//! ```text
 //! ```
 //!
 //! The rows were fitted frame by frame to reference exports of the effect at
@@ -18,9 +23,9 @@ use crate::fx::{info, FxCx, Pass, ShaderSrc, Uniforms};
 use crate::registry::{Effect, FxInfo, FxIo, FxKind, ParamSpec as P, Registry};
 
 /// One fitted frame:
-/// `[t, s, rot, tx, ty, mx, my, z, rdx, rdy, bdx, bdy, gr, gg, gb, or, og, ob]`
+/// `[t, s, rot, tx, ty, mx, my, z, rdx, rdy, bdx, bdy, k1, gr, gg, gb, or, og, ob]`
 /// (time in seconds, color offsets in 0..255 code values).
-pub type CamRow = [f32; 18];
+pub type CamRow = [f32; 19];
 
 /// How samples outside the frame are filled.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -42,7 +47,8 @@ pub struct CamSpec {
 }
 
 /// The identity row (no transform, no blur, no color change).
-pub const CAM_ID: CamRow = [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0];
+pub const CAM_ID: CamRow =
+    [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0];
 
 /// Linear interpolation of the rows at time `t` (seconds, wrapped by the period).
 pub fn cam_at(spec: &CamSpec, t: f32) -> CamRow {
@@ -58,7 +64,7 @@ pub fn cam_at(spec: &CamSpec, t: f32) -> CamRow {
         if t < w[1][0] {
             let k = (t - w[0][0]) / (w[1][0] - w[0][0]).max(1e-6);
             let mut r = w[0];
-            for i in 1..18 {
+            for i in 1..19 {
                 r[i] = w[0][i] + (w[1][i] - w[0][i]) * k;
             }
             return r;
@@ -84,7 +90,8 @@ fn cam_sample(q: vec2f) -> vec4f {
     let t = u.e0.zw;
     let m = u.e1.xy;
     let z = u.e1.z;
-    let q = rot2(to_c(in.uv) - t, -rot) / s;
+    let q0 = rot2(to_c(in.uv) - t, -rot) / s;
+    let q = q0 * (1.0 + u.e1.w * dot(q0, q0));
     let dr = u.e3.zw;
     let db = u.p[2].xy;
     let split = abs(dr.x) + abs(dr.y) + abs(db.x) + abs(db.y) > 1e-6;
@@ -119,20 +126,20 @@ const PARAMS: &[P] = &[P::float("intensity", "Intensity", 0.0, 100.0, 100.0).uni
 /// Records one camera pass for `row` (intensity 0..1 blends toward identity).
 pub fn encode_cam(cx: &mut FxCx<'_>, row: &CamRow, edge: Edge, a: &crate::pool::Tex, out: &crate::pool::Tex, k: f32) {
     let mut r = *row;
-    for i in 1..18 {
+    for i in 1..19 {
         r[i] = CAM_ID[i] + (r[i] - CAM_ID[i]) * k;
     }
     let mut u = Uniforms::default();
     u.e[0] = [r[1], r[2], r[3], r[4]];
-    u.e[1] = [r[5], r[6], r[7], 0.0];
+    u.e[1] = [r[5], r[6], r[7], r[12]];
     let mode = match edge {
         Edge::Clamp => 0.0,
         Edge::Mirror => 1.0,
         Edge::Black => 2.0,
     };
     u.e[3] = [mode, 0.0, r[8], r[9]];
-    u.p[0] = [r[12], r[13], r[14], 0.0];
-    u.p[1] = [r[15], r[16], r[17], 0.0];
+    u.p[0] = [r[13], r[14], r[15], 0.0];
+    u.p[1] = [r[16], r[17], r[18], 0.0];
     u.p[2] = [r[10], r[11], 0.0, 0.0];
     let mut pass = Pass::full(shader_src(), out, u);
     pass.a = Bind::Tex(a);

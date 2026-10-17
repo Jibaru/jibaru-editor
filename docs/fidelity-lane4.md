@@ -3,7 +3,7 @@
 Lane 4 of the fidelity work against Filmora 15.7.3 covers 71 glitch,
 distortion, warp, ink and creative transitions and 87 video effects,
 filters and overlays from the reference batches
-(`docs/filmora-references.md`). **24 of 158** items have an
+(`docs/filmora-references.md`). **79 of 158** items have an
 implementation that imported projects reach through `filmora:<GUID>`
 aliases (`crates/jb-render/src/aliases_lane4.rs`). Everything was fitted to
 Filmora's *exported output* only (pairs of known input frames and the
@@ -44,10 +44,10 @@ read.
 
 | Filmora item | Batch | Ours | Grid (mean / max) | Scene (mean / max) | Notes |
 |---|---|---|---|---|---|
-| Exposure | fx001 | — | — | — | not implemented |
+| Exposure | fx001 | `jb.l4.look_overexposed` | 8.47 / 8.7 | 5.16 / 5.6 | approximation: soft bloom not modelled |
 | Glitch Effect 4 | fx001 | — | — | — | not implemented |
 | 1977 | fx001 | `jb.l4.look_rose_fade` | 5.43 / 5.8 | 2.31 / 6.2 |  |
-| Amaro | fx001 | `jb.l4.look_glow_matte` | 6.55 / 7.0 | 4.33 / 7.2 |  |
+| Amaro | fx001 | `jb.l4.look_glow_matte` | 6.55 / 7.0 | 4.33 / 7.2 | LUT + field; residual light-map detail finer than 16×9 |
 | Baltan | fx001 | — | — | — | not implemented |
 | BlueSkies | fx001 | `jb.l4.look_blue_sky` | 5.00 / 5.2 | 2.63 / 2.9 |  |
 | Brannan | fx001 | `jb.l4.look_warm_contrast_fade` | 5.32 / 5.5 | 2.96 / 3.4 |  |
@@ -59,7 +59,7 @@ read.
 | InkWell | fx001 | `jb.l4.look_mono_classic` | 4.58 / 5.1 | 2.71 / 4.9 |  |
 | Lomo | fx001 | `jb.l4.look_contrast_vignette` | 6.26 / 6.4 | 3.34 / 6.9 |  |
 | LordKelvin | fx001 | `jb.l4.look_hot_amber` | 7.04 / 7.2 | 3.18 / 7.9 |  |
-| Mild | fx001 | — | — | — | not implemented |
+| Mild | fx001 | `jb.l4.cam_gentle_sway` | — | — |  |
 | Money | fx001 | — | — | — | not implemented |
 | Nashville | fx001 | `jb.l4.look_pink_pastel` | 6.56 / 7.4 | 2.92 / 3.3 |  |
 | Sierra | fx002 | `jb.l4.look_faded_vignette` | 5.02 / 5.4 | 3.45 / 5.7 |  |
@@ -68,7 +68,7 @@ read.
 | Sutro | fx002 | `jb.l4.look_dark_moody` | 5.13 / 5.3 | 3.56 / 4.0 |  |
 | Toaster | fx002 | `jb.l4.look_toasted` | 6.56 / 6.7 | 4.60 / 5.0 |  |
 | Valencia | fx002 | `jb.l4.look_soft_warm_fade` | 4.94 / 5.2 | 2.44 / 2.8 |  |
-| Vivid | fx002 | `jb.l4.look_vivid_warm` | 9.65 / 9.8 | 5.21 / 5.7 |  |
+| Vivid | fx002 | `jb.l4.look_vivid_warm` | 9.65 / 9.8 | 5.21 / 5.7 | LUT + field; residual light-map detail finer than 16×9 |
 | Walden | fx002 | `jb.l4.look_pale_cyan` | 5.91 / 6.0 | 3.19 / 3.6 |  |
 | Wash | fx002 | — | — | — | not implemented |
 | XproII | fx002 | `jb.l4.look_cross_process` | 6.83 / 6.9 | 3.62 / 4.0 |  |
@@ -76,7 +76,7 @@ read.
 | B&W Style | fx002 | `jb.l4.look_mono_bright` | 3.83 / 4.3 | 2.55 / 4.3 |  |
 | Sunny Days | fx002 | `jb.l4.look_clear_day` | 4.76 / 5.0 | 2.43 / 5.4 |  |
 | Chromatic Aberration | fx002 | — | — | — | not implemented |
-| Mosaic | fx002 | — | — | — | not implemented |
+| Mosaic | fx002 | — | — | — | not implemented: random block glitches, a pixelate + mix fit stays at MAD 20–58 |
 | Tilt-shift Circle | fx002 | — | — | — | not implemented |
 | Canvas | fx003 | — | — | — | not implemented |
 | Fast Light Leaks 2 | fx003 | — | — | — | not implemented |
@@ -96,41 +96,41 @@ read.
 | Flicker Jitter 03 | fx003 | — | — | — | not implemented |
 | Glow Vibrate | fx003 | — | — | — | not implemented |
 | Pulse Jitter | fx003 | — | — | — | not implemented |
-| Shake the Camera | fx003 | — | — | — | not implemented |
+| Shake the Camera | fx003 | `jb.l4.cam_impact_shake` | 19.72 / 32.4 | 11.20 / 26.0 |  |
 | Glitch Effect 2 | fx003 | — | — | — | not implemented |
-| Local Color | fx003 | — | — | — | not implemented |
+| Local Color | fx003 | `jb.l4.spot_color_jump` | 3.17 / 4.0 | 1.84 / 2.1 | per-segment rectangles and tints measured exactly |
 | No Signal Glitch 01 | fx003 | — | — | — | not implemented |
 | Psychedelic Glitch | fx003 | — | — | — | not implemented |
 | Stripe Glitch 01 | fx003 | — | — | — | not implemented |
 | Strong Sharpening | fx003 | — | — | — | not implemented |
-| Highlight Glow | fx003 | — | — | — | not implemented |
+| Highlight Glow | fx003 | `jb.l4.look_highlight_lift` | 6.38 / 6.5 | 5.25 / 5.9 | approximation: bloom not modelled |
 | Old Movie 2 | fx003 | — | — | — | not implemented |
-| Old TV Border | fx003 | — | — | — | not implemented |
+| Old TV Border | fx003 | `jb.l4.look_old_tv_border` | 8.35 / 8.9 | 5.43 / 8.5 | approximation: border shape finer than 16×9 field |
 | Edge Glow 01 | fx003 | — | — | — | not implemented |
 | Scanline Effect 1 | fx003 | — | — | — | not implemented |
-| Chaos Shake | fx003 | — | — | — | not implemented |
+| Chaos Shake | fx003 | `jb.l4.cam_rgb_jolt` | 10.00 / 16.8 | 3.70 / 6.5 |  |
 | Collision | fx003 | — | — | — | not implemented |
 | Crash Into | fx003 | — | — | — | not implemented |
-| Earthquake Shake | fx003 | — | — | — | not implemented |
-| Extreme | fx003 | — | — | — | not implemented |
+| Earthquake Shake | fx003 | `jb.l4.cam_rumble` | 6.50 / 12.7 | 2.63 / 4.5 |  |
+| Extreme | fx003 | `jb.l4.cam_hard_shake` | 10.09 / 15.5 | 3.41 / 5.8 |  |
 | Flash Exposure | fx003 | — | — | — | not implemented |
 | Ripple Shake 02 | fx003 | — | — | — | not implemented |
 | Up-Down 1 | fx003 | — | — | — | not implemented |
 | Shattered 02 | fx003 | — | — | — | not implemented |
 | Shattered 03 | fx003 | — | — | — | not implemented |
 | Exposure Zoom | fx003 | — | — | — | not implemented |
-| Fast Zoom | fx003 | — | — | — | not implemented |
+| Fast Zoom | fx003 | `jb.l4.cam_zoom_burst` | 5.31 / 11.5 | 2.74 / 4.3 |  |
 | Heart Zoom | fx003 | — | — | — | not implemented |
-| Parallax Smooth Zoom In | fx003 | — | — | — | not implemented |
+| Parallax Smooth Zoom In | fx003 | `jb.l4.cam_slow_push` | 5.09 / 5.7 | 2.46 / 2.7 |  |
 | Rabid Camera 1 | fx003 | — | — | — | not implemented |
 | Zoom Lens | fx003 | — | — | — | not implemented |
 | Aesthetic Light Leak 04 16-9 | fxfix1 | — | — | — | not implemented |
 | CALIFORNIA VINTAGE FILM LOOK | fxfix1 | — | — | — | not implemented |
 | Vintage Film Pack GRUNGE FILM VINTAGE | fxfix1 | — | — | — | not implemented |
-| Four Seasons | fxfix1 | — | — | — | not implemented |
-| Glow | fxfix1 | — | — | — | not implemented |
+| Four Seasons | fxfix1 | `jb.l4.look_season_tint` | 10.10 / 10.4 | 8.78 / 9.3 | approximation: overlay finer than the field |
+| Glow | fxfix1 | `jb.l4.look_bright_glow` | 7.14 / 7.4 | 3.55 / 7.6 | approximation: bloom not modelled |
 | Radio Explike FX | fxfix1 | — | — | — | not implemented |
-| TV Wall | fxfix1 | — | — | — | not implemented |
+| TV Wall | fxfix1 | `jb.l4.video_wall_3x3` | 12.24 / 37.7 | 3.83 / 12.3 | grid: tiny downscaled text/checker, encoder-dominated |
 
 ### Transitions
 
@@ -147,7 +147,7 @@ read.
 | Orb Twist 1 | tr005 | — | — | not implemented |
 | Orb Twist 3 | tr005 | — | — | not implemented |
 | Orb Twist 4 | tr005 | — | — | not implemented |
-| Liquid Bodies Pack Transition 03 | tr006 | — | — | not implemented |
+| Liquid Bodies Pack Transition 03 | tr006 | `jb.l4.reveal_clean_sweep_down_1` | 8.61 / 29.7 |  |
 | Neon Mosaic 03 | tr006 | — | — | not implemented |
 | Neon Mosaic 04 | tr006 | — | — | not implemented |
 | Neon Mosaic Down | tr006 | — | — | not implemented |
@@ -163,47 +163,47 @@ read.
 | 3D Warp Box Rebound | tr008 | — | — | not implemented |
 | 3D Warp Box Right | tr008 | — | — | not implemented |
 | Depth Mosaic | tr008 | — | — | not implemented |
-| Cartoon Liquid Transition 04 | tr010 | — | — | not implemented |
-| Comic Smoke Transition 07 | tr010 | — | — | not implemented |
-| Brush And Ink Transition 34 | tr010 | — | — | not implemented |
-| Brush And Ink Transition 36 | tr010 | — | — | not implemented |
-| Brush And Ink Transition 40 | tr010 | — | — | not implemented |
-| Brush Paint Pack Transition 09 | tr010 | — | — | not implemented |
-| Colorful Ink Slideshow Vol 01 Transition 04 | tr010 | — | — | not implemented |
-| Dynamic Ink 01 | tr010 | — | — | not implemented |
-| Dynamic Ink 02 | tr011 | — | — | not implemented |
-| Dynamic Ink 03 | tr011 | — | — | not implemented |
-| Dynamic Ink 05 | tr011 | — | — | not implemented |
-| Dynamic Ink 06 | tr011 | — | — | not implemented |
-| Dynamic Ink 07 | tr011 | — | — | not implemented |
-| Dynamic Ink 08 | tr011 | — | — | not implemented |
-| Dynamic Ink 09 | tr011 | — | — | not implemented |
-| Dynamic Ink 10 | tr011 | — | — | not implemented |
-| Glow Ink Down | tr011 | — | — | not implemented |
-| Glow Ink Left | tr011 | — | — | not implemented |
-| Glow Ink Right | tr011 | — | — | not implemented |
-| Glow Ink Up | tr011 | — | — | not implemented |
-| Ink Brush Mask Transition | tr011 | — | — | not implemented |
-| Ink Reveal Transition 02 | tr011 | — | — | not implemented |
-| Liquid Spread Transition 02 | tr011 | — | — | not implemented |
-| Liquid Spread Transition 05 | tr011 | — | — | not implemented |
-| Liquid Spread Transition 06 | tr011 | — | — | not implemented |
-| Liquid Spread Transition 09 | tr011 | — | — | not implemented |
-| Liquid Spread Transition 10 | tr011 | — | — | not implemented |
-| Luminous Ink Wash 01 | tr011 | — | — | not implemented |
-| Luminous Ink Wash 02 | tr011 | — | — | not implemented |
-| Luminous Ink Wash 03 | tr011 | — | — | not implemented |
-| Luminous Ink Wash 04 | tr011 | — | — | not implemented |
-| Luminous Ink Wash 05 | tr011 | — | — | not implemented |
-| Luminous Ink Wash 06 | tr011 | — | — | not implemented |
-| Luminous Ink Wash 07 | tr011 | — | — | not implemented |
-| Luminous Ink Wash 08 | tr012 | — | — | not implemented |
-| Luminous Ink Wash 09 | tr012 | — | — | not implemented |
-| Luminous Ink Wash 10 | tr012 | — | — | not implemented |
-| Moonlight Ink Transition 01 | tr012 | — | — | not implemented |
-| Moonlight Ink Transition 02 | tr012 | — | — | not implemented |
-| Moonlight Ink Transition 03 | tr012 | — | — | not implemented |
-| Moonlight Ink Transition 04 | tr012 | — | — | not implemented |
-| Moonlight Ink Transition 05 | tr012 | — | — | not implemented |
-| Blink Eyes 03 | tr012 | — | — | not implemented |
-| Mosaic | trfix1 | — | — | not implemented |
+| Cartoon Liquid Transition 04 | tr010 | `jb.l4.reveal_ink_sweep_down_1` | 18.87 / 49.1 | white matte as a flat cover band; shape procedural |
+| Comic Smoke Transition 07 | tr010 | `jb.l4.reveal_ink_spread_down_left_1` | 22.87 / 65.7 | smoke matte as a flat cover band; shape procedural |
+| Brush And Ink Transition 34 | tr010 | `jb.l4.reveal_clean_sweep_up_right` | 10.34 / 29.1 |  |
+| Brush And Ink Transition 36 | tr010 | `jb.l4.reveal_ink_sweep_right_1` | 6.08 / 11.1 |  |
+| Brush And Ink Transition 40 | tr010 | `jb.l4.reveal_clean_spread_down_left_1` | 7.42 / 17.3 |  |
+| Brush Paint Pack Transition 09 | tr010 | `jb.l4.reveal_ink_sweep_right_2` | 5.68 / 7.0 |  |
+| Colorful Ink Slideshow Vol 01 Transition 04 | tr010 | `jb.l4.reveal_clean_spread_right_1` | 26.75 / 57.5 | multicolor ink approximated by one cover color |
+| Dynamic Ink 01 | tr010 | — | — | dropped: multicolor splats, procedural reveal worse than a cut |
+| Dynamic Ink 02 | tr011 | — | — | dropped: multicolor splats, procedural reveal worse than a cut |
+| Dynamic Ink 03 | tr011 | `jb.l4.reveal_ink_sweep_down_2` | 8.53 / 14.4 |  |
+| Dynamic Ink 05 | tr011 | `jb.l4.reveal_ink_spread_up_left_1` | 9.41 / 18.0 |  |
+| Dynamic Ink 06 | tr011 | `jb.l4.reveal_clean_sweep_down_2` | 11.43 / 27.5 |  |
+| Dynamic Ink 07 | tr011 | `jb.l4.reveal_ink_spread_down_right_1` | 21.59 / 31.1 |  |
+| Dynamic Ink 08 | tr011 | `jb.l4.reveal_clean_spread_right_2` | 11.09 / 24.1 |  |
+| Dynamic Ink 09 | tr011 | `jb.l4.reveal_ink_spread_down_left_2` | 18.42 / 32.6 |  |
+| Dynamic Ink 10 | tr011 | `jb.l4.reveal_clean_spread_left_1` | 12.87 / 46.1 |  |
+| Glow Ink Down | tr011 | `jb.l4.reveal_ink_bloom_1` | 16.52 / 36.7 |  |
+| Glow Ink Left | tr011 | `jb.l4.reveal_clean_spread_left_2` | 17.26 / 31.3 |  |
+| Glow Ink Right | tr011 | `jb.l4.reveal_ink_spread_right_1` | 10.65 / 19.0 |  |
+| Glow Ink Up | tr011 | `jb.l4.reveal_ink_sweep_up_left_1` | 11.28 / 26.3 |  |
+| Ink Brush Mask Transition | tr011 | `jb.l4.reveal_ink_spread_down_right_2` | 8.90 / 19.9 |  |
+| Ink Reveal Transition 02 | tr011 | `jb.l4.reveal_clean_spread_up_right` | 8.50 / 15.8 |  |
+| Liquid Spread Transition 02 | tr011 | `jb.l4.reveal_ink_spread_up_left_2` | 11.96 / 27.6 |  |
+| Liquid Spread Transition 05 | tr011 | `jb.l4.reveal_clean_spread_right_3` | 9.78 / 16.2 |  |
+| Liquid Spread Transition 06 | tr011 | `jb.l4.reveal_ink_bloom_2` | 9.17 / 16.3 |  |
+| Liquid Spread Transition 09 | tr011 | `jb.l4.reveal_ink_spread_up_right_1` | 7.46 / 20.5 |  |
+| Liquid Spread Transition 10 | tr011 | `jb.l4.reveal_clean_spread_down_right_1` | 9.37 / 13.2 |  |
+| Luminous Ink Wash 01 | tr011 | `jb.l4.reveal_ink_bloom_3` | 13.02 / 30.9 |  |
+| Luminous Ink Wash 02 | tr011 | `jb.l4.reveal_ink_bloom_4` | 8.15 / 14.3 |  |
+| Luminous Ink Wash 03 | tr011 | `jb.l4.reveal_ink_sweep_up_left_2` | 18.51 / 45.3 |  |
+| Luminous Ink Wash 04 | tr011 | — | — | dropped: glow wash, procedural reveal worse than a cut |
+| Luminous Ink Wash 05 | tr011 | `jb.l4.reveal_ink_spread_up_right_2` | 21.52 / 49.5 |  |
+| Luminous Ink Wash 06 | tr011 | `jb.l4.reveal_ink_spread_up_right_3` | 20.58 / 36.3 |  |
+| Luminous Ink Wash 07 | tr011 | `jb.l4.reveal_clean_spread_left_3` | 21.59 / 43.2 |  |
+| Luminous Ink Wash 08 | tr012 | `jb.l4.reveal_ink_spread_down_1` | 11.52 / 28.9 |  |
+| Luminous Ink Wash 09 | tr012 | `jb.l4.reveal_ink_spread_down_2` | 12.28 / 22.1 |  |
+| Luminous Ink Wash 10 | tr012 | `jb.l4.reveal_ink_sweep_right_3` | 21.05 / 53.6 |  |
+| Moonlight Ink Transition 01 | tr012 | `jb.l4.reveal_ink_spread_down_left_3` | 6.34 / 12.4 |  |
+| Moonlight Ink Transition 02 | tr012 | `jb.l4.reveal_ink_spread_up_right_4` | 7.27 / 11.3 |  |
+| Moonlight Ink Transition 03 | tr012 | `jb.l4.reveal_clean_spread_down` | 6.68 / 13.1 |  |
+| Moonlight Ink Transition 04 | tr012 | `jb.l4.reveal_ink_sweep_left` | 7.90 / 10.6 |  |
+| Moonlight Ink Transition 05 | tr012 | `jb.l4.reveal_clean_spread_down_right_2` | 6.17 / 8.2 |  |
+| Blink Eyes 03 | tr012 | `jb.l4.reveal_ink_sweep_right_4` | 13.60 / 81.6 | black lids not modelled (reveal only) |
+| Mosaic | trfix1 | — | — | not implemented: random block glitches, a pixelate + mix fit stays at MAD 20–58 |

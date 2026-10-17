@@ -4,7 +4,9 @@
 //!
 //! ```text
 //! m(p) = (1 − k) · dot(p, (cos θ, sin θ)) + k · |p − c| + amp · (fbm(p · f + seed) − ½)
-//! B where m(p) < thr(progress)            p = centred, aspect-correct coords
+//! B where m(p) < thr_b(progress), a flat cover color where
+//! thr_b <= m(p) < thr_c (liquid / smoke mattes that sweep across first),
+//! A elsewhere                              p = centred, aspect-correct coords
 //! ```
 //!
 //! `θ, k, c, amp, f, seed` were searched per item to best match the mask
@@ -24,8 +26,10 @@ pub struct RevealSpec {
     pub description: &'static str,
     /// `[θ, k, cx, cy, amp, f, seed]`.
     pub map: [f32; 7],
-    /// `(progress, threshold)` pairs, progress ascending.
-    pub thr: &'static [[f32; 2]],
+    /// `(progress, thr_b, thr_c)` rows, progress ascending.
+    pub thr: &'static [[f32; 3]],
+    /// Display-referred cover color (None: no cover band).
+    pub cover: Option<[f32; 3]>,
 }
 
 const BODY: &str = r#"
@@ -38,6 +42,7 @@ const BODY: &str = r#"
     let f = u.e1.y;
     let seed = u.e1.z;
     let thr = u.e1.w;
+    let thr_c = u.e2.x;
     let d = cos(th) * p.x + sin(th) * p.y;
     let r = length(p - c);
     var m = (1.0 - k) * d + k * r;
@@ -47,7 +52,9 @@ const BODY: &str = r#"
     // Anti-aliased edge about one output pixel wide.
     let w = 0.75 * u.inv_size.y;
     let b = 1.0 - smoothstep(thr - w, thr + w, m);
-    return mix(sa(in.uv), sb(in.uv), b);
+    let cv = (1.0 - smoothstep(thr_c - w, thr_c + w, m)) * (1.0 - b) * u.e2.y;
+    let ab = mix(sa(in.uv), sb(in.uv), b);
+    return mix(ab, from_disp(vec4f(u.e3.rgb, 1.0)), cv);
 }
 "#;
 
@@ -56,21 +63,23 @@ fn shader_src() -> &'static ShaderSrc {
     S.get_or_init(|| ShaderSrc::new("jb.l4.reveal", BODY))
 }
 
-/// Threshold at `p` (linear between the tabulated pairs).
-pub fn thr_at(tab: &[[f32; 2]], p: f32) -> f32 {
+/// Thresholds `(thr_b, thr_c)` at `p` (linear between the tabulated rows).
+pub fn thr_at(tab: &[[f32; 3]], p: f32) -> (f32, f32) {
     if tab.is_empty() {
-        return if p < 0.5 { -10.0 } else { 10.0 };
+        let t = if p < 0.5 { -10.0 } else { 10.0 };
+        return (t, t);
     }
     if p <= tab[0][0] {
-        return tab[0][1];
+        return (tab[0][1], tab[0][2]);
     }
     for w in tab.windows(2) {
         if p < w[1][0] {
             let k = (p - w[0][0]) / (w[1][0] - w[0][0]).max(1e-6);
-            return w[0][1] + (w[1][1] - w[0][1]) * k;
+            return (w[0][1] + (w[1][1] - w[0][1]) * k, w[0][2] + (w[1][2] - w[0][2]) * k);
         }
     }
-    tab[tab.len() - 1][1]
+    let l = tab[tab.len() - 1];
+    (l[1], l[2])
 }
 
 pub struct RevealFx {
@@ -87,7 +96,11 @@ impl Effect for RevealFx {
         let m = self.spec.map;
         let mut u = Uniforms::default();
         u.e[0] = [m[0], m[1], m[2], m[3]];
-        u.e[1] = [m[4], m[5], m[6], thr_at(self.spec.thr, io.progress)];
+        let (tb, tc) = thr_at(self.spec.thr, io.progress);
+        u.e[1] = [m[4], m[5], m[6], tb];
+        u.e[2] = [tc, self.spec.cover.is_some() as u32 as f32, 0.0, 0.0];
+        let c = self.spec.cover.unwrap_or([0.0; 3]);
+        u.e[3] = [c[0], c[1], c[2], 1.0];
         let mut pass = Pass::full(shader_src(), io.out, u);
         pass.a = Bind::Tex(io.a);
         pass.b = io.b.map_or(Bind::Tex(io.a), Bind::Tex);
