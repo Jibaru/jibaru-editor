@@ -70,7 +70,7 @@ MAD mean / worst frame over the item window at 960x540 (harness with `JB_FIDELIT
 | Slow Flip | `F2C5B762-7F0D-4A06-BC2C-FBB8727AADA5` | `jb.flip_slow` | 5.92 | 11.4 | 3.17 | +2.75 | worst frame at the switch between faces |
 | 3D Horizontal Closing | `B070D206-0B16-4B67-BCF6-98414767AEA8` | `jb.panels_close_3d` | 20.47 | 33.7 | 4.59 | +15.88 | approximation: per-frame layer fit leaves large residuals (multi-face / curved / blurred motion not captured) |
 | 3D Box Horizontal | `EBC160A4-C522-4DEE-8FF2-24596EFF5CDA` | `jb.box_horizontal_3d` | 13.83 | 29.7 | 2.59 | +11.24 | approximation: per-frame layer fit leaves large residuals (multi-face / curved / blurred motion not captured) |
-| 3D Box Left | `75E87EE4-EC9E-4398-BA61-0653057F144A` | `jb.box_left_3d` | 6.70 | 41.1 | 3.37 | +3.33 | approximation: per-frame layer fit leaves large residuals (multi-face / curved / blurred motion not captured) |
+| 3D Box Left | `75E87EE4-EC9E-4398-BA61-0653057F144A` | `jb.box_left_3d` | 3.96 | 5.9 | 2.91 | +1.05 | approximation: per-frame layer fit leaves large residuals (multi-face / curved / blurred motion not captured) |
 | 3D Box Vertical | `1C7CC9AD-ACD1-4D08-9A39-82682F5BE775` | `jb.box_vertical_3d` | 12.81 | 25.6 | 2.98 | +9.83 | approximation: per-frame layer fit leaves large residuals (multi-face / curved / blurred motion not captured) |
 | 3D Flip Right | `B04A402D-5C04-4110-AEAD-2E3DBEC1FEFF` | `jb.flip_3d_right` | 2.46 | 3.8 | 3.07 | -0.61 |  |
 | Pivot Flip | `D9864B5B-CAF1-4C24-9124-49B8F7926046` | `jb.pivot_flip` | 7.32 | 36.2 | 2.99 | +4.33 | approximation: per-frame layer fit leaves large residuals (multi-face / curved / blurred motion not captured) |
@@ -106,18 +106,18 @@ MAD mean / worst frame over the item window at 960x540 (harness with `JB_FIDELIT
 | 3D Box Close | `16BFABD5-AC48-42AF-BAF9-149934D9B990` | — |  |  |  |  | not implemented |
 | 3D Box Down | `86437F55-4674-4809-9B7A-0D39DCF9E313` | `jb.box_down_3d` | 8.55 | 49.4 | 1.91 | +6.64 | approximation: per-frame layer fit leaves large residuals (multi-face / curved / blurred motion not captured) |
 | 3D Box Drop | `3B310488-6093-4A52-B87E-0367ADF1641A` | `jb.box_drop_3d` | 3.93 | 6.9 | 3.04 | +0.89 |  |
-| 3D Box Fall | `0C615FD6-6C3D-469A-955C-5FDF8FA6A23A` | `jb.box_fall_3d` | 4.47 | 28.4 | 1.88 | +2.59 | worst frame at the switch between faces |
-| 3D Box Flip 1 | `A84BB82F-36F0-4E6A-8488-FBC2F1AA0BD0` | `jb.box_flip_3d_1` | 7.54 | 35.9 | 2.65 | +4.89 | approximation: per-frame layer fit leaves large residuals (multi-face / curved / blurred motion not captured) |
-| 3D Box Flip 2 | `D1334A82-581D-42C6-B3CD-7B0DF3E5F565` | `jb.box_flip_3d_2` | 5.48 | 30.5 | 2.73 | +2.75 | worst frame at the switch between faces |
+| 3D Box Fall | `0C615FD6-6C3D-469A-955C-5FDF8FA6A23A` | `jb.box_fall_3d` | 3.92 | 8.8 | 1.88 | +2.04 | worst frame at the switch between faces |
+| 3D Box Flip 1 | `A84BB82F-36F0-4E6A-8488-FBC2F1AA0BD0` | `jb.box_flip_3d_1` | 5.51 | 23.1 | 2.65 | +2.86 | approximation: per-frame layer fit leaves large residuals (multi-face / curved / blurred motion not captured) |
+| 3D Box Flip 2 | `D1334A82-581D-42C6-B3CD-7B0DF3E5F565` | `jb.box_flip_3d_2` | 5.15 | 30.6 | 2.31 | +2.84 | worst frame at the switch between faces |
 | 3D Box Flip 3 | `E23C0AF1-1BCB-4083-908D-1952E6FC7494` | `jb.box_flip_3d_3` | 12.34 | 38.8 | 3.18 | +9.16 | approximation: per-frame layer fit leaves large residuals (multi-face / curved / blurred motion not captured) |
-| 3D Box Flip 4 | `B88000C0-71DF-4B92-B4DE-A63C7733978D` | `jb.box_flip_3d_4` | 5.48 | 30.2 | 2.43 | +3.05 | worst frame at the switch between faces |
+| 3D Box Flip 4 | `B88000C0-71DF-4B92-B4DE-A63C7733978D` | `jb.box_flip_3d_4` | 4.93 | 29.5 | 2.03 | +2.90 | worst frame at the switch between faces |
 | 3D Box Flip 5 | `64D165BC-C38F-400F-965D-A9E33BA1128C` | `jb.box_flip_3d_5` | 3.73 | 5.5 | 3.90 | -0.17 |  |
-| 3D Box Flip 6 | `95EB31D4-DA7A-4642-8E35-CEA17DD93B35` | `jb.box_flip_3d_6` | 5.57 | 29.1 | 1.90 | +3.67 | worst frame at the switch between faces |
-| 3D Box Right | `9BF9CABE-864C-43D2-A282-24A578AF699F` | `jb.box_turn_right_3d` | 9.14 | 68.0 | 3.14 | +6.00 | approximation: per-frame layer fit leaves large residuals (multi-face / curved / blurred motion not captured) |
+| 3D Box Flip 6 | `95EB31D4-DA7A-4642-8E35-CEA17DD93B35` | `jb.box_flip_3d_6` | 4.81 | 22.4 | 1.90 | +2.91 | worst frame at the switch between faces |
+| 3D Box Right | `9BF9CABE-864C-43D2-A282-24A578AF699F` | `jb.box_turn_right_3d` | 5.31 | 28.1 | 2.51 | +2.80 | approximation: per-frame layer fit leaves large residuals (multi-face / curved / blurred motion not captured) |
 | 3D Box Split 1 | `3B28FE15-13ED-4BF8-A844-9DFDAC64816B` | — |  |  |  |  | not implemented |
 | 3D Box Split 2 | `93020E77-3F2E-4A15-BE14-A2C09970408D` | — |  |  |  |  | not implemented |
 | 3D Box Up | `F9DB5BCD-C24E-43A4-BAE3-7FC4BE93A25F` | `jb.box_up_3d` | 9.57 | 55.8 | 1.99 | +7.58 | approximation: per-frame layer fit leaves large residuals (multi-face / curved / blurred motion not captured) |
-| 3D Camera Transitions 7 | `F163DDE7-90AF-077C-84B2-1498C379F735` | — |  |  |  |  | not implemented |
+| 3D Camera Transitions 7 | `F163DDE7-90AF-077C-84B2-1498C379F735` | `jb.camera_cards_7` | 23.49 | 52.9 | 2.59 | +20.90 |  |
 | 3D Camera Transitions 8 | `BCD1F0EA-3EEA-EBE7-EAC8-6FE53723769E` | — |  |  |  |  | not implemented |
 | 3D Camera Transitions 9 | `39701EAA-6FF3-DDF1-B765-F2F4B76ED063` | — |  |  |  |  | not implemented |
 | 3D Card | `1C56ABE1-F948-4426-AC71-6710D6362312` | `jb.card_3d` | 6.19 | 23.5 | 4.50 | +1.69 | approximation: per-frame layer fit leaves large residuals (multi-face / curved / blurred motion not captured) |
@@ -140,9 +140,9 @@ MAD mean / worst frame over the item window at 960x540 (harness with `JB_FIDELIT
 | 3D Flip | `EC14B694-D0AD-425A-806C-BA9D288341CC` | `jb.flip_3d_tilt` | 2.88 | 4.3 | 4.32 | -1.44 |  |
 | 3D Frame Shift | `8C84620F-C904-4702-B697-F87B224048B9` | — |  |  |  |  | not implemented |
 | 3D Page Flip Left | `A985CC65-0A2B-440F-B437-6F802A0305B0` | `jb.page_flip_left_3d` | 13.77 | 39.9 | 7.65 | +6.12 | approximation: per-frame layer fit leaves large residuals (multi-face / curved / blurred motion not captured) |
-| 3D Screens | `94860FC5-0D3E-42F4-A8BB-AE99CFBE5DF5` | — |  |  |  |  | not implemented |
+| 3D Screens | `94860FC5-0D3E-42F4-A8BB-AE99CFBE5DF5` | `jb.screens_3d` | 16.31 | 32.9 | 2.04 | +14.27 |  |
 | 3D Slideshow Style 1 | `82F40844-1371-4C82-A822-40DB348B8A8C` | — |  |  |  |  | not implemented |
-| 3D Slideshow Style 2 | `DE2B8F85-34CE-43B3-A326-293F597C2B0F` | — |  |  |  |  | not implemented |
+| 3D Slideshow Style 2 | `DE2B8F85-34CE-43B3-A326-293F597C2B0F` | `jb.slideshow_tilt_2` | 9.29 | 12.8 | 8.63 | +0.66 |  |
 | 3D Slideshow Style 3 | `A12CC2AE-1864-44B7-88AE-4F5A3DA50167` | — |  |  |  |  | not implemented |
 | 3D Slideshow Style 4 | `6E3365D4-B23E-4787-8D6B-2B25240E3463` | — |  |  |  |  | not implemented |
 | 3D Slideshow Style 5 | `5963FA3B-5C16-423F-AE9C-C1F0424BC60D` | — |  |  |  |  | not implemented |
@@ -154,7 +154,7 @@ MAD mean / worst frame over the item window at 960x540 (harness with `JB_FIDELIT
 | Collage Turn | `17B92348-899F-4BDA-B020-C5CA9081B00F` | — |  |  |  |  | not implemented |
 | Cube Down | `59A8A58F-31CB-4740-9F9D-0DCD3CB7AF92` | `jb.cube_turn_down` | 6.44 | 7.8 | 4.84 | +1.60 | approximation: per-frame layer fit leaves large residuals (multi-face / curved / blurred motion not captured) |
 | Cube Facets Down | `FAC11A67-7C08-497E-B979-1EF1F923DEF6` | `jb.cube_facets_down` | 11.16 | 51.7 | 2.84 | +8.32 | approximation: per-frame layer fit leaves large residuals (multi-face / curved / blurred motion not captured) |
-| Cube Facets Left | `55C7899F-8326-4E0E-8A14-BAD17A8757E5` | — |  |  |  |  | not implemented |
+| Cube Facets Left | `55C7899F-8326-4E0E-8A14-BAD17A8757E5` | `jb.cube_facets_left` | 7.35 | 22.2 | 2.84 | +4.51 |  |
 | Cube Facets Right | `C73CB5B2-6885-48E1-A97D-9DC8C8D1E3BD` | — |  |  |  |  | not implemented |
 | Cube Facets Up | `09FB622E-E770-4E86-BC86-A6F3BDFACF75` | — |  |  |  |  | not implemented |
 | Cube Left | `A6B6286F-F9FE-4F9F-8C45-538EEC05F620` | `jb.cube_turn_left` | 5.26 | 7.1 | 3.08 | +2.18 |  |
@@ -163,7 +163,7 @@ MAD mean / worst frame over the item window at 960x540 (harness with `JB_FIDELIT
 | Diagonal Slide | `FC0A3B6C-84ED-40EA-B83C-E8043A8BD880` | — |  |  |  |  | not implemented |
 | Domino Scroll | `64129C4C-9142-481B-B3AF-933947088D7C` | — |  |  |  |  | not implemented |
 | Flip Down | `804982E3-3FC8-425E-B43A-6444F2C53B79` | `jb.flip_down` | 3.62 | 5.1 | 3.44 | +0.18 |  |
-| Flip Down | `0A8EF5CE-6993-474F-9609-F0C3B2ADF0C1` | `jb.flip_down_fast` | 6.38 | 30.3 | 1.93 | +4.45 | approximation: per-frame layer fit leaves large residuals (multi-face / curved / blurred motion not captured) |
+| Flip Down | `0A8EF5CE-6993-474F-9609-F0C3B2ADF0C1` | `jb.flip_down_fast` | 5.90 | 30.3 | 1.93 | +3.97 | approximation: per-frame layer fit leaves large residuals (multi-face / curved / blurred motion not captured) |
 | Flip Left | `F309557C-8B97-499A-9696-29B0FDD6367C` | `jb.flip_left` | 2.60 | 3.6 | 2.22 | +0.38 |  |
 | Flip Pages Right | `BE89907B-B1DB-4D6B-A00C-D0F268F3F852` | `jb.flip_pages_right` | 14.30 | 33.7 | 6.82 | +7.48 | approximation: per-frame layer fit leaves large residuals (multi-face / curved / blurred motion not captured) |
 | Flip Right | `7B680F51-1B11-480D-A4DE-C5065188BBCC` | `jb.flip_right` | 2.91 | 3.7 | 2.84 | +0.07 |  |
@@ -204,4 +204,4 @@ MAD mean / worst frame over the item window at 960x540 (harness with `JB_FIDELIT
 | Skew Right Split | `2D4099D2-9B28-437f-8FEB-2A7E25C0B549` | `jb.skew_split_right` | 1.68 | 2.5 | 1.73 | -0.05 |  |
 | Cube Right | `0FCB240F-5328-4e85-869A-2D989F50D387` | `jb.cube_turn_right` | 4.85 | 5.7 | 3.18 | +1.67 |  |
 
-77 of 138 items implemented; 11 within mean < 3 and worst < 10.
+81 of 138 items implemented; 11 within mean < 3 and worst < 10.

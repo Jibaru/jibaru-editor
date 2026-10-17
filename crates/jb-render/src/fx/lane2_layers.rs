@@ -77,6 +77,8 @@ pub struct Key {
     pub lens: [f32; 2],
     /// Saturation of the source before the gain (1: unchanged, 0: grey).
     pub sat: f32,
+    /// Source rect override (all zero: the layer's).
+    pub rect: [f32; 4],
 }
 
 impl Key {
@@ -96,6 +98,7 @@ impl Key {
             strip: std::array::from_fn(|i| m(self.strip[i], b.strip[i])),
             lens: [m(self.lens[0], b.lens[0]), m(self.lens[1], b.lens[1])],
             sat: m(self.sat, b.sat),
+            rect: std::array::from_fn(|i| m(self.rect[i], b.rect[i])),
         }
     }
 }
@@ -145,6 +148,17 @@ impl Table {
                 let (a, b) = (&l.keys[i - 1], &l.keys[i]);
                 a.lerp(b, (p - a.p) / (b.p - a.p).max(1e-6))
             };
+            // Degenerate pins (a quad collapsed to a line or point) draw nothing.
+            let c = &key.c;
+            let area = 0.5
+                * ((c[0] * c[3] - c[2] * c[1])
+                    + (c[2] * c[5] - c[4] * c[3])
+                    + (c[4] * c[7] - c[6] * c[5])
+                    + (c[6] * c[1] - c[0] * c[7]))
+                    .abs();
+            if area < 1e-5 {
+                continue;
+            }
             out.push((l, key));
         }
         out
@@ -153,7 +167,7 @@ impl Table {
 
 /// Parses `lane2/tables.txt`: `item <id>` sections with `bg r g b`, `dp x`,
 /// `layer <A|B|S> <clip|mirror|wrap> [homo] u0 v0 u1 v1 [nx ny lo hi]` and `k` key lines
-/// `p c0x c0y c1x c1y c2x c2y c3x c3y gr gg gb gur gug gub gvr gvg gvb or og ob a [bc x8 [strip x4 [k1 k2 [sat]]]]`
+/// `p c0x c0y c1x c1y c2x c2y c3x c3y gr gg gb gur gug gub gvr gvg gvb or og ob a [bc x8 [strip x4 [k1 k2 [sat [rect x4]]]]]`
 /// (gains and offsets in display 0..1).
 pub fn parse_tables(text: &str) -> Result<Vec<Table>, String> {
     let mut out: Vec<Table> = Vec::new();
@@ -244,6 +258,7 @@ pub fn parse_tables(text: &str) -> Result<Vec<Table>, String> {
                             strip: std::array::from_fn(|i| v.get(30 + i).copied().unwrap_or(0.0)),
                             lens: [v.get(34).copied().unwrap_or(0.0), v.get(35).copied().unwrap_or(0.0)],
                             sat: v.get(36).copied().unwrap_or(1.0),
+                            rect: std::array::from_fn(|i| v.get(37 + i).copied().unwrap_or(0.0)),
                         };
                         let key = if v.len() >= 30 { key } else { Key { bc: [0.0; 8], ..key } };
                         let key = if v.len() >= 34 { key } else { Key { strip: [0.0; 4], ..key } };
@@ -328,7 +343,7 @@ pub fn encode_table(table: &Table, cx: &mut FxCx<'_>, io: &FxIo<'_>) {
             u.p[s + 5] = [k.gu[0], k.gu[1], k.gu[2], src];
             u.p[s + 6] = [k.gv[0], k.gv[1], k.gv[2], edge + if l.perspective { 4.0 } else { 0.0 }];
             u.p[s + 7] = [k.o[0], k.o[1], k.o[2], taps as f32];
-            u.p[s + 8] = l.rect;
+            u.p[s + 8] = if k.rect != [0.0; 4] { k.rect } else { l.rect };
             u.p[s + 9] = if k.strip[..2] != [0.0, 0.0] { k.strip } else { l.strip };
             u.p[s + 10] = [k.lens[0], k.lens[1], k.sat, 0.0];
         }

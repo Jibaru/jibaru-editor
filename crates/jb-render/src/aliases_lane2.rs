@@ -43,6 +43,8 @@ pub const FILMORA_LANE2: &[(&str, &str)] = &[
     ("F9DB5BCD-C24E-43A4-BAE3-7FC4BE93A25F", "jb.box_up_3d"),
     // 3D Box Vertical
     ("1C7CC9AD-ACD1-4D08-9A39-82682F5BE775", "jb.box_vertical_3d"),
+    // 3D Camera Transitions 7
+    ("F163DDE7-90AF-077C-84B2-1498C379F735", "jb.camera_cards_7"),
     // 3D Card
     ("1C56ABE1-F948-4426-AC71-6710D6362312", "jb.card_3d"),
     // Card Switch
@@ -59,6 +61,8 @@ pub const FILMORA_LANE2: &[(&str, &str)] = &[
     ("75A09E8D-21D1-4c4e-AEA9-EB9CEC11A644", "jb.cross_split"),
     // Cube Facets Down
     ("FAC11A67-7C08-497E-B979-1EF1F923DEF6", "jb.cube_facets_down"),
+    // Cube Facets Left
+    ("55C7899F-8326-4E0E-8A14-BAD17A8757E5", "jb.cube_facets_left"),
     // Rotating Cube
     ("F23CEC10-EB99-4085-BA42-86CD41883CEE", "jb.cube_rotate"),
     // Cube Down
@@ -157,10 +161,14 @@ pub const FILMORA_LANE2: &[(&str, &str)] = &[
     ("f03e2971-f66f-4481-b308-a640d451d2ca", "jb.roll_left_3"),
     // Screen Flip 3D
     ("8D3025A8-8F60-42E7-B0AA-0C06F5608C76", "jb.screen_flip_3d"),
+    // 3D Screens
+    ("94860FC5-0D3E-42F4-A8BB-AE99CFBE5DF5", "jb.screens_3d"),
     // Skew Left Split
     ("5003D879-7930-44fa-A333-F21F62564709", "jb.skew_split_left"),
     // Skew Right Split
     ("2D4099D2-9B28-437f-8FEB-2A7E25C0B549", "jb.skew_split_right"),
+    // 3D Slideshow Style 2
+    ("DE2B8F85-34CE-43B3-A326-293F597C2B0F", "jb.slideshow_tilt_2"),
 ];
 
 pub fn register(r: &mut Registry) {
