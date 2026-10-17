@@ -2,7 +2,8 @@
 //
 //   P = (uv - 0.5) * (aspect, 1) - centre;  Q = R(-r) P
 //   d = Q.x (linear) | |Q| (circle) | angle of Q / 2pi (sweep) |
-//       fract(blades * angle) (pinwheel) | star radius (star) | |Q.x| (band)
+//       fract(blades * angle) (pinwheel) | star radius (star) | |Q.x| (band) |
+//       2 max(|Q.x| / aspect, |Q.y|) (rectangle, 1 on the frame edge)
 //   m = clamp(sgn * (c - d) / w + 0.5, 0, 1), optionally smoothstepped,
 // and the frame is mix(A, B, m) in display space plus a glow along the edge
 // (e = |c - d|): core.rgb * exp(-(e / wc)^2) + halo.rgb * exp(-e / wh).
@@ -37,6 +38,7 @@ fn star_r(q: vec2f, rf: f32) -> f32 {
     if (shape == 3) { d = fract(ang * u.p[2].x); }
     if (shape == 4) { d = star_r(q, u.p[2].x); }
     if (shape == 5) { d = abs(q.x); }
+    if (shape == 6) { d = max(abs(q.x) / aspect(), abs(q.y)) * 2.0; }
     let tear = u.p[5];
     if (tear.x > 0.0) {
         let n = fbm(vec2f(q.y * tear.y, select(3.7, 11.3, q.x < 0.0))) * 0.8 + 0.2 * vnoise(vec2f(q.y * tear.y * 9.0, 5.1));

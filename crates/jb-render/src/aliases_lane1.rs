@@ -159,6 +159,8 @@ pub const FILMORA_LANE1: &[(&str, &str)] = &[
     ("4d71fc4e-d3c5-4e82-b57c-2312572feba1", "jb.tunnel_warp_3"),
     ("947d8c0d-576a-430e-8e70-cbffcd33b02e", "jb.tunnel_warp_4"),
     ("B3DB8933-F2E5-4094-975D-2595F0121FC2", "jb.sparkle_trail_wash_06"),
+    ("CACF5228-B4B6-44e2-91C6-4CA8367EECBA", "jb.rect_iris_close"),
+    ("F7BD83DF-999C-4d09-8F4C-85DAB842E720", "jb.rect_iris_open"),
 ];
 
 pub fn register(r: &mut Registry) {

@@ -1,5 +1,5 @@
 //! Parametric soft-mask wipes fitted frame by frame on Filmora exports
-//! (linear, band, circular, clock sweep, pinwheel and star masks). The mask
+//! (linear, band, rectangle, circular, clock sweep, pinwheel and star masks). The mask
 //! position `c`, edge width `w`, rotation `r` and an optional glow along the
 //! mask edge (a gaussian core and an exponential halo, colours per keyframe)
 //! are tabulated at progress keyframes (`shaders/lane1/mask.wgsl` has the
@@ -17,6 +17,7 @@ pub enum Shape {
     Pinwheel = 3,
     Star = 4,
     Band = 5,
+    Rect = 6,
 }
 
 pub struct MaskSpec {
