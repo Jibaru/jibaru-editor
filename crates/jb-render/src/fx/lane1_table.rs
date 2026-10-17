@@ -35,25 +35,73 @@ pub struct TableSpec {
     pub edge: Edge,
     /// Layer order: 0 sum, 1 A over B, 2 B over A (coverage of transparent edges).
     pub order: u8,
-    pub rows: &'static [[f32; ROW]],
+    /// Row columns stored in `data` (always starting with 0, the progress);
+    /// the other columns keep their identity value.
+    pub cols: &'static [u8],
+    /// Keyframes, `cols.len()` values each.
+    pub data: &'static [f32],
+}
+
+impl TableSpec {
+    /// The keyframes as full rows.
+    pub fn rows(&self) -> Vec<[f32; ROW]> {
+        self.data
+            .chunks_exact(self.cols.len().max(1))
+            .map(|vals| {
+                let mut r = identity_row();
+                for (c, v) in self.cols.iter().zip(vals) {
+                    r[*c as usize] = *v;
+                }
+                r
+            })
+            .collect()
+    }
+}
+
+/// Identity cameras (k = 1) and an all-zero mix.
+fn identity_row() -> [f32; ROW] {
+    let mut r = [0.0; ROW];
+    r[3] = 1.0;
+    r[15] = 1.0;
+    r
+}
+
+/// A stand-in for an item whose artwork is not reproduced: both clips with
+/// identity cameras and only the per-frame colour mix, `[p, al.rgb, be.rgb, ga.rgb]`
+/// keyframes (the timing, the cut and the average colour of the look).
+pub struct MixSpec {
+    pub id: &'static str,
+    pub name: &'static str,
+    pub category: &'static str,
+    pub description: &'static str,
+    pub rows: &'static [[f32; 10]],
+}
+
+enum Rows {
+    Full(Vec<[f32; ROW]>),
+    Mix(&'static [[f32; 10]]),
 }
 
 pub struct TableFx {
     info: FxInfo,
-    spec: &'static TableSpec,
+    rows: Rows,
+    edge: Edge,
+    order: u8,
     shader: ShaderSrc,
+}
+
+/// Full row of a colour-mix keyframe.
+fn mix_row(m: &[f32; 10]) -> [f32; ROW] {
+    let mut r = identity_row();
+    r[0] = m[0];
+    r[25..34].copy_from_slice(&m[1..10]);
+    r
 }
 
 /// Linear interpolation of the rows at progress `p` (held outside).
 pub fn sample_rows(rows: &[[f32; ROW]], p: f32) -> [f32; ROW] {
-    let identity = {
-        let mut r = [0.0; ROW];
-        r[3] = 1.0;
-        r[15] = 1.0;
-        r
-    };
     if rows.is_empty() {
-        return identity;
+        return identity_row();
     }
     if p <= rows[0][0] {
         return rows[0];
@@ -77,7 +125,13 @@ impl Effect for TableFx {
     }
 
     fn encode(&self, cx: &mut FxCx<'_>, io: &FxIo<'_>) {
-        let r = sample_rows(self.spec.rows, io.progress);
+        let r = match &self.rows {
+            Rows::Full(rows) => sample_rows(rows, io.progress),
+            Rows::Mix(rows) => {
+                let m = super::lane1_mask::sample10(rows, io.progress);
+                mix_row(&m)
+            }
+        };
         let mut u = Uniforms { progress: io.progress, time: io.time, ..Default::default() };
         for side in 0..2 {
             let o = 1 + side * 12;
@@ -90,7 +144,7 @@ impl Effect for TableFx {
         u.p[8] = [r[31], r[32], r[33], 0.0];
         u.p[10] = [r[34], r[35], r[36], 0.0];
         u.p[11] = [r[37], r[38], r[39], 0.0];
-        u.p[9] = [self.spec.edge as u32 as f32, self.spec.order as f32, 0.0, 0.0];
+        u.p[9] = [self.edge as u32 as f32, self.order as f32, 0.0, 0.0];
         cx.run(&self.shader, io.a, io.b, io.out, u);
     }
 }
@@ -100,7 +154,18 @@ pub fn register(r: &mut Registry) {
     for spec in super::lane1_tables::TABLES {
         r.register(TableFx {
             info: info(spec.id, spec.name, spec.category, FxKind::Transition, spec.description, &[]),
-            spec,
+            rows: Rows::Full(spec.rows()),
+            edge: spec.edge,
+            order: spec.order,
+            shader: ShaderSrc::new("jb.lane1.table", body),
+        });
+    }
+    for spec in super::lane1_tables::MIXES {
+        r.register(TableFx {
+            info: info(spec.id, spec.name, spec.category, FxKind::Transition, spec.description, &[]),
+            rows: Rows::Mix(spec.rows),
+            edge: Edge::Clamp,
+            order: 0,
             shader: ShaderSrc::new("jb.lane1.table", body),
         });
     }

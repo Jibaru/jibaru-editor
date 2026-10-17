@@ -121,6 +121,7 @@ pub const GROUPS: &[LibraryGroup] = &[
     g(T, "Camera Moves", crate::fx::lane1_tables::LIB_CAMERA_MOVES),
     g(T, "Soft Wipes", crate::fx::lane1_tables::LIB_SOFT_WIPES),
     g(T, "Flash & Fade", crate::fx::lane1_tables::LIB_FLASH_FADE),
+    g(T, "Overlay Washes", crate::fx::lane1_tables::LIB_OVERLAY_WASHES),
     g(T, "3D Turns", crate::fx::lane2_layers::LIB_3D),
     g(
         T,

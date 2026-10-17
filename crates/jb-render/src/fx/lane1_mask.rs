@@ -48,7 +48,8 @@ struct MaskFx {
     shader: ShaderSrc,
 }
 
-fn sample(rows: &[[f32; 10]], p: f32) -> [f32; 10] {
+/// Linear interpolation of 10-float keyframes `[p, ...]` at progress `p` (held outside).
+pub fn sample10(rows: &[[f32; 10]], p: f32) -> [f32; 10] {
     if rows.is_empty() {
         return [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
     }
@@ -71,7 +72,7 @@ impl Effect for MaskFx {
 
     fn encode(&self, cx: &mut FxCx<'_>, io: &FxIo<'_>) {
         let s = self.spec;
-        let r = sample(s.rows, io.progress);
+        let r = sample10(s.rows, io.progress);
         let mut u = Uniforms { progress: io.progress, ..Default::default() };
         u.p[0] = [r[1], r[2], r[3], 0.0];
         u.p[1] = [s.shape as u32 as f32, s.sgn, s.centre[0], s.centre[1]];
