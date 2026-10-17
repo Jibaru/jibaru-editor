@@ -9,6 +9,8 @@
 //   6: gain d/dv rgb, edge (0 clip, 1 mirror, 2 wrap)
 //   7: offset rgb (display 0..1), blur taps
 //   8: source rect u0 v0 u1 v1
+//  10: lens: radial distortion k1, k2 of the screen point before the pin
+//      (p -> c + (p - c)(1 + k1 r^2 + k2 r^4), r in frame heights from the centre), saturation
 //   9: strip mask in source uv: lo <= dot(n, q) <= hi (n = xy, lo = z, hi = w); |n| is
 //      1 / feather, so the edges ramp over one unit of dot(n, q) (or one pixel if wider)
 // Corners are where the source rect's corners (TL, TR, BR, BL) land; the
@@ -83,7 +85,15 @@ fn l2_mirror(x: vec2f) -> vec2f {
     return select(f, 2.0 - f, f > vec2f(1.0));
 }
 
-fn slot(l: i32, k: i32) -> vec4f { return u.p[l * 10 + k]; }
+fn slot(l: i32, k: i32) -> vec4f { return u.p[l * 11 + k]; }
+
+fn lens(l: i32, p: vec2f) -> vec2f {
+    let k = slot(l, 10);
+    if (k.x == 0.0 && k.y == 0.0) { return p; }
+    let d = (p - 0.5) * vec2f(aspect(), 1.0);
+    let r2 = dot(d, d);
+    return 0.5 + (p - 0.5) * (1.0 + k.x * r2 + k.y * r2 * r2);
+}
 
 fn l2_src(s: f32, q: vec2f) -> vec3f {
     if (s < 0.5) { return to_disp(sa(q)).rgb; }
@@ -96,7 +106,7 @@ fn l2_layer(l: i32, p: vec2f, t: f32, fw: vec2f) -> vec4f {
     let c01 = slot(l, 0) + slot(l, 2) * t;
     let c23 = slot(l, 1) + slot(l, 3) * t;
     let persp = slot(l, 6).w > 3.5;
-    let st = pin_inv(persp, p, c01.xy, c01.zw, c23.xy, c23.zw);
+    let st = pin_inv(persp, lens(l, p), c01.xy, c01.zw, c23.xy, c23.zw);
     // Degenerate pins give NaN/inf: draw nothing there (NaN would poison the blend).
     if (!(all(abs(st) < vec2f(1e6)))) { return vec4f(0.0); }
     let rect = slot(l, 8);
@@ -121,14 +131,16 @@ fn l2_layer(l: i32, p: vec2f, t: f32, fw: vec2f) -> vec4f {
         // Degenerate pins (slivers) can invert to a wrong root: reject points the pin does not map back.
         if (!persp) {
             let back = fwd_bilinear(clamp(st, vec2f(-0.5), vec2f(1.5)), c01.xy, c01.zw, c23.xy, c23.zw);
-            if (any(abs(back - p) > 2.0 * u.inv_size)) { cov = 0.0; }
+            if (any(abs(back - lens(l, p)) > 2.0 * u.inv_size)) { cov = 0.0; }
         }
     }
     let g = slot(l, 4);
     let gu = slot(l, 5);
     let gv = slot(l, 6);
     let o = slot(l, 7);
-    let s = l2_src(gu.w, q);
+    var s = l2_src(gu.w, q);
+    let sat = slot(l, 10).z;
+    if (sat != 1.0) { s = mix(vec3f(dot(s, LUMA)), s, sat); }
     let col = s * (g.rgb + gu.rgb * (st.x - 0.5) + gv.rgb * (st.y - 0.5)) + o.rgb;
     return vec4f(col, cov * g.w);
 }
@@ -143,9 +155,9 @@ fn fx(uv: vec2f) -> vec4f {
         let c01 = slot(l, 0);
         let c23 = slot(l, 1);
         let persp = slot(l, 6).w > 3.5;
-        let s0 = pin_inv(persp, uv, c01.xy, c01.zw, c23.xy, c23.zw);
-        let sx1 = pin_inv(persp, uv + vec2f(px.x, 0.0), c01.xy, c01.zw, c23.xy, c23.zw);
-        let sy1 = pin_inv(persp, uv + vec2f(0.0, px.y), c01.xy, c01.zw, c23.xy, c23.zw);
+        let s0 = pin_inv(persp, lens(l, uv), c01.xy, c01.zw, c23.xy, c23.zw);
+        let sx1 = pin_inv(persp, lens(l, uv + vec2f(px.x, 0.0)), c01.xy, c01.zw, c23.xy, c23.zw);
+        let sy1 = pin_inv(persp, lens(l, uv + vec2f(0.0, px.y)), c01.xy, c01.zw, c23.xy, c23.zw);
         var fw = 0.5 * (abs(sx1 - s0) + abs(sy1 - s0));
         if (!(all(fw < vec2f(1e6)))) { fw = vec2f(1e6); }
         let taps = max(i32(slot(l, 7).w), 1);

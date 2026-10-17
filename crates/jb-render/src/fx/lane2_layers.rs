@@ -31,8 +31,8 @@ const SHADER: &str = include_str!("lane2/layers.wgsl");
 include!("lane2/library_ids.rs");
 const TABLES: &str = include_str!("lane2/tables.txt");
 
-/// Layers per pass (10 uniform slots each, 32 available).
-const PER_PASS: usize = 3;
+/// Layers per pass (11 uniform slots each, 32 available).
+const PER_PASS: usize = 2;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Src {
@@ -64,6 +64,10 @@ pub struct Key {
     pub bc: [f32; 8],
     /// Strip mask `[nx, ny, lo, hi]` in source uv (see layers.wgsl); zero n: the layer's own.
     pub strip: [f32; 4],
+    /// Lens distortion `[k1, k2]` of the screen point before the pin.
+    pub lens: [f32; 2],
+    /// Saturation of the source before the gain (1: unchanged, 0: grey).
+    pub sat: f32,
 }
 
 impl Key {
@@ -81,6 +85,8 @@ impl Key {
             a: m(self.a, b.a),
             bc: m8(self.bc, b.bc),
             strip: std::array::from_fn(|i| m(self.strip[i], b.strip[i])),
+            lens: [m(self.lens[0], b.lens[0]), m(self.lens[1], b.lens[1])],
+            sat: m(self.sat, b.sat),
         }
     }
 }
@@ -136,7 +142,7 @@ impl Table {
 
 /// Parses `lane2/tables.txt`: `item <id>` sections with `bg r g b`, `dp x`,
 /// `layer <A|B|S> <clip|mirror|wrap> [homo] u0 v0 u1 v1 [nx ny lo hi]` and `k` key lines
-/// `p c0x c0y c1x c1y c2x c2y c3x c3y gr gg gb gur gug gub gvr gvg gvb or og ob a [bc x8 [strip x4]]`
+/// `p c0x c0y c1x c1y c2x c2y c3x c3y gr gg gb gur gug gub gvr gvg gvb or og ob a [bc x8 [strip x4 [k1 k2 [sat]]]]`
 /// (gains and offsets in display 0..1).
 pub fn parse_tables(text: &str) -> Result<Vec<Table>, String> {
     let mut out: Vec<Table> = Vec::new();
@@ -221,6 +227,8 @@ pub fn parse_tables(text: &str) -> Result<Vec<Table>, String> {
                             a: v[21],
                             bc: std::array::from_fn(|i| v.get(22 + i).copied().unwrap_or(0.0)),
                             strip: std::array::from_fn(|i| v.get(30 + i).copied().unwrap_or(0.0)),
+                            lens: [v.get(34).copied().unwrap_or(0.0), v.get(35).copied().unwrap_or(0.0)],
+                            sat: v.get(36).copied().unwrap_or(1.0),
                         };
                         let key = if v.len() >= 30 { key } else { Key { bc: [0.0; 8], ..key } };
                         let key = if v.len() >= 34 { key } else { Key { strip: [0.0; 4], ..key } };
@@ -270,7 +278,7 @@ pub fn encode_table(table: &Table, cx: &mut FxCx<'_>, io: &FxIo<'_>) {
         u.e[0] = [table.bg[0], table.bg[1], table.bg[2], chunk.len() as f32];
         u.e[1] = [if prev.is_some() { 1.0 } else { 0.0 }, 0.0, 0.0, 0.0];
         for (li, (l, k)) in chunk.iter().enumerate() {
-            let s = li * 10;
+            let s = li * 11;
             let taps = blur_taps(&k.bc);
             let src = match l.src {
                 Src::A => 0.0,
@@ -292,6 +300,7 @@ pub fn encode_table(table: &Table, cx: &mut FxCx<'_>, io: &FxIo<'_>) {
             u.p[s + 7] = [k.o[0], k.o[1], k.o[2], taps as f32];
             u.p[s + 8] = l.rect;
             u.p[s + 9] = if k.strip[..2] != [0.0, 0.0] { k.strip } else { l.strip };
+            u.p[s + 10] = [k.lens[0], k.lens[1], k.sat, 0.0];
         }
         let target = if ci == last { io.out.clone() } else { cx.temp_like(io.out) };
         let mut pass = Pass::full(shader(), &target, u);

@@ -102,7 +102,7 @@ MAD mean / worst frame over the item window at 960x540 (harness with `JB_FIDELIT
 | Simple Roll 7 | `0fbaebd7-c224-4ca5-a9f0-d16307f19854` | `jb.roll_7` | 4.85 | 10.2 | 3.27 | +1.58 |  |
 | Simple Roll 8 | `93a969d4-9108-45d6-9c09-f08350b2dca7` | `jb.roll_8` | 4.48 | 7.9 | 2.54 | +1.94 |  |
 | Simple Roll 9 | `1568e098-ca48-4861-9667-6d3d6ed19b60` | `jb.roll_9` | 4.36 | 11.3 | 3.20 | +1.16 |  |
-| Retro Box 01 | `7DB28C3E-D012-470E-B872-F71BA20437E2` | — |  |  |  |  | not implemented |
+| Retro Box 01 | `7DB28C3E-D012-470E-B872-F71BA20437E2` | `jb.retro_box` | 2.82 | 3.5 | 2.59 | +0.23 |  |
 | 3D Box Close | `16BFABD5-AC48-42AF-BAF9-149934D9B990` | — |  |  |  |  | not implemented |
 | 3D Box Down | `86437F55-4674-4809-9B7A-0D39DCF9E313` | `jb.box_down_3d` | 8.55 | 49.4 | 1.91 | +6.64 |  |
 | 3D Box Drop | `3B310488-6093-4A52-B87E-0367ADF1641A` | `jb.box_drop_3d` | 3.93 | 6.9 | 3.04 | +0.89 |  |
@@ -204,4 +204,4 @@ MAD mean / worst frame over the item window at 960x540 (harness with `JB_FIDELIT
 | Skew Right Split | `2D4099D2-9B28-437f-8FEB-2A7E25C0B549` | `jb.skew_split_right` | 1.68 | 2.5 | 1.73 | -0.05 |  |
 | Cube Right | `0FCB240F-5328-4e85-869A-2D989F50D387` | `jb.cube_turn_right` | 4.85 | 5.7 | 3.18 | +1.67 |  |
 
-52 of 138 items implemented; 10 within mean < 3 and worst < 10.
+53 of 138 items implemented; 11 within mean < 3 and worst < 10.

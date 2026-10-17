@@ -91,6 +91,8 @@ pub const FILMORA_LANE2: &[(&str, &str)] = &[
     ("2DD72324-4654-456D-9EA8-9931F6B6A1FD", "jb.push_left_fast"),
     // Fast Push Right
     ("95DF8005-6F31-48DD-9713-3FB2EECF102F", "jb.push_right_fast"),
+    // Retro Box 01
+    ("7DB28C3E-D012-470E-B872-F71BA20437E2", "jb.retro_box"),
     // Simple Roll 10
     ("691302d8-de75-4f40-82e3-5dd30fc0dc55", "jb.roll_10"),
     // Simple Roll 11
