@@ -11,6 +11,8 @@ use std::sync::Arc;
 pub mod animations;
 pub mod art3b;
 pub mod art3a;
+pub mod art2_items;
+pub mod art2_paint;
 pub mod color;
 pub mod creative;
 pub mod distort;
@@ -761,6 +763,7 @@ pub fn register_builtin(r: &mut Registry) {
     lane2_layers::register(r);
     art3b::register(r);
     art3a::register(r);
+    art2_paint::register_items(r, art2_items::items());
     crate::aliases::register(r);
 }
 

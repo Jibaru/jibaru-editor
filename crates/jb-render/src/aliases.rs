@@ -61,6 +61,7 @@ pub fn register(r: &mut Registry) {
     crate::aliases_lane4::register(r);
     crate::aliases_art3b::register(r);
     crate::aliases_art3a::register(r);
+    crate::aliases_art2::register(r);
     // Every built-in ported from the agent-editor prototype is reachable by
     // its prototype id as `ae:<id>`.
     let ids: Vec<&'static str> = r.iter().map(|i| i.id).collect();
