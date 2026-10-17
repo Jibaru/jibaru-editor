@@ -32,6 +32,16 @@ tables (Ramer–Douglas–Peucker, tolerance ≈ 1 % of the range):
 - **Flash** (`kit::FlashFx`, two passes): the current side zoomed by `s`
   and lit as `g·Z + h·blur(Z, σ) + o` (clipped), per frame.
 
+**Half-pixel offset.** Some transitions (Fade Dissolve, Dissolve Skew 01,
+Blind 1, Color Dissolve 3, Cut Off — Filmora's older engine items) render
+every frame shifted half a 1080p pixel right and up: their first frame,
+whose content is the clip's, matches the previous clean frame shifted by
+(+0.5, −0.5) px with bilinear filtering (1080p MAD 5.3 → 1.8 on the
+15 Mbit/s tr013 export), while most store transitions start pixel-exact.
+`Item::shifted` reproduces it (found by comparing every window's first and
+last frames with the clean neighbours);
+other lanes' items from the same engine likely need it too.
+
 Nothing from Filmora's installed assets was read; light, flares and washes
 are fitted from the exported output only and rendered procedurally.
 
@@ -58,7 +68,7 @@ it wherever the artwork covers the frame; "Before" is the first stand-in
 | Anime Style Flow 01 | `jb.starburst_flash` | stand-in: global mix + light field | 11.01 | 28.29 | 2.51 | +8.50 | 15.31 |  |
 | B&W Dissolve | `jb.mono_dissolve` | stand-in: global mix + light field | 8.13 | 13.95 | 3.50 | +4.63 | 9.72 |  |
 | Black Friday Sale 02 Transition 06 | `jb.chevron_sweep` | stand-in: global mix + light field | 12.26 | 51.62 | 2.44 | +9.82 | 17.80 |  |
-| Blind 1 | `jb.blind_bars` | edge front + procedural slats | 9.88 | 18.97 | 3.42 | +6.47 | 10.39 | slat band with hashed per-slat thresholds; slat pattern is not Filmora's |
+| Blind 1 | `jb.blind_bars` | edge front + procedural slats | 8.48 | 17.73 | 3.42 | +5.07 | 10.39 | slat band with hashed per-slat thresholds; slat pattern is not Filmora's; half-pixel offset |
 | Blue Sparkling Awards Transition 04 | `jb.gold_sparkle_burst` | stand-in: global mix + light field | 17.75 | 28.65 | 3.33 | +14.43 | 22.56 |  |
 | Burning Dash Transition 01 | `jb.fireball_dash_1` | stand-in: global mix + light field | 18.26 | 30.34 | 3.08 | +15.18 | 25.98 |  |
 | Burning Dash Transition 02 | `jb.fireball_dash_2` | stand-in: global mix + light field | 14.46 | 28.82 | 3.17 | +11.29 | 19.98 |  |
@@ -78,7 +88,7 @@ it wherever the artwork covers the frame; "Before" is the first stand-in
 | Cinematic Travel Vlog Transition 01 | `jb.film_strip_slide` | stand-in: global mix + light field | 21.36 | 32.51 | 3.05 | +18.31 | 28.22 |  |
 | Classic Movies Transition 06 | `jb.red_flare_flash` | stand-in: global mix + light field | 5.87 | 15.87 | 2.59 | +3.28 | 9.74 |  |
 | Col Merge | `jb.sides_merge` | edge wipe | 2.26 | 2.86 | 2.33 | -0.07 | 4.70 | two edges closing to the centre line |
-| Color Dissolve 3 | `jb.block_glow_dissolve` | stand-in: global mix + light field | 14.37 | 33.17 | 3.58 | +10.79 | 18.28 |  |
+| Color Dissolve 3 | `jb.block_glow_dissolve` | stand-in: global mix + light field | 13.36 | 33.11 | 3.58 | +9.78 | 18.28 | half-pixel offset |
 | Color Distance | `jb.checker_scatter` | stand-in: global mix + light field | 7.65 | 22.87 | 3.19 | +4.46 | 9.78 |  |
 | Colorful Transition Pack Transition 01 | `jb.liquid_blob_wipe` | stand-in: global mix + light field | 7.44 | 26.97 | 2.50 | +4.95 | 11.73 |  |
 | Colorful Transitions Vol 06 Transition 16 | `jb.color_rings` | procedural rings | 24.73 | 45.02 | 2.36 | +22.37 | 47.83 | inner ring radii and colours measured, outer bands estimated; coverage from the global fit |
@@ -91,20 +101,20 @@ it wherever the artwork covers the frame; "Before" is the first stand-in
 | Cross Whisk | `jb.block_whisk` | stand-in: global mix + light field | 12.48 | 26.77 | 2.82 | +9.66 | 15.43 |  |
 | Crystal Ball 1 | `jb.crystal_ball_iris` | lens ball | 7.20 | 13.36 | 3.59 | +3.61 | 7.37 | ellipse → circle iris with bulge and mid flash colours |
 | Crystal Ball 2 | `jb.crystal_ball_lens` | lens ball over clip | 15.70 | 35.22 | 3.24 | +12.46 | 17.76 | bulge only; the ball's rim highlight is not drawn |
-| Cut Off | `jb.cut_off` | stand-in: global mix + light field | 11.95 | 28.44 | 3.50 | +8.45 | 12.52 |  |
+| Cut Off | `jb.cut_off` | stand-in: global mix + light field | 11.33 | 28.34 | 3.50 | +7.83 | 12.52 | half-pixel offset |
 | Depth Slice | `jb.depth_panels` | stand-in: global mix + light field | 31.53 | 42.27 | 2.90 | +28.63 | 43.24 |  |
 | Diagonal Slice | `jb.split_slide` | stand-in: global mix + light field | 11.19 | 26.77 | 3.81 | +7.38 | 12.27 |  |
 | Dimensional Drop | `jb.panel_drop` | stand-in: global mix + light field | 19.72 | 36.60 | 3.77 | +15.95 | 27.21 |  |
-| Dissolve Skew 01 | `jb.diagonal_dissolve` | ramp wipe | 6.68 | 9.51 | 3.29 | +3.39 | 6.94 | diagonal soft front; ~3 above the floor mid-way (front shape) |
+| Dissolve Skew 01 | `jb.diagonal_dissolve` | ramp wipe | 5.23 | 8.45 | 3.29 | +1.95 | 6.94 | diagonal soft front; ~3 above the floor mid-way (front shape); half-pixel offset |
 | Domino Cascade | `jb.domino_panels` | stand-in: global mix + light field | 26.14 | 40.74 | 4.26 | +21.88 | 39.08 |  |
 | Energy Sports Transition 02 | `jb.speed_bars` | stand-in: global mix + light field | 31.36 | 70.25 | 2.66 | +28.70 | 34.95 |  |
 | Erase Line Down | `jb.line_erase_down` | edge wipe | 3.11 | 4.03 | 2.35 | +0.76 | 5.52 | hard edge, fast–slow–fast timing table |
 | Erase Line Right | `jb.line_erase_right` | edge wipe | 2.52 | 3.04 | 2.31 | +0.21 | 4.89 | hard edge, fast–slow–fast timing table |
-| Fade Dissolve | `jb.sweep_dissolve` | soft edge × eased mix | 6.81 | 7.99 | 3.33 | +3.47 | 7.07 | left-to-right front 0.475 wide at x = 0.047 + 1.4 p, times an eased global weight |
+| Fade Dissolve | `jb.sweep_dissolve` | soft edge × eased mix | 5.49 | 6.48 | 3.33 | +2.16 | 7.07 | left-to-right front 0.475 wide at x = 0.047 + 1.4 p, times an eased global weight; half-pixel offset |
 | Fade Grayscale | `jb.gray_fade` | global mix | 5.77 | 8.11 | 3.50 | +2.27 | 6.26 | dissolve through a desaturated mix (luma terms) |
 | Fade Single Track | `jb.wash_black` | global mix | 3.33 | 6.83 | 3.70 | -0.37 | 3.65 | dip to black, black on frames 29–32 |
 | Fade White | `jb.wash_white` | global mix | 3.66 | 6.55 | 4.50 | -0.84 | 3.98 | linear display-space dip to white, peak on the cut frame |
-| Falling Frame Transitions | `jb.falling_frame` | stand-in: global mix + light field | 29.04 | 45.11 | 3.29 | +25.74 | 32.74 |  |
+| Falling Frame Transitions | `jb.falling_frame` | framed panel | 23.87 | 42.50 | 3.29 | +20.58 | 32.74 | flat panel with white border and fitted grade; the frame tilts in perspective while it falls (mid frames ~35) |
 | Fast Whirl 1 | `jb.fast_whirl_1` | stand-in: global mix + light field | 9.97 | 28.84 | 3.25 | +6.72 | 11.38 |  |
 | Fast Whirl 2 | `jb.fast_whirl_2` | stand-in: global mix + light field | 9.49 | 28.47 | 3.22 | +6.27 | 11.18 |  |
 | Fast Wipe Down | `jb.fast_wipe_down` | existing `jb.fast_wipe_down` | 2.67 | 4.12 | 3.05 | -0.38 | 4.64 | alias only; already at the floor |

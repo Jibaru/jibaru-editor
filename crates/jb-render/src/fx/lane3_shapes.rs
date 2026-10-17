@@ -81,6 +81,32 @@ fn fx(uv: vec2f) -> vec4f {{
     )
 }
 
+/// Framed panel over the other clip: the outgoing clip scaled by `s`,
+/// rotated by `rot` and moved by `(dx, dy)` (uv), with a white border `bw`
+/// frame heights wide, over the incoming clip zoomed by `s2`; the whole
+/// picture graded `g c + o`. Rows `[p, s, rot, dx, dy, s2, g, or, og, ob]`.
+fn framed_panel(rows: &[[f32; 10]], bw: f32) -> String {
+    format!(
+        r#"{}
+fn fx(uv: vec2f) -> vec4f {{
+    let p = prog();
+    let k0 = kf_g(p);
+    let k1 = kf_g_1(p);
+    let k2 = kf_g_2(p);
+    let s = max(k0.x, 0.05);
+    let A = aspect();
+    let q = rot2(to_c(uv - vec2f(k0.z, k0.w)), -k0.y) / s;
+    let b = {bw:?} / s;
+    var c = to_disp(sb(zoom_uv(uv, max(k1.x, 0.05), vec2f(0.5)))).rgb;
+    if (abs(q.x) <= 0.5 * A + b && abs(q.y) <= 0.5 + b) {{ c = vec3f(1.0); }}
+    if (abs(q.x) <= 0.5 * A && abs(q.y) <= 0.5) {{ c = to_disp(sa(from_c(q))).rgb; }}
+    return l3_out(k1.y * c + vec3f(k1.z, k1.w, k2.x));
+}}
+"#,
+        table("g", rows)
+    )
+}
+
 fn items() -> Vec<Item> {
     vec![
         Item::new(
@@ -91,6 +117,15 @@ fn items() -> Vec<Item> {
              panels with a motion blur, dipping in scale as each panel passes, and the new clip settles full \
              frame. Fitted frame by frame on Filmora's export of Carousel Left.",
             panel_strip(D::CAROUSEL_LEFT, false, 1.0),
+        ),
+        Item::new(
+            "jb.falling_frame",
+            "Falling Frame",
+            "Motion",
+            "A white flash, then the clip shrinks slightly inside a thin white frame and falls out of the bottom of \
+             the picture, uncovering the new clip. Fitted frame by frame on Filmora's export of Falling Frame \
+             Transitions (as a flat panel: the slight perspective tilt of the falling frame is not modelled).",
+            framed_panel(D::FALLING_FRAME, 0.012),
         ),
         Item::new(
             "jb.carousel_right",

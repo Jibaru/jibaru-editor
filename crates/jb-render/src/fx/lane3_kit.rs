@@ -67,6 +67,9 @@ fn kf_{name}(p: f32) -> vec4f {{
 
 /// WGSL helpers shared by every lane 3 transition.
 pub const KIT: &str = r#"
+// Sample offset of Filmora's transition rendering (see `with_pixel_shift`):
+// content half a 1080p pixel right and up.
+const L3_SHIFT: vec2f = vec2f(-0.5 / 1920.0, 0.5 / 1080.0);
 // Linear ramp of a threshold: 1 where m < t - s/2, 0 where m > t + s/2.
 fn l3_ramp(m: f32, t: f32, s: f32) -> f32 {
     if (s <= 1e-5) { return select(0.0, 1.0, m < t); }
@@ -117,6 +120,8 @@ pub struct Item {
     pub description: &'static str,
     pub params: Vec<ParamSpec>,
     pub wgsl: String,
+    /// Render half a 1080p pixel right and up (see [`with_pixel_shift`]).
+    pub shift: bool,
 }
 
 impl Item {
@@ -127,7 +132,13 @@ impl Item {
         description: &'static str,
         wgsl: String,
     ) -> Self {
-        Self { id, name, category, description, params: Vec::new(), wgsl }
+        Self { id, name, category, description, params: Vec::new(), wgsl, shift: false }
+    }
+
+    /// Marks the item as rendered with Filmora's half-pixel offset.
+    pub fn shifted(mut self) -> Self {
+        self.shift = true;
+        self
     }
 }
 
@@ -300,12 +311,26 @@ fn fx(uv: vec2f) -> vec4f {{
     )
 }
 
+/// Some of Filmora's transitions (its built-in engine ones among them: Fade
+/// Dissolve, Blind 1, Color Dissolve 3, ...) render every frame half a 1080p
+/// pixel to the right and up compared with the plain clips: their first
+/// frame, whose content equals the clip's, matches it shifted by
+/// (+0.5, -0.5) px with bilinear filtering (5.3 -> 1.8 mean difference at
+/// 1080p on a 15 Mbit/s export); most store transitions do not. For items
+/// marked [`Item::shifted`] the recipe's `fx` is wrapped so its whole output
+/// is shifted the same way.
+fn with_pixel_shift(wgsl: &str) -> String {
+    assert!(wgsl.contains("fn fx(uv: vec2f) -> vec4f"), "lane 3 item without fx(uv)");
+    let body = wgsl.replacen("fn fx(uv: vec2f) -> vec4f", "fn fx_l3(uv: vec2f) -> vec4f", 1);
+    format!("{body}\nfn fx(uv: vec2f) -> vec4f {{ return fx_l3(uv + L3_SHIFT); }}\n")
+}
+
 pub fn register_items(r: &mut Registry, items: Vec<Item>) {
     for it in items {
         shader(
             r,
             info(it.id, it.name, it.category, FxKind::Transition, it.description, &it.params),
-            format!("{KIT}\n{}", it.wgsl),
+            format!("{KIT}\n{}", if it.shift { with_pixel_shift(&it.wgsl) } else { it.wgsl }),
         );
     }
 }
@@ -338,12 +363,13 @@ pub struct FlashFx {
     pub info: FxInfo,
     pub rows: &'static [[f32; 8]],
     pub cut: f32,
+    pub shift: bool,
     pub shader: ShaderSrc,
 }
 
 const FLASH_WGSL: &str = r#"
 @fragment fn fs_main(in: VsOut) -> @location(0) vec4f {
-    let q = zoom_uv(in.uv, max(u.e0.z, 1e-3), vec2f(0.5));
+    let q = zoom_uv(in.uv + u.e1.w * L3_SHIFT, max(u.e0.z, 1e-3), vec2f(0.5));
     let x = to_disp(sa(q)).rgb;
     let bl = to_disp(sb(q)).rgb;
     return l3_out(u.e0.x * x + u.e0.y * bl + u.e1.xyz);
@@ -354,7 +380,7 @@ impl FlashFx {
     pub fn new(it: Item, rows: &'static [[f32; 8]], cut: f32) -> Self {
         let shader = ShaderSrc::new(it.id, format!("{KIT}\n{FLASH_WGSL}"));
         let info = info(it.id, it.name, it.category, FxKind::Transition, it.description, &it.params);
-        Self { info, rows, cut, shader }
+        Self { info, rows, cut, shift: it.shift, shader }
     }
 }
 
@@ -373,7 +399,7 @@ impl Effect for FlashFx {
         let bl = cx.blur(src, sigma, sigma);
         let mut e = [[0.0; 4]; 4];
         e[0] = [r[1], r[2], r[4], 0.0];
-        e[1] = [r[5], r[6], r[7], 0.0];
+        e[1] = [r[5], r[6], r[7], if self.shift { 1.0 } else { 0.0 }];
         let u = Uniforms { progress: io.progress, e, ..Default::default() };
         cx.run(&self.shader, src, Some(&bl), io.out, u);
     }

@@ -42,6 +42,7 @@ fn fx(uv: vec2f) -> vec4f {{
 "#,
                 table("g", SWEEP_DISSOLVE_G)
             ),
+            shift: true,
         },
         Item::new(
             "jb.wash_white",

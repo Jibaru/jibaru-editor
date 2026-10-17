@@ -47,7 +47,8 @@ fn items() -> Vec<Item> {
             "A soft diagonal front crosses from the top-left corner to the bottom-right, dissolving into the new \
              clip; the front widens as it goes. Fitted on Filmora's export of Dissolve Skew 01.",
             ramp_wipe("(uv.x * A + uv.y) / (A + 1.0)", D::SKEW_DISSOLVE),
-        ),
+        )
+        .shifted(),
         Item::new(
             "jb.blind_bars",
             "Blind Bars",
@@ -56,7 +57,8 @@ fn items() -> Vec<Item> {
              clip at its own moment and dark gaps open between slats. Front position and band width fitted on \
              Filmora's export of Blind 1.",
             format!("{}\n{BLIND_BARS}", table("g", D::BLIND_BARS)),
-        ),
+        )
+        .shifted(),
         Item::new(
             "jb.slice_slide",
             "Slice Slide",
