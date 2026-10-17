@@ -31,6 +31,23 @@ worse than the stand-in's. Artwork whose drawing differs from Filmora's (as
 it must) keeps a residual above the floor along its edges and details; the
 gain over the stand-in is in shape, coverage and motion.
 
+## Findings
+
+- Items whose artwork is a few large shapes with a deterministic path
+  (irises, stripes, chevrons, gold bars, panels, a rolling pumpkin, a film
+  strip) gain the most: once the path is measured, the shape coverage over
+  time matches and MAD drops well below the stand-in.
+- Items made of many random small elements (toon flames, ink and smoke
+  clouds, sparkles, speed lines) cannot be matched element by element
+  without tracing the reference, so a flat high-contrast drawing measures
+  *worse* than the smooth stand-in (which is the MAD-optimal blur of them).
+  Those stay on their stand-ins; attempts and their scores are in the notes.
+- Photoreal close-ups (Creepy Pack 01/02) are out of reach of flat vector
+  art.
+- Several first-half items are geometric camera/panel motions (carousels,
+  domino, reel, slices, whirls) rather than artwork; they were left to the
+  geometric lanes' models.
+
 ## Upgraded (20)
 
 | Filmora item | Ours | Replaced stand-in | MAD before | MAD now | MAD max | Floor | Notes |
