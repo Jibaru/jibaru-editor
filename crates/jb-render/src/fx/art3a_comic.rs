@@ -91,8 +91,39 @@ const CANDY_SPIRAL: &[[f32; 9]] = &[
     [60.0, 1.15, 0.63, 0.62, 2.12, 0.0, 1.3, 0.6, 0.0],
 ];
 
+/// Animate Effect Transition 03 (Filmora): blob radius and splat size per
+/// reference frame, the splat fitted to the uncovered area of each frame
+/// (`[frame, blob, hole]`).
+const COMIC_BURST: &[[f32; 3]] = &[
+    [0.0, 0.0, 0.0],
+    [16.5, 0.0, 0.0],
+    [17.0, 0.75, 0.0],
+    [17.5, 1.3, 0.0],
+    [18.5, 1.3, 0.0],
+    [18.5, 1.3, 0.06],
+    [21.0, 1.3, 0.09],
+    [22.0, 1.3, 0.3],
+    [23.0, 1.3, 0.94],
+    [24.0, 1.3, 1.21],
+    [25.0, 1.3, 1.69],
+    [26.0, 1.3, 2.15],
+    [27.5, 1.3, 2.3],
+    [28.0, 1.3, 2.73],
+    [29.0, 1.3, 3.17],
+    [30.0, 1.3, 3.39],
+    [32.0, 1.3, 4.5],
+    [60.0, 1.3, 8.0],
+];
+
 pub fn items() -> Vec<Item> {
     vec![
+        art_item(
+            "jb.comic_burst",
+            "Comic Burst",
+            "Comic",
+            "A pale paper blob balloons over the clip and fills the frame, then the next clip bursts through it as a spiky splat that blows the paper apart.",
+            art_wgsl("", &[tab("cb", &at_frames(COMIC_BURST))], include_str!("../shaders/art3a/comic_burst.wgsl")),
+        ),
         art_item(
             "jb.candy_swirl",
             "Candy Swirl",

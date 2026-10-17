@@ -7,7 +7,6 @@ use crate::registry::Registry;
 pub const FILMORA_LANE3: &[(&str, &str, &str)] = &[
     ("A5C3C5BD-546E-4DC5-A97B-3D7A9E8F7C0C", "jb.warm_flare_flash", "Algorithm Combination Set 06"),
     ("590F1E5A-7B73-41FE-904E-F5A6F795C352", "jb.golden_dust_sweep", "Ancient Civilization Egypt Pack Transition 04"),
-    ("83F6C992-902D-42C5-91EB-7656CC7F489E", "jb.ink_splash_burst", "Animate Effect Transition 03"),
     ("ead34435-c969-ef11-bd6a-5811229582b1", "jb.energy_ring_burst", "Anime Attack 03"),
     ("4A3125B0-9072-458F-BE38-687AE30CDA78", "jb.flame_wash", "Anime Flame Transition 09"),
     ("c3d04d2c-c338-f111-9585-e796645309a2", "jb.starburst_flash", "Anime Style Flow 01"),
@@ -25,7 +24,6 @@ pub const FILMORA_LANE3: &[(&str, &str, &str)] = &[
     ("BF4991DE-B5A1-4006-BA50-95F0388E18BF", "jb.bokeh_flash", "Christmas Gift Transition 03"),
     ("59CDE888-1E78-4DCF-A4EB-71B48B9F90B2", "jb.soft_light_leak", "Cinematic Transition 03"),
     ("51023327-1E45-45D6-B606-54FB773D3BA2", "jb.scratched_film_dip", "Cinematic Transition 09"),
-    ("4690E200-55D5-48FE-87F1-77FA4394AB60", "jb.film_strip_slide", "Cinematic Travel Vlog Transition 01"),
     ("141AB999-5344-4DA8-9DBA-00F7359BFF0C", "jb.red_flare_flash", "Classic Movies Transition 06"),
     ("84611DFC-9C1F-4f2a-B514-B434D849B956", "jb.sides_merge", "Col Merge"),
     ("C74251B2-6F0F-4C21-A9E8-C75479B39261", "jb.block_glow_dissolve", "Color Dissolve 3"),

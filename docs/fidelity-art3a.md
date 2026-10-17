@@ -31,13 +31,15 @@ worse than the stand-in's. Artwork whose drawing differs from Filmora's (as
 it must) keeps a residual above the floor along its edges and details; the
 gain over the stand-in is in shape, coverage and motion.
 
-## Upgraded (16)
+## Upgraded (18)
 
 | Filmora item | Ours | Replaced stand-in | MAD before | MAD now | MAD max | Floor | Notes |
 |---|---|---|---:|---:|---:|---:|---|
+| Animate Effect Transition 03 | `jb.comic_burst` | `jb.ink_splash_burst` | 5.51 | 5.16 | 49.48 | 2.93 |  |
 | Business Presentation Vol 02 Transition 02 | `jb.stripe_close` | `jb.stripe_slide_diagonal` | 25.40 | 5.90 | 17.65 | 2.43 |  |
 | Camera Shutter | `jb.iris_shutter` | `jb.shutter_wash_01` | 9.72 | 4.88 | 11.69 | — |  |
 | Camera Transition 09 | `jb.lens_iris` | `jb.shutter_wash_02` | 14.04 | 7.60 | 13.15 | — |  |
+| Cinematic Travel Vlog Transition 01 | `jb.film_strip_race` | `jb.film_strip_slide` | 21.36 | 6.23 | 15.86 | 3.05 | the picture stays put while the strip mask (frame windows, gaps, 25 fps) moves over it |
 | Comic Style 3 | `jb.comic_page` | `jb.comic_panels` | 35.33 | 27.50 | 42.94 | 3.81 | camera fitted per frame on the hero panels; the other panels of the reference are halftone-printed and cannot be matched pixel-wise |
 | Creepy Pack Transition 03 | `jb.lantern_roll` | `jb.lantern_sweep` | 25.04 | 20.73 | 44.20 | 2.35 |  |
 | Gaming Set Sports Transition 2 | `jb.arrow_stack` | `jb.chevron_wipe` | 10.47 | 5.51 | 8.94 | 2.48 |  |
@@ -52,7 +54,7 @@ gain over the stand-in is in shape, coverage and motion.
 | Horrible Colorful Transition 02 | `jb.ghost_glide` | `jb.glitch_bands` | 10.73 | 5.52 | 11.99 | 2.33 |  |
 | Horrible Colorful Transition 13 | `jb.boo_dive` | `jb.ghost_face_flash` | 22.67 | 21.39 | 86.89 | 2.40 |  |
 
-## Still stand-ins (49)
+## Still stand-ins (47)
 
 Mapped by their lane's stand-in; "Tried" is the best original-art attempt when one was measured but not switched (worse or not visually right).
 
@@ -60,9 +62,8 @@ Mapped by their lane's stand-in; "Tried" is the best original-art attempt when o
 |---|---|---:|---:|---|
 | Algorithm Combination Set 06 | `jb.warm_flare_flash` | 10.07 | — |  |
 | Ancient Civilization Egypt Pack Transition 04 | `jb.golden_dust_sweep` | 6.53 | — |  |
-| Animate Effect Transition 03 | `jb.ink_splash_burst` | 5.51 | — |  |
 | Anime Attack 03 | `jb.energy_ring_burst` | 19.15 | — |  |
-| Anime Flame Transition 09 | `jb.flame_wash` | 12.90 | — |  |
+| Anime Flame Transition 09 | `jb.flame_wash` | 12.90 | — | original toon flames drawn (24.38): random flame tongues cannot line up with the reference pose by pose, so any flat high-contrast drawing measures worse than the smooth stand-in; not switched |
 | Anime Style Flow 01 | `jb.starburst_flash` | 11.01 | — |  |
 | B&W Dissolve | `jb.mono_dissolve` | 8.13 | — |  |
 | Black Friday Sale 02 Transition 06 | `jb.chevron_sweep` | 12.26 | — |  |
@@ -73,7 +74,6 @@ Mapped by their lane's stand-in; "Tried" is the best original-art attempt when o
 | Christmas Gift Transition 03 | `jb.bokeh_flash` | 6.89 | — |  |
 | Cinematic Transition 03 | `jb.soft_light_leak` | 4.65 | — |  |
 | Cinematic Transition 09 | `jb.scratched_film_dip` | 6.04 | — |  |
-| Cinematic Travel Vlog Transition 01 | `jb.film_strip_slide` | 21.36 | — |  |
 | Classic Movies Transition 06 | `jb.red_flare_flash` | 5.87 | — |  |
 | Color Dissolve 3 | `jb.block_glow_dissolve` | 13.36 | — |  |
 | Color Distance | `jb.checker_scatter` | 7.65 | — |  |
