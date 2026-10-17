@@ -12,6 +12,8 @@
 use crate::fx::lane3::kit::{register_items, table, Item};
 use crate::registry::Registry;
 
+#[path = "art3a_business.rs"]
+mod business;
 #[path = "art3a_camera.rs"]
 mod camera;
 #[path = "art3a_halloween.rs"]
@@ -64,6 +66,7 @@ pub fn tab<const K: usize>(name: &str, rows: &[[f32; K]]) -> String {
 
 pub fn register(r: &mut Registry) {
     let mut items = Vec::new();
+    items.extend(business::items());
     items.extend(camera::items());
     items.extend(halloween::items());
     register_items(r, items);

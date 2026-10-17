@@ -31,12 +31,14 @@ worse than the stand-in's. Artwork whose drawing differs from Filmora's (as
 it must) keeps a residual above the floor along its edges and details; the
 gain over the stand-in is in shape, coverage and motion.
 
-## Upgraded (8)
+## Upgraded (10)
 
 | Filmora item | Ours | Replaced stand-in | MAD before | MAD now | MAD max | Floor | Notes |
 |---|---|---|---:|---:|---:|---:|---|
+| Business Presentation Vol 02 Transition 02 | `jb.stripe_close` | `jb.stripe_slide_diagonal` | 25.40 | 5.90 | 17.65 | 2.43 |  |
 | Camera Shutter | `jb.iris_shutter` | `jb.shutter_wash_01` | 9.72 | 4.88 | 11.69 | — |  |
 | Camera Transition 09 | `jb.lens_iris` | `jb.shutter_wash_02` | 14.04 | 7.60 | 13.15 | — |  |
+| Gaming Set Sports Transition 2 | `jb.arrow_stack` | `jb.chevron_wipe` | 10.47 | 5.51 | 8.94 | 2.48 |  |
 | Halloween Colorful Transition 04 | `jb.pumpkin_grin` | `jb.pumpkin_face_wipe` | 31.61 | 25.65 | 80.12 | 2.30 |  |
 | Halloween Colorful Transition 09 | `jb.witch_hat_wave` | `jb.witch_hat_wipe` | 6.22 | 4.10 | 11.27 | 2.29 |  |
 | Halloween Colorful Transition 17 | `jb.skull_and_hat` | `jb.skull_hat_sweep` | 15.71 | 10.70 | 20.46 | 2.33 |  |
@@ -44,7 +46,7 @@ gain over the stand-in is in shape, coverage and motion.
 | Horrible Colorful Transition 02 | `jb.ghost_glide` | `jb.glitch_bands` | 10.73 | 5.52 | 11.99 | 2.33 |  |
 | Horrible Colorful Transition 13 | `jb.boo_dive` | `jb.ghost_face_flash` | 22.67 | 21.39 | 86.89 | 2.40 |  |
 
-## Still stand-ins (57)
+## Still stand-ins (55)
 
 Mapped by their lane's stand-in; "Tried" is the best original-art attempt when one was measured but not switched (worse or not visually right).
 
@@ -58,7 +60,6 @@ Mapped by their lane's stand-in; "Tried" is the best original-art attempt when o
 | Anime Style Flow 01 | `jb.starburst_flash` | 11.01 | — |  |
 | B&W Dissolve | `jb.mono_dissolve` | 8.13 | — |  |
 | Black Friday Sale 02 Transition 06 | `jb.chevron_sweep` | 12.26 | — |  |
-| Business Presentation Vol 02 Transition 02 | `jb.stripe_slide_diagonal` | 25.40 | — |  |
 | Carousel Down | `jb.carousel_down` | 21.09 | — |  |
 | Carousel Down Rebound | `jb.carousel_down_rebound` | 21.39 | — |  |
 | Carousel Up | `jb.carousel_up` | 21.98 | — |  |
@@ -86,7 +87,6 @@ Mapped by their lane's stand-in; "Tried" is the best original-art attempt when o
 | Fear Halloween 2 | `jb.zoom_through` | 27.50 | — |  |
 | Flora Collage Pack Transition 05 | `jb.diagonal_sweep` | 6.59 | — |  |
 | Flyeye | `jb.fly_eye` | 20.45 | — |  |
-| Gaming Set Sports Transition 2 | `jb.chevron_wipe` | 10.47 | — |  |
 | Give Mom Unique Love Pack Transition 01 | `jb.pink_bokeh` | 11.12 | — |  |
 | Gold Blue Transition 02 | `jb.gold_blue_paint_2` | 15.90 | — |  |
 | Gold Blue Transition 03 | `jb.gold_blue_paint_3` | 10.98 | — |  |

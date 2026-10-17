@@ -14,6 +14,8 @@ pub const FILMORA_ART3A: &[(&str, &str, &str)] = &[
     ("D59BB790-3F65-4AA6-8F59-5485294E671D", "jb.skull_and_hat", "Halloween Colorful Transition 17"),
     ("E85C72C2-7A02-42F6-9B24-BD0456A19847", "jb.ghost_glide", "Horrible Colorful Transition 02"),
     ("37E1E9AB-58F5-459A-8078-327D080B90A7", "jb.boo_dive", "Horrible Colorful Transition 13"),
+    ("6C96C244-355D-400C-B335-5442B68ED84C", "jb.stripe_close", "Business Presentation Vol 02 Transition 02"),
+    ("af283ec2-2384-f56a-ce90-687075426050", "jb.arrow_stack", "Gaming Set Sports Transition 2"),
 ];
 
 pub fn register(r: &mut Registry) {

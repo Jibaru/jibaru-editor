@@ -5,6 +5,7 @@ use crate::registry::FxKind::Transition as T;
 
 pub const LIBRARY: &[LibraryGroup] = &[
     LibraryGroup { kind: T, name: "Camera", items: &["jb.iris_shutter", "jb.lens_iris"] },
+    LibraryGroup { kind: T, name: "Graphics", items: &["jb.stripe_close", "jb.arrow_stack"] },
     LibraryGroup {
         kind: T,
         name: "Halloween",
