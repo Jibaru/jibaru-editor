@@ -315,3 +315,67 @@ pub fn capsule_column_run(t: f32, asp: f32) -> Scene {
     }
     s
 }
+
+/// Four pinwheel wedges of the new clip open from the centre, each fanning
+/// counter-clockwise from a quarter line until they meet.
+pub fn pinwheel_wedges(t: f32, _asp: f32) -> Scene {
+    let f = t * 60.0;
+    let mut s = Scene::new();
+    // The wedges on the vertical lines open faster than the horizontal ones.
+    let wv = kf(f, &[(13.0, 0.0), (14.0, 5.0), (17.0, 15.0), (20.0, 22.5), (23.0, 32.5), (26.0, 40.0), (29.0, 45.0), (32.0, 52.5), (35.0, 57.5), (38.0, 62.5), (41.0, 67.5), (44.0, 70.0), (47.0, 75.0), (50.0, 80.0), (52.0, 81.0), (54.0, 85.0), (56.0, 86.0), (58.0, 88.0), (60.0, 90.0)]);
+    let wh = kf(f, &[(13.0, 0.0), (14.0, 5.0), (17.0, 5.0), (20.0, 7.5), (23.0, 10.0), (26.0, 15.0), (29.0, 20.0), (32.0, 22.5), (35.0, 27.5), (38.0, 32.5), (41.0, 37.5), (44.0, 45.0), (47.0, 50.0), (50.0, 57.5), (52.0, 65.0), (54.0, 70.0), (56.0, 77.5), (58.0, 85.0), (60.0, 90.0)]);
+    if wv.min(wh) >= 89.9 {
+        s.mix = 1.0;
+        return s;
+    }
+    for k in 0..4 {
+        let w = if k % 2 == 0 { wv } else { wh };
+        if w > 0.0 {
+            let a = (90.0 * k as f32 + 90.0 - 0.5 * w).to_radians();
+            s.push(Prim::sector(0.0, 0.0, (0.5 * w).min(89.0).to_radians(), a).tex_b());
+        }
+    }
+    s
+}
+
+/// The old clip shrinks into a card on a carousel of alternating old / new
+/// cards over black; the carousel spins a few cards past and the new card
+/// that stops in front grows to fill the frame.
+pub fn card_carousel(t: f32, asp: f32) -> Scene {
+    let f = t * 60.0;
+    if f >= 58.0 {
+        return Scene::cut(t, 0.0);
+    }
+    let mut s = Scene::new().dip([0.0; 3], 1.0);
+    let phi = kf(f, &[(0.0, 0.0), (8.0, 10.0), (10.0, 15.5), (12.0, 20.4), (14.0, 29.6), (16.0, 40.0), (18.0, 53.0), (20.0, 72.0), (22.0, 94.7), (24.0, 125.0), (26.0, 161.0), (28.0, 203.0), (30.0, 239.0), (32.0, 278.0), (34.0, 319.0), (36.0, 346.0), (38.0, 374.0), (40.0, 388.0), (42.0, 404.0), (44.0, 418.0), (46.0, 425.0), (48.0, 430.0), (58.0, 450.0)]).to_radians();
+    let r = 0.45;
+    let mut cards: Vec<(f32, Prim)> = Vec::new();
+    for i in 0..6 {
+        let a = i as f32 * PI / 2.0 - phi;
+        let z = a.cos();
+        if z < -0.1 {
+            continue;
+        }
+        let mut x = r * a.sin();
+        let mut hh = 0.15 + 0.05 * z;
+        let mut depth = z;
+        if i == 0 && f < 11.0 {
+            // The old clip shrinking out of full screen.
+            hh = kf(f, &[(0.0, 0.5), (4.0, 0.415), (8.0, 0.285), (11.0, 0.195)]);
+            depth = 2.0;
+        }
+        if i == 5 && f > 47.5 {
+            hh = kf(f, &[(47.5, 0.197), (50.0, 0.24), (52.0, 0.33), (54.0, 0.41), (56.0, 0.46), (58.0, 0.5)]);
+            x = kf(f, &[(47.5, 0.16), (58.0, 0.0)]);
+            depth = 2.0;
+        }
+        if i > 0 && f < 4.0 {
+            continue;
+        }
+        let hw = hh * asp;
+        cards.push((depth, Prim::card(x, 0.0, hw, hh).quad_tex(i % 2 == 1)));
+    }
+    cards.sort_by(|p, q| p.0.partial_cmp(&q.0).unwrap_or(std::cmp::Ordering::Equal));
+    s.extend(cards.into_iter().map(|c| c.1));
+    s
+}

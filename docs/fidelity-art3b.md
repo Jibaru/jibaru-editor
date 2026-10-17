@@ -4,7 +4,7 @@ Art3b replaces stand-ins of the earlier lanes (a global A/B mix plus a smooth
 colour field: right timing and average colour, no shapes) for graphic,
 cartoon and themed motion transitions (shapes, comic bursts, holiday,
 seasonal, sports and business graphics, motion-graphics packs) with
-recreations drawn with **our own original vector art**. **17 of 66**
+recreations drawn with **our own original vector art**. **19 of 66**
 items are upgraded; imported projects reach them through the
 `filmora:<GUID>` aliases in `crates/jb-render/src/aliases_art3b.rs` (the
 stand-in alias of each upgraded GUID was removed from the older lane file,
@@ -76,9 +76,9 @@ be higher where a hard-edged shape is a few pixels off).
 | Old Camera | `0D696B4E-F6DB-4160-8C64-2E8B68E933EC` | tr012 | `jb.shutter_wash_03` | — | 4.38 | 24.68 / 52.1 (+20.30) | — | stand-in |  |
 | Open Envelope | `2D94F069-FB2F-421A-90B2-7A78A1936F44` | tr009 | `jb.film_frame_wash_02` | — | 3.13 | 23.49 / 68.4 (+20.36) | — | stand-in |  |
 | Orb Twist 4 | `e9d23961-f4f6-4e02-9ff9-8f6181ec43e6` | tr005 | — | — | 3.79 | 48.04 / 86.1 (+44.25) | — | stand-in |  |
-| Perspective Break | `EF9351C0-EA39-4190-93FA-E6633052C8E1` | tr009 | `jb.panel_shuffle_wash_02` | — | 3.7 | 48.73 / 66.6 (+45.03) | — | stand-in |  |
+| Perspective Break | `EF9351C0-EA39-4190-93FA-E6633052C8E1` | tr009 | `jb.panel_shuffle_wash_02` | `jb.card_carousel` | 3.7 | 48.73 / 66.6 (+45.03) | 19.24 / 39.2 (+15.54) | upgraded |  |
 | Photo Spread | `8DCB22B3-BF4F-4523-AF46-E121A5F0E4EB` | tr012 | `jb.film_frame_wash_03` | — | 2.8 | 32.35 / 50.2 (+29.55) | — | stand-in |  |
-| Pinwheel | `668D3D30-43B8-41ef-A222-86E7912A497E` | tr005 | `jb.overlay_wash_01` | — | 2.92 | 16.60 / 30.4 (+13.68) | — | stand-in |  |
+| Pinwheel | `668D3D30-43B8-41ef-A222-86E7912A497E` | tr005 | `jb.overlay_wash_01` | `jb.pinwheel_wedges` | 2.92 | 16.60 / 30.4 (+13.68) | 4.83 / 6.0 (+1.91) | upgraded |  |
 | Plain Shape 17 | `3FC5FC6D-C669-40FA-B1AF-308BED370634` | tr004 | `jb.shape_burst_wash_15` | `jb.square_frames_zoom` | 2.37 | 23.27 / 54.2 (+20.90) | 19.39 / 57.1 (+17.02) | upgraded |  |
 | Plain Shape 20 | `CEC1827B-745E-4EB4-AD1B-A1EBEE58FF0D` | tr004 | `jb.shape_burst_wash_16` | `jb.hex_windows` | 2.39 | 8.69 / 32.5 (+6.30) | 6.56 / 19.3 (+4.17) | upgraded |  |
 | Plain Shape 22 | `554FEC3F-E022-46A6-B763-67E2E9D6BA7B` | tr004 | `jb.shape_burst_wash_17` | `jb.white_ring_iris` | 2.43 | 9.41 / 34.2 (+6.98) | 6.32 / 18.2 (+3.89) | upgraded |  |

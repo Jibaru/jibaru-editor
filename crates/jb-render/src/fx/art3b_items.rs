@@ -506,7 +506,9 @@ pub static ITEMS: &[ArtItem] = &[
     item!("jb.chevron_band_sweep", "Chevron Band Sweep", "Shapes", "Rounded chevron bands sweep from left to right: navy, two dimmed glimpses of the new clip and white, followed by the new clip.", chevron_band_sweep),
     item!("jb.arrowhead_slots", "Arrowhead Slots", "Shapes", "The frame cuts to black and four arrow-head windows onto the new clip dart in from the left one after another into their slots, then the new clip fills the gaps.", arrowhead_slots),
     item!("jb.capsule_column_run", "Capsule Column Run", "Shapes", "Seven columns of yellow, blue and purple capsules run through the frame, alternately down and up, and their long purple tails pull through to leave the new clip behind.", capsule_column_run),
+    item!("jb.pinwheel_wedges", "Pinwheel Wedges", "Shapes", "Four pinwheel wedges of the new clip fan open from the centre until they meet.", pinwheel_wedges),
+    item!("jb.card_carousel", "Card Carousel", "Shapes", "The old clip shrinks into a card on a carousel of alternating old and new cards over black; the carousel spins and the new card that stops in front grows to fill the frame.", card_carousel),
 ];
 
 /// Library listing (registry ids, display order).
-pub const LIB_IDS: &[&str] = &["jb.diagonal_streak_sweep", "jb.red_x_panels", "jb.square_frames_zoom", "jb.red_ring_iris", "jb.white_ring_iris", "jb.orange_ring_rise", "jb.hex_windows", "jb.chevron_trio_right", "jb.ring_burst_center", "jb.spinning_square_frames", "jb.glossy_slab_sweep", "jb.corner_wedge_close", "jb.sparkle_heart_swell", "jb.memphis_disc_roll", "jb.chevron_band_sweep", "jb.arrowhead_slots", "jb.capsule_column_run"];
+pub const LIB_IDS: &[&str] = &["jb.diagonal_streak_sweep", "jb.red_x_panels", "jb.square_frames_zoom", "jb.red_ring_iris", "jb.white_ring_iris", "jb.orange_ring_rise", "jb.hex_windows", "jb.chevron_trio_right", "jb.ring_burst_center", "jb.spinning_square_frames", "jb.glossy_slab_sweep", "jb.corner_wedge_close", "jb.sparkle_heart_swell", "jb.memphis_disc_roll", "jb.chevron_band_sweep", "jb.arrowhead_slots", "jb.capsule_column_run", "jb.pinwheel_wedges", "jb.card_carousel"];

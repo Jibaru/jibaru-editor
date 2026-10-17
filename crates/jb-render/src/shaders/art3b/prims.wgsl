@@ -185,6 +185,13 @@ fn sdf(i: u32, l: vec2f) -> f32 {
             return max(max(e, -e - v0.y / k), abs(l.y) - v0.w);
         }
         case 13: { return sd_rhombus(l, max(v0.yz, vec2f(1e-5))); }
+        case 14: {
+            // Unbounded sector of half-angle a (< pi/2) about +x.
+            let q = vec2f(l.x, abs(l.y));
+            let e = vec2f(cos(v0.y), sin(v0.y));
+            let n = vec2f(-e.y, e.x);
+            return select(length(q), dot(q, n), dot(q, e) > 0.0);
+        }
         default: { return 1.0; }
     }
 }

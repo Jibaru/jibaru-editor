@@ -17,6 +17,8 @@ pub const FILMORA_ART3B: &[(&str, &str)] = &[
     ("08C887B6-5597-4A52-BE2B-133E6B6EC9BD", "jb.capsule_column_run"), // Motion Transitions Pack Vol 4 Transition 14
     ("FDFA48E8-C537-46AE-9200-3B952A2030FE", "jb.arrowhead_slots"), // Movie Atmosphere CN Transition 07
     ("9c12f97c-2022-6562-8868-6beeecfc32d0", "jb.chevron_band_sweep"), // News Set Channel 7 Transition 2
+    ("EF9351C0-EA39-4190-93FA-E6633052C8E1", "jb.card_carousel"), // Perspective Break
+    ("668D3D30-43B8-41ef-A222-86E7912A497E", "jb.pinwheel_wedges"), // Pinwheel
     ("3FC5FC6D-C669-40FA-B1AF-308BED370634", "jb.square_frames_zoom"), // Plain Shape 17
     ("CEC1827B-745E-4EB4-AD1B-A1EBEE58FF0D", "jb.hex_windows"), // Plain Shape 20
     ("554FEC3F-E022-46A6-B763-67E2E9D6BA7B", "jb.white_ring_iris"), // Plain Shape 22

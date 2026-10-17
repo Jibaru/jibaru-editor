@@ -129,6 +129,7 @@ const K_HEART: f32 = 10.0;
 const K_ARC: f32 = 11.0;
 const K_CHEVRON: f32 = 12.0;
 const K_RHOMBUS: f32 = 13.0;
+const K_SECTOR: f32 = 14.0;
 
 impl Prim {
     fn shape(kind: f32, a: f32, b: f32, c: f32, cx: f32, cy: f32) -> Prim {
@@ -207,6 +208,11 @@ impl Prim {
     /// Rhombus with half diagonals (hx, hy) centred at (cx, cy).
     pub fn rhombus(cx: f32, cy: f32, hx: f32, hy: f32) -> Prim {
         Self::shape(K_RHOMBUS, hx, hy, 0.0, cx, cy)
+    }
+    /// Unbounded sector (pie wedge) with its apex at (cx, cy), half-angle
+    /// `half` (< π/2) about the direction `angle` (radians, clockwise).
+    pub fn sector(cx: f32, cy: f32, half: f32, angle: f32) -> Prim {
+        Self::shape(K_SECTOR, half, 0.0, 0.0, cx, cy).rot(angle)
     }
     /// Perspective quad through corners p0 (maps to texture top-left), p1
     /// (top-right), p2 (bottom-right), p3 (bottom-left); filled with the
