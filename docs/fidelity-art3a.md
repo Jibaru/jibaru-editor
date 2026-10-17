@@ -31,7 +31,7 @@ worse than the stand-in's. Artwork whose drawing differs from Filmora's (as
 it must) keeps a residual above the floor along its edges and details; the
 gain over the stand-in is in shape, coverage and motion.
 
-## Upgraded (18)
+## Upgraded (20)
 
 | Filmora item | Ours | Replaced stand-in | MAD before | MAD now | MAD max | Floor | Notes |
 |---|---|---|---:|---:|---:|---:|---|
@@ -51,10 +51,12 @@ gain over the stand-in is in shape, coverage and motion.
 | Halloween Colorful Transition 09 | `jb.witch_hat_wave` | `jb.witch_hat_wipe` | 6.22 | 4.10 | 11.27 | 2.29 |  |
 | Halloween Colorful Transition 17 | `jb.skull_and_hat` | `jb.skull_hat_sweep` | 15.71 | 10.70 | 20.46 | 2.33 |  |
 | Halloween Colorful Transition 21 | `jb.bat_rise` | `jb.bat_wing_wipe` | 9.79 | 7.18 | 24.90 | 2.30 |  |
+| Halloween Horrors Pack Transition 02 | `jb.ghost_crowd` | `jb.ghost_crowd_rise` | 19.01 | 18.67 | 44.36 | 2.98 |  |
+| Halloween Party Transition 03 | `jb.bat_swarm_dive` | `jb.bat_swarm` | 9.27 | 8.96 | 40.35 | 2.41 |  |
 | Horrible Colorful Transition 02 | `jb.ghost_glide` | `jb.glitch_bands` | 10.73 | 5.52 | 11.99 | 2.33 |  |
 | Horrible Colorful Transition 13 | `jb.boo_dive` | `jb.ghost_face_flash` | 22.67 | 21.39 | 86.89 | 2.40 |  |
 
-## Still stand-ins (47)
+## Still stand-ins (45)
 
 Mapped by their lane's stand-in; "Tried" is the best original-art attempt when one was measured but not switched (worse or not visually right).
 
@@ -92,18 +94,16 @@ Mapped by their lane's stand-in; "Tried" is the best original-art attempt when o
 | Flora Collage Pack Transition 05 | `jb.diagonal_sweep` | 6.59 | — |  |
 | Flyeye | `jb.fly_eye` | 20.45 | — |  |
 | Give Mom Unique Love Pack Transition 01 | `jb.pink_bokeh` | 11.12 | — |  |
-| Gold Blue Transition 02 | `jb.gold_blue_paint_2` | 15.90 | — |  |
-| Gold Blue Transition 03 | `jb.gold_blue_paint_3` | 10.98 | — |  |
-| Gold Blue Transition 04 | `jb.gold_blue_paint_4` | 24.00 | — |  |
-| Gold Blue Transition 05 | `jb.gold_blue_paint_5` | 10.19 | — |  |
-| Gold Blue Transition 06 | `jb.gold_blue_paint_6` | 9.21 | — |  |
+| Gold Blue Transition 02 | `jb.gold_blue_paint_2` | 15.90 | — | organic ink/smoke wipe; a procedural ink flood fitted to the coverage over time measured 21.22 (worse): matching the reference cloud shapes would mean tracing them, so the stand-in stays |
+| Gold Blue Transition 03 | `jb.gold_blue_paint_3` | 10.98 | — | organic ink/smoke wipe; a procedural ink flood fitted to the coverage over time measured 11.56 (worse): matching the reference cloud shapes would mean tracing them, so the stand-in stays |
+| Gold Blue Transition 04 | `jb.gold_blue_paint_4` | 24.00 | — | organic ink/smoke wipe; a procedural ink flood fitted to the coverage over time measured 25.0 (worse): matching the reference cloud shapes would mean tracing them, so the stand-in stays |
+| Gold Blue Transition 05 | `jb.gold_blue_paint_5` | 10.19 | — | organic ink/smoke wipe; a procedural ink flood fitted to the coverage over time measured 19.34 (worse): matching the reference cloud shapes would mean tracing them, so the stand-in stays |
+| Gold Blue Transition 06 | `jb.gold_blue_paint_6` | 9.21 | — | organic ink/smoke wipe; a procedural ink flood fitted to the coverage over time measured 11.78 (worse): matching the reference cloud shapes would mean tracing them, so the stand-in stays |
 | Golden Awards Transition 01 | `jb.gold_ribbon_2` | 12.21 | — |  |
 | Golden Awards Transition 02 | `jb.gold_ribbon_3` | 11.56 | — |  |
 | Golden Awards Transition 04 | `jb.golden_bloom_flash` | 7.45 | — |  |
 | Golden Awards Transition 05 | `jb.gold_glitter_flash` | 8.58 | — |  |
-| Halloween Horrors Pack Transition 02 | `jb.ghost_crowd_rise` | 19.01 | 19.44 | `jb.ghost_crowd` drawn; measures 19.44 vs 19.01, alias kept on the stand-in |
-| Halloween Party Transition 02 | `jb.lantern_glow` | 10.57 | 13.77 | `jb.lantern_face` drawn; measures 13.77 vs 10.57, alias kept on the stand-in |
-| Halloween Party Transition 03 | `jb.bat_swarm` | 9.27 | 10.47 | `jb.bat_swarm_dive` drawn; measures 10.47 vs 9.27, alias kept on the stand-in |
+| Halloween Party Transition 02 | `jb.lantern_glow` | 10.57 | 12.17 | `jb.lantern_face` drawn and refitted (12.17, was 13.77) but still above the stand-in (10.57): the reference rind texture and vignette during the 15-frame hold cost ~13 per frame; alias kept on the stand-in |
 | Halloween Scary Pack Transition 06 | `jb.blue_fire_smoke` | 20.20 | — |  |
 | Horizontal Reel | `jb.card_reel` | 14.42 | — |  |
 | Horizontal Screen Cutting | `jb.band_cut_zoom` | 14.85 | — |  |

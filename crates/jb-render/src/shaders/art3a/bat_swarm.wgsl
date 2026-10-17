@@ -40,7 +40,7 @@ fn fx(uv: vec2f) -> vec4f {
         let z = k.z;
         let eye_c = vec2f(0.0, -0.135);
         let q = c / (s * z) + eye_c;
-        let d = (spr_bat_d(q, 0.7 + 0.2 * sin(p * 25.0)) - 0.03) * s * z;
+        let d = min(spr_bat_d(q, 0.7 + 0.2 * sin(p * 25.0)) - 0.03, sd_ellipse(q - vec2f(0.0, 0.05), vec2f(0.55, 0.32))) * s * z;
         col = ak_over(col, BS_INK, clamp(0.5 - d / (px + 0.002 * z), 0.0, 1.0));
         let e = vec2f(abs(q.x) - 0.05, q.y + 0.135);
         let de = sd_ellipse(rot2(e, 0.3), vec2f(0.036, 0.022)) * s * z;

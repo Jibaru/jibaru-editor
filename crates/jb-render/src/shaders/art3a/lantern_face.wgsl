@@ -38,6 +38,8 @@ fn fx(uv: vec2f) -> vec4f {
     var skin = mix(vec3f(0.66, 0.36, 0.01), vec3f(0.55, 0.29, 0.01), smoothstep(0.42, 0.5, rib));
     let vig = smoothstep(0.2, 1.0, length(q * vec2f(0.72, 1.15)));
     skin = mix(skin, vec3f(0.12, 0.06, 0.0), vig);
+    // Seen from up close (before the eyes light) the rind is a bright orange.
+    skin = skin * mix(1.4, 1.0, k.w);
     var col = skin;
     // Warm light from inside around the holes.
     let de = lf_eye(q);
