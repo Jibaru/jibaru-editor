@@ -4,7 +4,7 @@ Art3b replaces stand-ins of the earlier lanes (a global A/B mix plus a smooth
 colour field: right timing and average colour, no shapes) for graphic,
 cartoon and themed motion transitions (shapes, comic bursts, holiday,
 seasonal, sports and business graphics, motion-graphics packs) with
-recreations drawn with **our own original vector art**. **14 of 66**
+recreations drawn with **our own original vector art**. **17 of 66**
 items are upgraded; imported projects reach them through the
 `filmora:<GUID>` aliases in `crates/jb-render/src/aliases_art3b.rs` (the
 stand-in alias of each upgraded GUID was removed from the older lane file,
@@ -70,9 +70,9 @@ be higher where a hard-edged shape is a few pixels off).
 | Modern Transparent Transition 08 | `E51B8E25-E17F-4E9A-96C4-67F07830F4A5` | tr006 | `jb.shape_burst_wash_10` | — | 2.91 | 10.70 / 32.4 (+7.79) | — | stand-in |  |
 | Modern Transparent Transition 10 | `C9CA2925-ECC7-421C-8E35-60C9984C1EAA` | tr006 | `jb.shape_burst_wash_11` | `jb.corner_wedge_close` | 2.48 | 6.45 / 29.4 (+3.97) | 3.61 / 7.5 (+1.13) | upgraded |  |
 | Motion Transitions Pack Vol 3 Transition 14 | `6F64A98D-2C50-4D7F-9314-89E859FB9AD4` | tr004 | `jb.shape_burst_wash_02` | — | 2.44 | 14.55 / 52.1 (+12.11) | — | stand-in |  |
-| Motion Transitions Pack Vol 4 Transition 14 | `08C887B6-5597-4A52-BE2B-133E6B6EC9BD` | tr002 | `jb.shape_burst_wash_01` | — | 2.42 | 20.63 / 58.3 (+18.21) | — | stand-in |  |
-| Movie Atmosphere CN Transition 07 | `FDFA48E8-C537-46AE-9200-3B952A2030FE` | tr002 | `jb.shape_burst_wash_12` | — | 2.37 | 32.50 / 64.5 (+30.13) | — | stand-in |  |
-| News Set Channel 7 Transition 2 | `9c12f97c-2022-6562-8868-6beeecfc32d0` | trfix1 | `jb.shape_burst_wash_14` | — | 2.87 | 15.05 / 86.7 (+12.18) | — | stand-in |  |
+| Motion Transitions Pack Vol 4 Transition 14 | `08C887B6-5597-4A52-BE2B-133E6B6EC9BD` | tr002 | `jb.shape_burst_wash_01` | `jb.capsule_column_run` | 2.42 | 20.63 / 58.3 (+18.21) | 7.80 / 22.8 (+5.38) | upgraded |  |
+| Movie Atmosphere CN Transition 07 | `FDFA48E8-C537-46AE-9200-3B952A2030FE` | tr002 | `jb.shape_burst_wash_12` | `jb.arrowhead_slots` | 2.37 | 32.50 / 64.5 (+30.13) | 5.33 / 22.8 (+2.96) | upgraded |  |
+| News Set Channel 7 Transition 2 | `9c12f97c-2022-6562-8868-6beeecfc32d0` | trfix1 | `jb.shape_burst_wash_14` | `jb.chevron_band_sweep` | 2.87 | 15.05 / 86.7 (+12.18) | 4.30 / 32.0 (+1.43) | upgraded |  |
 | Old Camera | `0D696B4E-F6DB-4160-8C64-2E8B68E933EC` | tr012 | `jb.shutter_wash_03` | — | 4.38 | 24.68 / 52.1 (+20.30) | — | stand-in |  |
 | Open Envelope | `2D94F069-FB2F-421A-90B2-7A78A1936F44` | tr009 | `jb.film_frame_wash_02` | — | 3.13 | 23.49 / 68.4 (+20.36) | — | stand-in |  |
 | Orb Twist 4 | `e9d23961-f4f6-4e02-9ff9-8f6181ec43e6` | tr005 | — | — | 3.79 | 48.04 / 86.1 (+44.25) | — | stand-in |  |

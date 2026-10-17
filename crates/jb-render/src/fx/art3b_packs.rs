@@ -161,3 +161,157 @@ pub fn memphis_disc_roll(t: f32, _asp: f32) -> Scene {
 pub fn annulus_c(cx: f32, cy: f32, r0: f32, r1: f32) -> Prim {
     Prim::circle(cx, cy, 0.5 * (r0 + r1)).stroke(r1 - r0)
 }
+
+/// Region behind a right-pointing 90° chevron front with a rounded tip at
+/// (tip, cy): a huge square turned 45° with rounded corners.
+pub fn chevron_region(tip: f32, cy: f32, r: f32) -> Prim {
+    let l = 3.0;
+    let cx = tip - l * std::f32::consts::SQRT_2 + r * (std::f32::consts::SQRT_2 - 1.0);
+    Prim::rect(cx, cy, l, l).rot(PI / 4.0).round(r)
+}
+
+/// Rounded chevron bands sweep left to right: a navy band, two dimmed
+/// glimpses of the new clip, a white band, then the new clip itself.
+pub fn chevron_band_sweep(t: f32, _asp: f32) -> Scene {
+    let f = t * 60.0;
+    let mut s = Scene::new();
+    if f >= 19.0 {
+        s.mix = 1.0;
+        return s;
+    }
+    let navy = kf(f, &[(1.0, -1.3), (2.0, -1.0), (3.0, -0.75), (4.0, -0.5), (5.0, -0.26), (6.0, -0.02), (7.0, 0.28), (8.0, 0.556), (10.0, 0.83), (11.0, 1.11), (12.0, 1.43)]);
+    let back = kf(f, &[(4.0, -1.3), (5.0, -1.0), (6.0, -0.72), (7.0, -0.5), (8.0, -0.26), (10.0, -0.02), (11.0, 0.26), (12.0, 0.63), (13.0, 1.0), (14.0, 1.4)]);
+    let white = kf(f, &[(5.0, -1.4), (6.0, -1.1), (7.0, -0.85), (8.0, -0.48), (10.0, -0.13), (11.0, 0.24), (12.0, 0.61), (13.0, 0.97), (14.0, 1.35)]);
+    let newc = kf(f, &[(7.0, -1.3), (8.0, -1.0), (10.0, -0.72), (11.0, -0.5), (12.0, -0.26), (13.0, -0.02), (14.0, 0.2), (16.0, 0.43), (17.0, 0.67), (18.0, 1.0), (19.0, 1.3)]);
+    let r = 0.14;
+    let on = |x: f32| x > -1.25 && f >= 1.0;
+    if on(navy) && back < 1.3 {
+        s.push(chevron_region(navy + 0.08, 0.0, r).col(0x000000).alpha(0.3).soft(0.06));
+        s.push(chevron_region(navy, 0.0, r).col(0x03041C));
+    }
+    if on(back) && white < 1.3 {
+        s.push(chevron_region(back, 0.0, r).tex_b().rgb([0.42, 0.38, 0.5]));
+        s.push(chevron_region(0.5 * (back + white), 0.0, r).tex_b().rgb([0.75, 0.72, 0.82]));
+    }
+    if on(white) {
+        s.push(chevron_region(white, 0.0, r).col(0xE9E9EA).grad(0xD9D9DC, -0.5, 0.5));
+    }
+    if f >= 16.0 {
+        s.push(chevron_region(newc + 0.06, 0.0, r).col(0x03041C));
+    }
+    if on(newc) {
+        s.push(chevron_region(newc + 0.03, 0.0, r).col(0x000000).alpha(0.25).soft(0.03));
+        s.push(chevron_region(newc, 0.0, r).tex_b());
+    }
+    s
+}
+
+/// Region behind a right-pointing sharp front through (tip, 0) whose
+/// edges fall back by `k` per unit of |y|.
+pub fn front_region(tip: f32, k: f32) -> Prim {
+    let hy = 8.0;
+    let hx = k * hy;
+    Prim::rhombus(tip - hx, 0.0, hx, hy)
+}
+
+/// Arrow head pointing right with its tip at (tx, ty): two square-ended
+/// 45° arms of horizontal thickness `th` whose front edges reach `reach`
+/// above and below the tip.
+pub fn arrowhead(tx: f32, ty: f32, th: f32, reach: f32) -> [Prim; 2] {
+    let r2 = std::f32::consts::FRAC_1_SQRT_2;
+    let hl = 0.5 * reach * std::f32::consts::SQRT_2;
+    let ht = 0.5 * th * r2;
+    [-1.0f32, 1.0].map(|sy| {
+        let u = [-r2, sy * r2];
+        let n = [-r2, -sy * r2];
+        let (cx, cy) = (tx + u[0] * hl + n[0] * ht, ty + u[1] * hl + n[1] * ht);
+        Prim::rect(cx, cy, hl, ht).rot(u[1].atan2(u[0]))
+    })
+}
+
+/// The frame cuts to black and four arrow-head windows onto the new clip
+/// dart in from the left one after another, each stopping in its slot;
+/// the new clip then fills the gaps from the left.
+pub fn arrowhead_slots(t: f32, _asp: f32) -> Scene {
+    let f = t * 60.0;
+    if f < 11.0 {
+        return Scene::new();
+    }
+    let fill = kf(f, &[(40.0, -1.2), (41.0, -0.72), (42.0, -0.26), (43.0, -0.06), (44.0, 0.09), (46.0, 0.48), (47.0, 0.6), (48.0, 0.85), (49.0, 1.4)]);
+    if f >= 49.0 {
+        return Scene::cut(t, 0.0);
+    }
+    let mut s = Scene::new().dip([0.0; 3], 1.0);
+    let cards: [&[(f32, f32)]; 4] = [
+        &[(11.0, -0.9), (12.0, -0.61), (13.0, -0.315), (14.0, -0.02), (16.0, 0.28), (17.0, 0.57), (18.0, 0.87)],
+        &[(16.0, -0.95), (17.0, -0.69), (18.0, -0.45), (19.0, -0.2), (20.0, 0.02), (22.0, 0.26), (23.0, 0.5)],
+        &[(21.0, -0.93), (22.0, -0.74), (23.0, -0.56), (24.0, -0.39), (25.0, -0.22), (26.0, -0.04), (28.0, 0.13)],
+        &[(25.0, -0.95), (26.0, -0.8), (28.0, -0.69), (29.0, -0.57), (30.0, -0.46), (31.0, -0.35), (32.0, -0.24)],
+    ];
+    for keys in cards {
+        if f < keys[0].0 {
+            continue;
+        }
+        for p in arrowhead(kf(f, keys), 0.0, 0.333, 0.47) {
+            s.push(p.tex_b());
+        }
+    }
+    if fill > -1.1 {
+        s.push(front_region(fill, 0.5).tex_b());
+    }
+    s
+}
+
+/// Seven columns of stacked capsules (yellow, blue, purple) run through
+/// the frame, alternately down from the top and up from the bottom, one
+/// after another; the long purple tails pull through last and leave the
+/// new clip behind them.
+pub fn capsule_column_run(t: f32, asp: f32) -> Scene {
+    let f = t * 60.0;
+    let mut s = Scene::new();
+    let starts = [5.0, 6.0, 8.0, 10.0, 12.0, 12.0, 14.0];
+    let n = starts.len();
+    let w = asp / n as f32;
+    let r = 0.5 * w;
+    let yel: &[(f32, f32)] = &[(0.0, 0.0), (2.0, 0.03), (4.0, 0.055), (6.0, 0.14), (8.0, 0.25), (10.0, 0.31), (12.0, 0.47), (14.0, 0.67), (16.0, 0.75), (18.0, 0.94), (20.0, 1.1), (22.0, 1.3), (30.0, 2.2)];
+    let blu: &[(f32, f32)] = &[(4.0, 0.0), (6.0, 0.05), (8.0, 0.08), (10.0, 0.14), (12.0, 0.22), (14.0, 0.36), (16.0, 0.47), (18.0, 0.64), (20.0, 0.83), (22.0, 0.94), (24.0, 1.05), (26.0, 1.2), (34.0, 2.2)];
+    let pur: &[(f32, f32)] = &[(7.0, 0.0), (8.0, 0.03), (10.0, 0.03), (12.0, 0.11), (14.0, 0.19), (16.0, 0.25), (18.0, 0.39), (20.0, 0.56), (22.0, 0.67), (24.0, 0.86), (26.0, 1.0), (28.0, 1.15), (36.0, 2.2)];
+    let tail: &[(f32, f32)] = &[(23.0, -0.05), (24.0, 0.05), (26.0, 0.36), (28.0, 0.5), (30.0, 0.69), (32.0, 0.86), (34.0, 0.92), (36.0, 0.97), (38.0, 1.05), (40.0, 1.3)];
+    let mut done = true;
+    for (c, st) in starts.iter().enumerate() {
+        let tau = f - st;
+        let x = -0.5 * asp + w * (c as f32 + 0.5);
+        // Descending columns start at the top edge, rising ones at the bottom.
+        let dir = if c % 2 == 1 { 1.0 } else { -1.0 };
+        let y = |d: f32| dir * (d - 0.5);
+        let tl = kf(tau, tail);
+        if tl < 1.29 {
+            done = false;
+        }
+        if tl > -0.04 {
+            let (y0, y1) = (y(-1.0), y(tl + r));
+            s.push(Prim::rect_xy(x - r - 0.002, y0.min(y1), x + r + 0.002, y0.max(y1)).tex_b());
+        }
+        if tau <= 0.0 || tl > 1.29 {
+            continue;
+        }
+        let back = if tl > -0.04 { tl + r } else { -1.0 };
+        for (keys, col) in [(yel, 0xFDD730), (blu, 0x24B0EA), (pur, 0x8A74E2)] {
+            let head = kf(tau, keys);
+            if head <= 0.0 || tau < keys[0].0 {
+                continue;
+            }
+            let lead = head - r;
+            if lead > back {
+                s.push(Prim::seg(x, y(back), x, y(lead), r).col(col));
+            } else if keys == pur {
+                s.push(Prim::circle(x, y(lead), r).col(col));
+            }
+        }
+    }
+    if done {
+        s.mix = 1.0;
+        s.prims.clear();
+    }
+    s
+}
