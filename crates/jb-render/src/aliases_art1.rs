@@ -27,6 +27,10 @@ pub const FILMORA_ART1: &[(&str, &str, &str)] = &[
     ("19AC37E2-3DE3-45AA-8323-47076A75B5E8", "jb.cine_light_bands", "Movie Light Effects 7"),
     ("22BFA34A-7C7E-4C0E-A007-6204E9E6F336", "jb.edge_glow_pulse", "Edge Glow 01"),
     ("6c7c67cf-ad75-ef11-b430-d8bbc19410ef", "jb.flash_tint_leak", "Aesthetic Light Leak 04 16-9"),
+    ("EEC217D3-E1F3-4F9E-A2AC-3D61DFE0D97F", "jb.cine_light_rainbow", "Movie Light Effects 1"),
+    ("C6EAFE28-6D0B-46D5-A92B-DA22A986432F", "jb.cine_scribble_leak", "Movie Light Effects 4"),
+    ("D03BAEF2-F8F6-4E6B-9E30-4F2C0B7D53AC", "jb.cine_scribble_aurora", "Movie Light Effects 5"),
+    ("3D6A60D4-179C-47D2-BA55-4FA3AD3C0665", "jb.cine_paint_ring", "Movie Light Effects 8"),
 ];
 
 pub fn register(r: &mut Registry) {

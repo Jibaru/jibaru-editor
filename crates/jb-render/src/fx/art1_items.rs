@@ -42,6 +42,10 @@ pub const LIB_EFFECTS: &[&str] = &[
     "jb.cine_light_bands",
     "jb.edge_glow_pulse",
     "jb.flash_tint_leak",
+    "jb.cine_light_rainbow",
+    "jb.cine_scribble_leak",
+    "jb.cine_scribble_aurora",
+    "jb.cine_paint_ring",
 ];
 
 /// Every art1 item.
@@ -64,6 +68,10 @@ pub fn specs() -> Vec<ArtSpec> {
         art!("jb.cine_light_bands", "Cine Light Bands", "Light", Effect, "cine_light_bands", "Strobing vertical bands of white, yellow and orange stage light flash across the picture."),
         art!("jb.edge_glow_pulse", "Edge Glow Pulse", "Light", Effect, "edge_glow_pulse", "A soft band sweeps across the picture again and again, lighting its edges up as glowing white lines."),
         art!("jb.flash_tint_leak", "Flash Tint Leak", "Light", Effect, "flash_tint_leak", "An aged, slightly darker print with a soft light leak washing over it: lavender, cream, peach and a red burn."),
+        art!("jb.cine_light_rainbow", "Cine Light Rainbow", "Light", Effect, "cine_light_rainbow", "An old-cinema print look with a pink defocus bloom and a late streaky rainbow flare down the left of the frame."),
+        art!("jb.cine_scribble_leak", "Cine Scribble Leak", "Light", Effect, "cine_scribble_leak", "Hand-drawn loops of cream light scrawl across the picture between pink washes, a dark smeared band and a rainbow flare."),
+        art!("jb.cine_scribble_aurora", "Cine Scribble Aurora", "Light", Effect, "cine_scribble_aurora", "Pink light washes, glowing film-edge smears, big hand-drawn loops of cream light and rippling aurora curtains."),
+        art!("jb.cine_paint_ring", "Cine Paint Ring", "Light", Effect, "cine_paint_ring", "A magenta flash, a splash of white paint, a bleached pastel print with a rough ring of dark paint, and a streaked white flare."),
     ]
 }
 

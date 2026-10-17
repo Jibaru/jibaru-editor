@@ -276,3 +276,30 @@ fn a1_orb(p: vec2f, o: vec4f, core: vec3f, rim: vec3f) -> vec4f {
     let body = 1.0 - smoothstep(0.75, 1.05, d);
     return vec4f(mix(core, rim, smoothstep(0.0, 0.9, d)), o.w * body * (0.85 + 0.15 * (1.0 - min(d, 1.0))));
 }
+
+// ---- scribbles ----
+// Point s (0..1) along a looping hand-drawn scribble: a line of length `len`
+// through `c` at angle `ang`, with `loops` loops of radius `r` and a wobble,
+// all shaped by `seed`.
+fn a1_scribble_at(s: f32, seed: f32, c: vec2f, len: f32, ang: f32, loops: f32, r: f32) -> vec2f {
+    let dir = vec2f(cos(ang), sin(ang));
+    let nrm = vec2f(-dir.y, dir.x);
+    let ph = 6.283 * a1_r(seed, 1.0);
+    let w = 6.283 * loops * s + ph;
+    let rr = r * (0.7 + 0.6 * a1_r(seed, 2.0) + 0.3 * sin(9.0 * s + seed));
+    let bend = 0.25 * len * sin(3.1 * s + 6.283 * a1_r(seed, 3.0));
+    return c + dir * (len * (s - 0.5) + rr * cos(w)) + nrm * (rr * sin(w) + bend);
+}
+// Coverage of a scribble stroke of half width `hw` (fractions of the height).
+fn a1_scribble(p: vec2f, seed: f32, c: vec2f, len: f32, ang: f32, loops: f32, r: f32, hw: f32) -> f32 {
+    var d = 1e3;
+    var a = a1_scribble_at(0.0, seed, c, len, ang, loops, r);
+    let n = 72;
+    for (var i = 1; i <= n; i = i + 1) {
+        let b = a1_scribble_at(f32(i) / f32(n), seed, c, len, ang, loops, r);
+        d = min(d, a1_seg(p, a, b));
+        a = b;
+    }
+    // the pen pressure varies a little along the stroke
+    return 1.0 - smoothstep(hw - 0.0025, hw + 0.0025, d);
+}

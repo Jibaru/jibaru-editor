@@ -69,6 +69,10 @@ clip; clip-local time):
 | Movie Light Effects 7 | `19AC37E2-3DE3-45AA-8323-47076A75B5E8` | `jb.cine_light_bands` | 58.58 / 64.34 | 17.79 / 20.57 |
 | Edge Glow 01 | `22BFA34A-7C7E-4C0E-A007-6204E9E6F336` | `jb.edge_glow_pulse` | 12.12 / 3.61 | 7.96 / 3.10 |
 | Aesthetic Light Leak 04 16-9 | `6c7c67cf-ad75-ef11-b430-d8bbc19410ef` | `jb.flash_tint_leak` | 28.70 / 29.50 | 7.32 / 7.08 |
+| Movie Light Effects 1 | `EEC217D3-E1F3-4F9E-A2AC-3D61DFE0D97F` | `jb.cine_light_rainbow` | 20.33 / 23.56 | 14.70 / 18.31 |
+| Movie Light Effects 4 | `C6EAFE28-6D0B-46D5-A92B-DA22A986432F` | `jb.cine_scribble_leak` | 38.86 / 43.42 | 31.84 / 34.99 |
+| Movie Light Effects 5 | `D03BAEF2-F8F6-4E6B-9E30-4F2C0B7D53AC` | `jb.cine_scribble_aurora` | 46.34 / 51.49 | 41.54 / 40.28 |
+| Movie Light Effects 8 | `3D6A60D4-179C-47D2-BA55-4FA3AD3C0665` | `jb.cine_paint_ring` | 68.88 / 72.99 | 26.36 / 29.35 |
 <!-- effects -->
 
 Particle items (sparkles, glitter, bokeh) stay well above the floor even when
