@@ -74,6 +74,17 @@ impl Scaler {
         Self::new(0, ffi::SwsFlags::SWS_BILINEAR)
     }
 
+    /// Area-averaging scaler with automatic threading, for decoded video:
+    /// a downscale averages the source pixels each output pixel covers (a 2×2
+    /// box at half size), as an editor's full-resolution render downscaled
+    /// for viewing would. Bilinear's wider tent filter blurred test-card
+    /// edges and checkers measurably against Filmora's 1080p exports viewed
+    /// at 960×540 (docs/fidelity.md, "Synthetic test media"). Upscales fall
+    /// back to bilinear inside swscale.
+    pub fn area() -> Self {
+        Self::new(0, ffi::SwsFlags::SWS_AREA)
+    }
+
     /// Converts `src` into `dst`. `dst` must have width, height, format and
     /// color properties set; its buffers are allocated if missing.
     ///

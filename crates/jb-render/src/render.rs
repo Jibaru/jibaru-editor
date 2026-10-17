@@ -30,35 +30,32 @@ pub struct RenderOptions {
     /// Hint passed to the frame source so decoders can scale down (previews).
     pub source_max_size: Option<(u32, u32)>,
     /// Offset added to the output RGB (8-bit code values) after compositing.
-    /// Defaults to [`FILMORA_OUTPUT_BIAS`]; `[0.0; 3]` gives exact levels.
+    /// Zero by default (Filmora has no post-composite offset, see
+    /// [`FILMORA_INPUT_BIAS`]); kept for experiments.
     pub output_bias: [f32; 3],
-    /// Offset added to decoded video RGB (8-bit code values) before effects.
-    /// Defaults to [`FILMORA_INPUT_BIAS`]; `[0.0; 3]` gives exact levels.
+    /// Offset added to decoded full-range YUV video (8-bit code values)
+    /// before effects. Defaults to [`FILMORA_INPUT_BIAS`]; `[0.0; 3]` gives
+    /// exact levels. Limited-range video and RGB sources never get it.
     pub input_bias: [f32; 3],
 }
 
-/// Filmora's pipeline renders slightly darker than an exact conversion:
-/// measured against Filmora 15.7 exports of the user projects
-/// (docs/fidelity.md), plain footage is offset by about −1.6 Y, −0.6 Cb and
-/// −0.85 Cr code values at every level (consistent with 8-bit truncation in
-/// its conversions), i.e. RGB (−2.9, −1.05, −2.69). Part of it happens when
-/// video is decoded ([`FILMORA_INPUT_BIAS`], not for still images: a strong
-/// exposure boost amplifies it per channel and fades take it with them) and
-/// the rest after compositing (this offset: whites pushed up by an exposure
-/// boost land at ~253). The split was fitted on the exposure 60–100 clips of Project C.
-pub const FILMORA_OUTPUT_BIAS: [f32; 3] = [-2.1, -1.56, -1.79];
-
-/// Decode-side part of Filmora's level offset (see [`FILMORA_OUTPUT_BIAS`]).
+/// Filmora's level offset on full-range video (8-bit RGB code values).
+/// Measured against Filmora 15.7 exports (docs/fidelity.md): full-range
+/// GoPro footage (`yuvj420p`, `pc`) comes out about (−0.8, +0.5, −0.9)
+/// off an exact conversion, amplified per channel by an exposure boost and
+/// faded with the clip, so it happens at decode. Limited-range video (the
+/// synthetic reference cards) passes through unchanged (bias < 0.2 at
+/// 1080p) and still images do not get it.
+///
+/// An earlier version also applied an output offset of (−2.1, −1.56, −1.79)
+/// after compositing: that was the fidelity harness, whose one-pass FFmpeg
+/// scale + YUV→RGB conversion of the downscaled reference darkened it by
+/// about that much (docs/fidelity.md, "Synthetic test media").
 pub const FILMORA_INPUT_BIAS: [f32; 3] = [-0.8, 0.51, -0.9];
 
 impl Default for RenderOptions {
     fn default() -> Self {
-        Self {
-            linear_light: false,
-            source_max_size: None,
-            output_bias: FILMORA_OUTPUT_BIAS,
-            input_bias: FILMORA_INPUT_BIAS,
-        }
+        Self { linear_light: false, source_max_size: None, output_bias: [0.0; 3], input_bias: FILMORA_INPUT_BIAS }
     }
 }
 
@@ -698,7 +695,12 @@ impl<'a> Frame<'a> {
                     ColorSpace::Bt2020Hlg => (2.0, 2.0),
                 };
                 u.e[1] = [format as u32 as f32, matrix, frame.full_range as u32 as f32, transfer];
-                let b = self.options.input_bias;
+                // Filmora's decode-side offset applies to full-range YUV only.
+                let b = if frame.full_range && frame.format != PixelFormat::Rgba8 {
+                    self.options.input_bias
+                } else {
+                    [0.0; 3]
+                };
                 u.p[0] = [b[0] / 255.0, b[1] / 255.0, b[2] / 255.0, 0.0];
                 nested_tex = None;
             }

@@ -113,8 +113,9 @@ fn render(
     }
     let mut renderer = jb_render::Renderer::new(size.0, size.1)?;
     renderer.options.source_max_size = Some(size);
-    // `JB_FIDELITY_LEVELS=none`: no Filmora level offsets (the reference batch exports
-    // of synthetic cards do not carry the offset measured on the user projects).
+    // `JB_FIDELITY_LEVELS=none`: no Filmora level offsets. The default offset only
+    // applies to full-range video, so this changes nothing on the limited-range
+    // synthetic cards of the reference batches.
     if std::env::var("JB_FIDELITY_LEVELS").as_deref() == Ok("none") {
         renderer.options.output_bias = [0.0; 3];
         renderer.options.input_bias = [0.0; 3];
@@ -159,10 +160,23 @@ struct Decoder {
 
 impl Decoder {
     fn open(path: &Path, start: f64, len: f64, w: u32, h: u32, fmt: &str) -> Result<Self> {
+        // Resample in YUV first (keeping the source's 4:2:0 layout), then
+        // convert to RGB at the target size: every video then goes through
+        // the same chroma path, whatever its size. A single swscale pass that
+        // scales and converts at once (FFmpeg 9, `scale=W:H:flags=area` to
+        // rgb24) darkens the result by about (1.7, 1.3, 1.6) RGB code values
+        // and blurs chroma edges, while an unscaled video (our render at the
+        // compare size) gets an exact conversion: that measured as a level
+        // offset and a tone mismatch between the two (docs/fidelity.md,
+        // "Synthetic test media").
+        let vf = format!(
+            "scale={w}:{h}:flags=area,format=yuv420p|yuvj420p|yuv420p10le|yuv422p|yuv422p10le|yuv444p,\
+             scale=flags=accurate_rnd+full_chroma_int"
+        );
         let child = Command::new("ffmpeg")
             .args(["-v", "error", "-nostdin", "-ss", &format!("{start:.6}"), "-i"])
             .arg(path)
-            .args(["-t", &format!("{len:.6}"), "-an", "-vf", &format!("scale={w}:{h}:flags=area")])
+            .args(["-t", &format!("{len:.6}"), "-an", "-vf", &vf])
             .args(["-fps_mode", "passthrough", "-f", "rawvideo", "-pix_fmt", fmt, "-"])
             .stdout(Stdio::piped())
             .spawn()

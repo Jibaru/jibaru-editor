@@ -93,7 +93,7 @@ impl VideoDecoder {
             hw_name,
             frame_duration: fr,
             info,
-            scaler: Scaler::bilinear(),
+            scaler: Scaler::area(),
             packet: ff::Packet::empty(),
             raw: AvFrame::alloc(),
             next_raw: AvFrame::alloc(),

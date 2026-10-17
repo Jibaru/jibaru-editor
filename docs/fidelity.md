@@ -20,7 +20,8 @@ cargo run --release -p jb-cli --example fidelity -- PROJECT.wfp REF.mp4 \
 ```
 
 It renders the range with the production path (`jb_export::export`, no
-camera proxies), decodes both videos with the same FFmpeg conversion, aligns
+camera proxies), decodes both videos with the same FFmpeg conversion
+(area resample in YUV, then YUV→RGB at the compare size), aligns
 them (±4 frames search; use `--search 0` for whole-project exports, whose
 frame count matches ours: a window whose content is off by one frame can
 otherwise align at ±1 and hide it), and prints
@@ -109,6 +110,9 @@ the harness' audio padding. This round:
   compositing (−2.1, −1.56, −1.79); the decode part is amplified by an
   exposure boost and faded with the clip, and still images do not get it.
   Fitted on the exposure 60–100 clips; plain footage is unchanged.
+  *Superseded:* the post-composite part was an artifact of the harness'
+  reference decode and is gone; the decode part now applies to full-range
+  video only (see *Synthetic test media*).
 - **Exposure above 50**: the curve stops steepening at 50 (`k = 2.55`) and
   the slider scales the input instead, `g = 1 + 0.0145 (s − 50)`, so
   highlights clip (at x ≈ 0.58 for 100).
@@ -145,6 +149,108 @@ the one-frame lag of every clip after a retimed one in Project D (541–581,
 - Project C 510–560 s and Project D high-detail foliage (775, 800 s):
   1 s means of 6–8 at 320 px with no bias; exposure-100 footage and 4K
   foliage amplify encoder noise (see Noise floor).
+
+## Synthetic test media
+
+The reference batches (`docs/filmora-references.md`) use synthetic cards
+(gridA/gridB, sceneA/sceneB). Plain windows with no transition measured
+MAD 4.1–4.3 (gridA) and 5.0–5.8 (gridB) at 960×540, with a tone curve
+that bent up to ±10–18 in the highlights and R/B about −1.4 (default
+levels) or +1.3 (`JB_FIDELITY_LEVELS=none`). The cause was not the media's
+color tags; it was our level offset plus the harness and the decoder's
+downscale filter.
+
+**Color tags.** gridA/gridB: H.264 High, `yuv420p`, `tv` range, BT.709
+matrix and primaries, transfer `iec61966-2-1` (sRGB: FFmpeg kept the PNG's
+tag although `-color_trc bt709` was passed). The RGB→YUV matrix really is
+BT.709 (PNG vs the clip decoded as BT.709: MAD 2.0, bias −0.25; decoded as
+BT.601: MAD 6.0). sceneA/sceneB: transfer and primaries unspecified. Every
+Filmora export is H.264 Baseline, `yuv420p`, `tv`, BT.709 everywhere. The
+user projects' GoPro footage is HEVC `yuvj420p`, **full range** (`pc`).
+
+**Filmora on limited-range video is a pass-through.** Its 1080p export of
+a plain gridA window against the source clip, compared plane by plane in
+YUV (no RGB conversion involved): Y/Cb/Cr mean difference +0.15 / −0.09 /
+−0.09, MAD 0.92 / 1.08 / 1.14 (6 Mbit/s compression). The sRGB and
+unspecified transfer tags are ignored (no transfer conversion, BT.709
+matrix); re-tagging gridA's transfer to BT.709 changed nothing in our
+render either. Our render at 1920×1080 with no offsets matches with bias
+(−0.19, +0.05, −0.02). So Filmora applies **no level offset to
+limited-range video**.
+
+**Full-range video does get one.** Project C at native 3840×2160 (no
+resampling anywhere) with no offsets: plain footage ours−ref
+(+0.32, −0.34, +0.93), exposure 45 (+1.84, −0.37, +1.91): the decode-side
+offset (−0.8, +0.51, −0.9) and its amplification by exposure, nothing
+more. The decode-side offset now applies only to full-range YUV video
+(`FILMORA_INPUT_BIAS`); stills and RGB sources never get it.
+
+**The post-composite offset was the harness.** The harness decoded the
+reference with `scale=W:H:flags=area` straight to `rgb24`. In FFmpeg 9
+that single swscale pass (downscale and YUV→RGB at once, chroma not fully
+interpolated) is biased and blurred; our render, already at the compare
+size, got an unscaled conversion. Against a box average of a
+full-resolution conversion of the same frame:
+
+| Decode of the reference | gridA 1080p→960 | Project C 4K→960 |
+|---|---|---|
+| one pass, `scale=960:540:flags=area` → rgb24 (old harness) | MAD 2.52, bias (−1.68, −1.37, −1.45) | MAD 1.73, bias (−1.98, −1.23, −1.75) |
+| area in YUV, then YUV→RGB (new harness) | MAD 2.49, bias (+0.19, −0.01, +0.24) | MAD 0.54, bias (+0.04, +0.04, +0.06) |
+
+That bias is the old post-composite "output offset" (−2.1, −1.56, −1.79)
+to within the fit's accuracy: it was fitted to cancel the harness. The
+harness now resamples in YUV (keeping 4:2:0) and converts to RGB at the
+compare size, the same chain for both videos, and
+`RenderOptions::output_bias` defaults to zero.
+
+**Downscale filter.** The decoder scaled sources to the render size with
+swscale bilinear, whose downscale kernel is a wide tent: test-card edges,
+checkers and text came out softer than the area-averaged reference
+(gridA 960×540 with the new harness: 3.13 bilinear, 1.81 area). Decoded
+video is now scaled with `SWS_AREA` (`Scaler::area`); upscales are
+unaffected (swscale uses bilinear for them).
+
+**Floor.** Filmora's export against the pass-through source, both through
+the harness chain at 960×540 (Filmora's frame-to-frame noise on the static
+card is only 0.12–0.15, so the floor is the encode, not temporal noise):
+
+| Window | Low (tr001, 5.9 Mbit/s) | ~15 Mbit/s (tr013) |
+|---|---|---|
+| gridA 0.1–1.4 s | 1.42 | 1.11 |
+| gridB 3.6–3.95 s (just after a transition) | 5.69 | 2.25 |
+
+gridB at Low is all compression: the encoder spends its bits on the
+transition and the plain frames after it are blocky. The newer
+~15–20 Mbit/s exports (tr013 onwards) have a much lower floor there.
+
+**Before / after** (MAD mean at 960×540, `--search 0`; before = previous
+code and harness):
+
+| Window | Before | After | After, `JB_FIDELITY_RENDER_SIZE=1920x1080 JB_FIDELITY_ENCODER=libx264` |
+|---|---|---|---|
+| gridA, tr001 0.1–1.4 s | 4.18 (levels none 4.31) | 1.81 | 1.30 |
+| gridB, tr001 3.6–3.95 s | 5.83 (levels none) | 5.15 | 5.07 |
+| gridA, tr013 0.1–1.4 s | 4.23 (levels none) | 1.67 | 1.03 |
+| gridB, tr013 3.6–3.95 s | 5.52 (levels none) | 3.02 | 1.86 |
+| sceneA, fx001 6.1–7.9 s | 1.91 (lane 4's floor) | 1.52 | — |
+| Project C plain, 100–103 s | 2.32 | 1.70 | — |
+| Project C last fade to black, 731–735.8 s | 0.79 | 0.83 | — |
+| Project C exposure 45, 300–303 s | 1.69 | 1.58 | — |
+| Project C exposure 100, 312–315 s | 3.19 | 3.13 | — |
+
+With full-resolution rendering, plain windows sit at or under the floor
+estimate (ours does not carry Filmora's own encode error twice). At
+960×540 the rest is our own 4:2:0 chain: chroma resampled twice (decode at
+half size, RGB, NV12 again) softens colored edges and leaves R/B about
+−0.5 on the grid card (flat areas: bias < 0.1, MAD 0.2).
+
+Not re-measured: the other user projects (their Filmora exports are not
+on this machine) and the fits made through the old offsets (Slide and
+Film Burn tables, lane fits that used the default levels). Fits made with
+`JB_FIDELITY_LEVELS=none` are unaffected on the synthetic media, since the
+cards are limited range; fits made with the default levels lose the
+(−2.9, −1.05, −2.69) total offset they were fitted on top of, which the
+old harness hid.
 
 ## Remaining gaps
 
