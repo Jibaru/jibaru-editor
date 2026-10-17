@@ -188,6 +188,12 @@ impl Prim {
     pub fn heart(cx: f32, cy: f32, s: f32) -> Prim {
         Self::shape(K_HEART, s, 0.0, 0.0, cx, cy)
     }
+    /// Heart of size `s` stretched horizontally by `w`. Its tip is at
+    /// cy + 0.55 s, its top at cy − 1.23 s, its widest span 1.95 s w at
+    /// cy − 0.66 s.
+    pub fn heart_wide(cx: f32, cy: f32, s: f32, w: f32) -> Prim {
+        Self::shape(K_HEART, s, w, 0.0, cx, cy)
+    }
     /// Arc of radius `r`, thickness `w`, spanning ±`half` radians about the rotation.
     pub fn arc(cx: f32, cy: f32, r: f32, w: f32, half: f32) -> Prim {
         Self::shape(K_ARC, r, w, half, cx, cy)

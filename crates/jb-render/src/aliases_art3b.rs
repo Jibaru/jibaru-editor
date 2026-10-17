@@ -11,6 +11,9 @@ pub const FILMORA_ART3B: &[(&str, &str)] = &[
     ("1C10FA86-5D69-4E77-9F5C-C99D2097D86F", "jb.chevron_trio_right"), // Linear 14
     ("C2A21964-21C9-48B3-8E17-3A78E97EC290", "jb.ring_burst_center"), // Linear 19
     ("2A59A5A5-A492-425C-904E-D7703218AC16", "jb.spinning_square_frames"), // Linear 4
+    ("B4DBCD45-650F-4E17-8FDF-7C13C72932EE", "jb.sparkle_heart_swell"), // Love Daily Record Transition 03
+    ("DD751802-4E0F-42F2-AA81-600665DE369C", "jb.memphis_disc_roll"), // Memphis Art Transition 06
+    ("C9CA2925-ECC7-421C-8E35-60C9984C1EAA", "jb.corner_wedge_close"), // Modern Transparent Transition 10
     ("3FC5FC6D-C669-40FA-B1AF-308BED370634", "jb.square_frames_zoom"), // Plain Shape 17
     ("CEC1827B-745E-4EB4-AD1B-A1EBEE58FF0D", "jb.hex_windows"), // Plain Shape 20
     ("554FEC3F-E022-46A6-B763-67E2E9D6BA7B", "jb.white_ring_iris"), // Plain Shape 22

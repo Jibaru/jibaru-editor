@@ -3,6 +3,7 @@
 //! is the frame aspect. Each comment names the motion it recreates.
 
 use super::kit::*;
+use super::packs::*;
 
 /// Diagonal capsule streaks in blue and teal shoot along a 50° diagonal
 /// from both corners, stretch until they cover the frame and fly on,
@@ -499,7 +500,10 @@ pub static ITEMS: &[ArtItem] = &[
     item!("jb.ring_burst_center", "Ring Burst Center", "Shapes", "A round window onto the new clip opens at the centre while yellow, white and orange rings close in from the edges; the frame cuts to the new clip and an orange ring thins out.", ring_burst_center),
     item!("jb.spinning_square_frames", "Spinning Square Frames", "Shapes", "Orange, yellow and white square outlines spin out of the centre around a turning square window onto the new clip that grows to fill the frame.", spinning_square_frames),
     item!("jb.glossy_slab_sweep", "Glossy Slab Sweep", "Shapes", "Glossy black slabs slide in diagonally until they cover the frame, then slide on to the right uncovering the new clip.", glossy_slab_sweep),
+    item!("jb.corner_wedge_close", "Corner Wedge Close", "Shapes", "Two wedges of the new clip slide in from opposite corners along a diagonal, led by thin white edges, and meet in the middle while thin lines fan out from the seam.", corner_wedge_close),
+    item!("jb.sparkle_heart_swell", "Sparkle Heart Swell", "Shapes", "A glossy pink heart swells out of the centre with a burst of sparkles until it covers the frame; the clips cross under it and it fades away over the new clip.", sparkle_heart_swell),
+    item!("jb.memphis_disc_roll", "Memphis Disc Roll", "Shapes", "A big mint disc with an orange ring, spinning white arcs and dark orbit lines rolls in from the left, idles and rolls out to the right, the new clip following its centre line.", memphis_disc_roll),
 ];
 
 /// Library listing (registry ids, display order).
-pub const LIB_IDS: &[&str] = &["jb.diagonal_streak_sweep", "jb.red_x_panels", "jb.square_frames_zoom", "jb.red_ring_iris", "jb.white_ring_iris", "jb.orange_ring_rise", "jb.hex_windows", "jb.chevron_trio_right", "jb.ring_burst_center", "jb.spinning_square_frames", "jb.glossy_slab_sweep"];
+pub const LIB_IDS: &[&str] = &["jb.diagonal_streak_sweep", "jb.red_x_panels", "jb.square_frames_zoom", "jb.red_ring_iris", "jb.white_ring_iris", "jb.orange_ring_rise", "jb.hex_windows", "jb.chevron_trio_right", "jb.ring_burst_center", "jb.spinning_square_frames", "jb.glossy_slab_sweep", "jb.corner_wedge_close", "jb.sparkle_heart_swell", "jb.memphis_disc_roll"];

@@ -10,6 +10,8 @@
 pub mod items;
 #[path = "art3b_kit.rs"]
 pub mod kit;
+#[path = "art3b_packs.rs"]
+pub mod packs;
 #[path = "art3b_themed.rs"]
 pub mod themed;
 

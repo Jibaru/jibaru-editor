@@ -40,7 +40,7 @@ fn bound(i: u32) -> f32 {
         case 3, 4, 5: { return v0.y * 1.6 + pad; }
         case 6: { return v0.y * (1.0 + v0.z) + pad; }
         case 7: { return v0.y + v0.z * max(1.0, v0.w) + pad; }
-        case 10: { return v0.y * 1.5 + pad; }
+        case 10: { return v0.y * 1.5 * max(v0.z, 1.0) + pad; }
         case 11: { return v0.y + v0.z + pad; }
         case 13: { return max(v0.y, v0.z) + pad; }
         default: { return -1.0; }
@@ -164,7 +164,11 @@ fn sdf(i: u32, l: vec2f) -> f32 {
             return length(vec2f(l.x - clamp(l.x, -v0.y, v0.y), l.y)) - rr;
         }
         case 8: { return l.x; }
-        case 10: { return sd_heart(l, v0.y); }
+        case 10: {
+            // Heart, stretched horizontally by c (0 or 1: none).
+            let w = select(1.0, v0.z, v0.z > 0.0);
+            return sd_heart(vec2f(l.x / w, l.y), v0.y) * min(w, 1.0);
+        }
         case 11: {
             // Arc: ring of radius a, thickness b, half-angle c about +x.
             let ang = abs(atan2(l.y, l.x));

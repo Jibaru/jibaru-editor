@@ -4,7 +4,7 @@ Art3b replaces stand-ins of the earlier lanes (a global A/B mix plus a smooth
 colour field: right timing and average colour, no shapes) for graphic,
 cartoon and themed motion transitions (shapes, comic bursts, holiday,
 seasonal, sports and business graphics, motion-graphics packs) with
-recreations drawn with **our own original vector art**. **11 of 66**
+recreations drawn with **our own original vector art**. **14 of 66**
 items are upgraded; imported projects reach them through the
 `filmora:<GUID>` aliases in `crates/jb-render/src/aliases_art3b.rs` (the
 stand-in alias of each upgraded GUID was removed from the older lane file,
@@ -14,7 +14,7 @@ so every GUID has exactly one mapping).
 
 No Filmora asset file was read. The reference exports were only *watched*
 (contact sheets, per-frame coverage of A / B / art and the mean colour of
-the art pixels) to learn the concept, timing, motion path, coverage over
+the art pixels, per-patch overlay alpha) to learn the concept, timing, motion path, coverage over
 time, palette and how A and B are revealed. Every shape is authored in code
 from primitives (rectangles, ellipses, stars, comic bursts, noisy blobs,
 capsules, chevrons, rhombi, hearts, arcs, perspective quads); nothing was
@@ -33,7 +33,10 @@ Ids and display names are our own descriptive names.
 * `crates/jb-render/src/shaders/art3b/prims.wgsl`: background pass, then
   the primitives as signed-distance shapes, six per draw, blended over in
   order.
-* `crates/jb-render/src/fx/art3b_items.rs`, `art3b_themed.rs`: the scenes.
+* `crates/jb-render/src/fx/art3b_items.rs` (the registry list and the
+  plain-shape scenes) and `art3b_packs.rs` (pack, themed and business
+  scenes); `art3b_themed.rs` holds unlisted horror drafts that did not
+  beat their stand-ins.
 
 ## Method
 
@@ -52,20 +55,20 @@ be higher where a hard-edged shape is a few pixels off).
 
 | Filmora item | GUID | Batch | Stand-in | Recreation | Floor | Before | After | Status | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| Horrible Party Transition 01 | `C30B1825-A2D9-40C5-8DC5-AAA6C17475C9` | tr003 | `jb.bandage_wrap` | `jb.mummy_wrap` (unlisted draft) | 2.88 | 15.52 / 32.1 (+12.64) | 22.57 / 53.6 (+19.69) | kept stand-in |  |
-| Horror Story Transition 01 | `B9FD48EE-56C3-427A-B497-1EAF2916664D` | tr003 | `jb.blood_splash` | `jb.blood_splatter` (unlisted draft) | 2.87 | 5.88 / 16.5 (+3.01) | 9.79 / 24.2 (+6.92) | kept stand-in |  |
-| Horror Story Transition 02 | `8169CEC2-0E41-4DCA-AF4E-6850BE909274` | tr003 | `jb.zombie_hands` | `jb.zombie_reach` (unlisted draft) | 2.62 | 12.43 / 25.9 (+9.81) | 13.34 / 34.4 (+10.72) | kept stand-in |  |
+| Horrible Party Transition 01 | `C30B1825-A2D9-40C5-8DC5-AAA6C17475C9` | tr003 | `jb.bandage_wrap` | `jb.mummy_wrap` | 2.88 | 15.52 / 32.1 (+12.64) | 22.57 / 53.6 (+19.69) | kept stand-in |  |
+| Horror Story Transition 01 | `B9FD48EE-56C3-427A-B497-1EAF2916664D` | tr003 | `jb.blood_splash` | `jb.blood_splatter` | 2.87 | 5.88 / 16.5 (+3.01) | 9.79 / 24.2 (+6.92) | kept stand-in |  |
+| Horror Story Transition 02 | `8169CEC2-0E41-4DCA-AF4E-6850BE909274` | tr003 | `jb.zombie_hands` | `jb.zombie_reach` | 2.62 | 12.43 / 25.9 (+9.81) | 13.34 / 34.4 (+10.72) | kept stand-in |  |
 | Horrors Pack Transition 01 | `A4A64485-7A1E-4CD7-9621-C4EC79433BAA` | tr003 | `jb.dark_smoke_wash_01` | — | 4.02 | 6.75 / 32.1 (+2.73) | — | stand-in |  |
 | Influencer Toolkit Vol 1 Transition 01 | `1E059E6B-7E12-4DC1-A5ED-982CF52EDD8F` | tr006 | `jb.shape_burst_wash_03` | `jb.glossy_slab_sweep` | 2.75 | 24.38 / 48.3 (+21.63) | 22.02 / 41.3 (+19.27) | upgraded |  |
 | Layered Vision | `0647A4ED-769A-494E-92EF-34984F81DD18` | tr009 | `jb.panel_shuffle_wash_01` | — | 4.0 | 48.60 / 66.0 (+44.60) | — | stand-in |  |
 | Linear 14 | `1C10FA86-5D69-4E77-9F5C-C99D2097D86F` | tr004 | `jb.shape_burst_wash_04` | `jb.chevron_trio_right` | 2.43 | 19.11 / 54.5 (+16.68) | 6.50 / 21.0 (+4.07) | upgraded |  |
 | Linear 19 | `C2A21964-21C9-48B3-8E17-3A78E97EC290` | tr004 | `jb.shape_burst_wash_05` | `jb.ring_burst_center` | 2.42 | 24.73 / 61.3 (+22.31) | 16.81 / 59.5 (+14.39) | upgraded |  |
 | Linear 4 | `2A59A5A5-A492-425C-904E-D7703218AC16` | tr004 | `jb.shape_burst_wash_06` | `jb.spinning_square_frames` | 2.49 | 23.17 / 53.2 (+20.68) | 15.07 / 39.2 (+12.58) | upgraded |  |
-| Love Daily Record Transition 03 | `B4DBCD45-650F-4E17-8FDF-7C13C72932EE` | tr006 | `jb.shape_burst_wash_07` | — | 3.51 | 22.59 / 49.4 (+19.08) | — | stand-in |  |
-| Memphis Art Transition 06 | `DD751802-4E0F-42F2-AA81-600665DE369C` | tr002 | `jb.shape_burst_wash_08` | — | 2.41 | 25.46 / 47.0 (+23.05) | — | stand-in |  |
+| Love Daily Record Transition 03 | `B4DBCD45-650F-4E17-8FDF-7C13C72932EE` | tr006 | `jb.shape_burst_wash_07` | `jb.sparkle_heart_swell` | 3.51 | 22.59 / 49.4 (+19.08) | 12.99 / 34.9 (+9.48) | upgraded |  |
+| Memphis Art Transition 06 | `DD751802-4E0F-42F2-AA81-600665DE369C` | tr002 | `jb.shape_burst_wash_08` | `jb.memphis_disc_roll` | 2.41 | 25.46 / 47.0 (+23.05) | 11.74 / 35.0 (+9.33) | upgraded |  |
 | Metropolis Transition 01 | `24f2ecb0-b8cc-f15c-dc60-9b14a61adc78` | tr006 | `jb.shape_burst_wash_09` | — | 2.62 | 18.36 / 40.2 (+15.74) | — | stand-in |  |
 | Modern Transparent Transition 08 | `E51B8E25-E17F-4E9A-96C4-67F07830F4A5` | tr006 | `jb.shape_burst_wash_10` | — | 2.91 | 10.70 / 32.4 (+7.79) | — | stand-in |  |
-| Modern Transparent Transition 10 | `C9CA2925-ECC7-421C-8E35-60C9984C1EAA` | tr006 | `jb.shape_burst_wash_11` | — | 2.48 | 6.45 / 29.4 (+3.97) | — | stand-in |  |
+| Modern Transparent Transition 10 | `C9CA2925-ECC7-421C-8E35-60C9984C1EAA` | tr006 | `jb.shape_burst_wash_11` | `jb.corner_wedge_close` | 2.48 | 6.45 / 29.4 (+3.97) | 3.61 / 7.5 (+1.13) | upgraded |  |
 | Motion Transitions Pack Vol 3 Transition 14 | `6F64A98D-2C50-4D7F-9314-89E859FB9AD4` | tr004 | `jb.shape_burst_wash_02` | — | 2.44 | 14.55 / 52.1 (+12.11) | — | stand-in |  |
 | Motion Transitions Pack Vol 4 Transition 14 | `08C887B6-5597-4A52-BE2B-133E6B6EC9BD` | tr002 | `jb.shape_burst_wash_01` | — | 2.42 | 20.63 / 58.3 (+18.21) | — | stand-in |  |
 | Movie Atmosphere CN Transition 07 | `FDFA48E8-C537-46AE-9200-3B952A2030FE` | tr002 | `jb.shape_burst_wash_12` | — | 2.37 | 32.50 / 64.5 (+30.13) | — | stand-in |  |
