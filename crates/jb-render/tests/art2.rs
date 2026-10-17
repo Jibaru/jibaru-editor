@@ -33,6 +33,8 @@ fn art2_ids_resolve_once() {
 fn art2_items_are_listed() {
     let ids: Vec<&str> = jb_render::fx::art2_items::items().iter().map(|i| i.id).collect();
     assert_eq!(ids, jb_render::fx::art2_items::LIB_IDS);
+    let ids: Vec<&str> = jb_render::fx::art2_gold::items().iter().map(|i| i.id).collect();
+    assert_eq!(ids, jb_render::fx::art2_gold::LIB_IDS);
 }
 
 #[test]
@@ -40,7 +42,7 @@ fn art2_runs_from_a_to_b() {
     let Some(mut r) = common::renderer(64, 36) else { return };
     let p = project(64, 36);
     let src = MemorySource::ab(64, 36);
-    for id in jb_render::fx::art2_items::LIB_IDS {
+    for id in jb_render::fx::art2_items::LIB_IDS.iter().chain(jb_render::fx::art2_gold::LIB_IDS) {
         let start = r.render(&p, &transition_plan(id, 0.0, &[]), &src);
         assert!(r.last_report().errors.is_empty(), "{id}: {:?}", r.last_report().errors);
         assert!(mean_abs_diff(&start.data, &src.frames["a"].data) < 2.0, "{id} start");
