@@ -7,6 +7,8 @@ use crate::registry::Registry;
 
 /// (Filmora resource GUID, our id).
 pub const FILMORA_LANE2: &[(&str, &str)] = &[
+    // 3D Box Close
+    ("16BFABD5-AC48-42AF-BAF9-149934D9B990", "jb.box_close_3d"),
     // 3D Box Down
     ("86437F55-4674-4809-9B7A-0D39DCF9E313", "jb.box_down_3d"),
     // 3D Box Drop
@@ -43,6 +45,8 @@ pub const FILMORA_LANE2: &[(&str, &str)] = &[
     ("F9DB5BCD-C24E-43A4-BAE3-7FC4BE93A25F", "jb.box_up_3d"),
     // 3D Box Vertical
     ("1C7CC9AD-ACD1-4D08-9A39-82682F5BE775", "jb.box_vertical_3d"),
+    // Boxed Reality
+    ("95AE988D-EDE9-4C4F-B813-A24BE7DE7415", "jb.boxed_reality"),
     // 3D Camera Transitions 7
     ("F163DDE7-90AF-077C-84B2-1498C379F735", "jb.camera_cards_7"),
     // 3D Card
@@ -63,6 +67,8 @@ pub const FILMORA_LANE2: &[(&str, &str)] = &[
     ("FAC11A67-7C08-497E-B979-1EF1F923DEF6", "jb.cube_facets_down"),
     // Cube Facets Left
     ("55C7899F-8326-4E0E-8A14-BAD17A8757E5", "jb.cube_facets_left"),
+    // Cube Facets Right
+    ("C73CB5B2-6885-48E1-A97D-9DC8C8D1E3BD", "jb.cube_facets_right"),
     // Rotating Cube
     ("F23CEC10-EB99-4085-BA42-86CD41883CEE", "jb.cube_rotate"),
     // Cube Down
@@ -119,6 +125,8 @@ pub const FILMORA_LANE2: &[(&str, &str)] = &[
     ("75729E2E-A47F-4E0C-8AC8-4DDA210C158B", "jb.fold_4"),
     // Fold Transition 08
     ("96262F03-7368-4610-91AB-6B25D29322D2", "jb.fold_8"),
+    // Glass Panel Flash
+    ("293A55BF-E78C-4F2A-A0C5-2B8E2B023C51", "jb.glass_panel_flash"),
     // 3D Page Flip Left
     ("A985CC65-0A2B-440F-B437-6F802A0305B0", "jb.page_flip_left_3d"),
     // 3D Horizontal Closing
