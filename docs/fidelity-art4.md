@@ -44,6 +44,7 @@ MAD mean / max over the window (0–255 over RGB).
 | No Signal Glitch 01 (grid / scene) | fx003 | `jb.a4.weak_signal` | 16.86 / 20.1 · 5.90 / 10.6 | 15.07 / 18.7 · 5.43 / 10.3 | same model; Filmora's blocky smearing of fine detail is not modelled |
 | Glitch line | tr001 | `jb.a4.glitch_flash_cut` | 45.84 / 123.5 | 16.03 / 36.2 | keyed colour-glitch rows (washes, negative, smear, swap, row wave) |
 | Pixel Game Transition 09 | tr003 | `jb.a4.pixel_fadeout_swap` | 33.38 / 89.2 | 10.33 / 21.1 | seeded square-cell dropout to a dark screen and back, edges first |
+| 3D Warp Box Left | tr008 | `jb.a4.curved_box_turn_left` | 28.71 / 78.2 | 13.69 / 35.5 | two curved quad patches (bilinear corners + edge bulges + perspective) fitted frame by frame; residual is the fine grid under curvature |
 
 ## Gaps
 

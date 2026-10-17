@@ -131,7 +131,16 @@ pub const JITTER_BARS: Model =
 pub const BLOCK_DISSOLVE: Model =
     Model { name: "block_dissolve", bodies: &[include_str!("../shaders/art4/block_dissolve.wgsl")], encode: encode_single };
 
-pub static MODELS: &[&Model] = &[&BLOCK_DISSOLVE, &JITTER_BARS, &PSY, &SHATTER, &ENGRAVE, &RGB_SPLIT, &MOSAIC, &PRISM, &SWIRL, &RIPPLE, &RING_WAVE, &WAVE_SPLIT, &UNSHARP, &GLOW];
+/// Two warped faces: the outgoing (face 0) and incoming (face 1) clips are
+/// drawn on curved quadrilateral patches over black, each a bilinear patch
+/// of corners TL, TR, BR, BL plus quadratic edge bulges (top, right,
+/// bottom, left; uv vectors), with perspective foreshortening along each
+/// texture axis and a shade. Face `f` uses keys `19f..19f+18`; `k38 > 0.5`
+/// puts the outgoing face in front. This fits the 3D warp-box family,
+/// whose bent faces are recovered frame by frame from the export.
+pub const PATCH2: Model = Model { name: "patch2", bodies: &[include_str!("../shaders/art4/patch2.wgsl")], encode: encode_single };
+
+pub static MODELS: &[&Model] = &[&PATCH2, &BLOCK_DISSOLVE, &JITTER_BARS, &PSY, &SHATTER, &ENGRAVE, &RGB_SPLIT, &MOSAIC, &PRISM, &SWIRL, &RIPPLE, &RING_WAVE, &WAVE_SPLIT, &UNSHARP, &GLOW];
 
 pub fn model(name: &str) -> Option<&'static Model> {
     MODELS.iter().copied().find(|m| m.name == name)

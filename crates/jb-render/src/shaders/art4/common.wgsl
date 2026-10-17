@@ -1,5 +1,5 @@
 // Shared helpers of the art-4 models (see fx/art4_kit.rs for the uniform
-// layout: constants c(i) in u.p[0..16], keyframe row k(i) in u.p[16..20]).
+// layout: constants c(i) in u.p[0..16], keyframe row k(i) in u.p[16..28]).
 
 fn c(i: i32) -> f32 { return u.p[i / 4][i % 4]; }
 fn k(i: i32) -> f32 { return u.p[16 + i / 4][i % 4]; }

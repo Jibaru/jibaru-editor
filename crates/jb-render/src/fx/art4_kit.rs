@@ -9,8 +9,8 @@
 //!
 //! ```text
 //! u.p[0..16]   c[0..64]     constants of the item
-//! u.p[16..20]  k[0..16]     keyframe row at the current progress (linear)
-//! u.p[20..32]               free for the model's passes
+//! u.p[16..28]  k[0..48]     keyframe row at the current progress (linear)
+//! u.p[28..32]               free for the model's passes
 //! u.e0..e3                  free for the model's passes
 //! ```
 //!
@@ -26,7 +26,7 @@ use std::sync::{Mutex, OnceLock};
 /// Number of constants of an item.
 pub const NC: usize = 64;
 /// Number of keyframed values of an item.
-pub const NK: usize = 16;
+pub const NK: usize = 48;
 
 /// One keyframe row: values at progress `p`.
 #[derive(Clone, Copy, Debug)]

@@ -7,6 +7,7 @@
 use crate::registry::Registry;
 
 pub const FILMORA_ART4: &[(&str, &str, &str)] = &[
+    ("69E652B1-EB6E-460C-9929-DC6F744F02D6", "jb.a4.curved_box_turn_left", "3D Warp Box Left"),
     ("E27040D3-6FEE-4708-B95B-384055CE7FDA", "jb.a4.afterimage_rise", "Baltan"),
     ("3F9270DE-728F-4898-8C4C-7856B4540539", "jb.a4.ribbon_wave_split", "Butterfly Wave Scrawler"),
     ("50D37319-8F37-4593-BBAF-9FF0A6307C01", "jb.a4.prism_split_bursts", "Chromatic Aberration"),
