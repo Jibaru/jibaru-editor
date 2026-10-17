@@ -44,6 +44,7 @@ pub const FILMORA: &[(&str, &str)] = &[
 
 pub fn register(r: &mut Registry) {
     crate::aliases_lane1::register(r);
+    crate::aliases_lane3::register(r);
     for (from, to) in NAMES {
         if r.get(to).is_some() {
             r.alias(*from, to);

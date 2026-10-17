@@ -18,6 +18,7 @@ pub mod lane1_mask;
 pub mod lane1_table;
 pub mod lane1_tables;
 pub mod lane4_all;
+pub mod lane3;
 pub mod motion;
 pub mod panel;
 pub mod retro;
@@ -753,6 +754,7 @@ pub fn register_builtin(r: &mut Registry) {
     lane4_all::register(r);
     lane1_table::register(r);
     lane1_mask::register(r);
+    lane3::register(r);
     crate::aliases::register(r);
 }
 

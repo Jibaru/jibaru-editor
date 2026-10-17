@@ -291,12 +291,17 @@ pub const GROUPS: &[LibraryGroup] = &[
     g(F, "Fitted Looks", crate::fx::lane4_all::looks::LIB_IDS),
 ];
 
+/// [`GROUPS`] followed by the groups contributed by fitted item sets.
+pub fn all_groups() -> impl Iterator<Item = &'static LibraryGroup> {
+    GROUPS.iter().chain(crate::fx::lane3::LIBRARY.iter())
+}
+
 /// The groups listing `id`, with its position in each.
 pub fn places(id: &str) -> impl Iterator<Item = (&'static LibraryGroup, usize)> + '_ {
-    GROUPS.iter().filter_map(move |g| g.items.iter().position(|i| *i == id).map(|p| (g, p)))
+    all_groups().filter_map(move |g| g.items.iter().position(|i| *i == id).map(|p| (g, p)))
 }
 
 /// Group names of a tab (`kind`), in sidebar order.
 pub fn group_names(kind: FxKind) -> impl Iterator<Item = &'static str> {
-    GROUPS.iter().filter(move |g| g.kind == kind).map(|g| g.name)
+    all_groups().filter(move |g| g.kind == kind).map(|g| g.name)
 }
