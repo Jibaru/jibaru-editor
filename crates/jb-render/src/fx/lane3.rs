@@ -10,10 +10,16 @@ pub mod data;
 pub mod fades;
 #[path = "lane3_kit.rs"]
 pub mod kit;
+#[path = "lane3_light.rs"]
+pub mod light;
 #[path = "lane3_library.rs"]
 mod library;
 #[path = "lane3_overlays.rs"]
 pub mod overlays;
+#[path = "lane3_shapes.rs"]
+pub mod shapes;
+#[path = "lane3_themed.rs"]
+pub mod themed;
 #[path = "lane3_wipes.rs"]
 pub mod wipes;
 
@@ -22,5 +28,8 @@ pub use library::LIBRARY;
 pub fn register(r: &mut Registry) {
     fades::register(r);
     wipes::register(r);
+    light::register(r);
+    shapes::register(r);
+    themed::register(r);
     overlays::register(r);
 }

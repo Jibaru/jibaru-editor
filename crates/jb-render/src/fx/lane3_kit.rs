@@ -175,6 +175,31 @@ fn fx(uv: vec2f) -> vec4f {{
     )
 }
 
+/// [`edge_wipe`] followed by a per-frame grade `out = a W + o` (display
+/// space) from rows `[p, a, or, og, ob]`: the tint or dimming of an overlay
+/// layered over the whole frame.
+pub fn edge_wipe_graded(mask: &str, rows: &[[f32; 3]], grade: &[[f32; 5]]) -> String {
+    format!(
+        r#"{}
+{}
+fn l3_mask(uv: vec2f) -> f32 {{
+    let c = to_c(uv);
+    let A = aspect();
+    return {mask};
+}}
+fn fx(uv: vec2f) -> vec4f {{
+    let p = prog();
+    let k = kf_g(p);
+    let gr = kf_h(p);
+    let w = to_disp(l3_mix(sa(uv), sb(uv), l3_ramp(l3_mask(uv), k.x, k.y))).rgb;
+    return l3_out(gr.x * w + gr.yzw);
+}}
+"#,
+        table("g", rows),
+        table("h", grade)
+    )
+}
+
 /// WGSL of the ramp-wipe recipe: weight of B = clamp(a + b m) for the mask
 /// expression `mask` (as in [`edge_wipe`]); rows `[p, a, b]`. Suits soft,
 /// wide dissolve fronts whose width changes over time.

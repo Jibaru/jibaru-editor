@@ -52,7 +52,7 @@ floor. Stand-ins score far above it wherever the artwork covers the frame.
 | Anime Style Flow 01 | `jb.starburst_flash` | global mix stand-in | 15.31 | 47.69 | 4.79 | +10.52 |  |
 | B&W Dissolve | `jb.mono_dissolve` | global mix stand-in | 9.72 | 26.83 | 5.12 | +4.61 |  |
 | Black Friday Sale 02 Transition 06 | `jb.chevron_sweep` | global mix stand-in | 17.80 | 59.61 | 4.83 | +12.96 |  |
-| Blind 1 | `jb.blind_bars` | global mix stand-in | 14.84 | 37.86 | 4.99 | +9.85 |  |
+| Blind 1 | `jb.blind_bars` | edge front + procedural slats | 10.39 | 19.31 | 4.99 | +5.40 | slat band with hashed per-slat thresholds; slat pattern is not Filmora's |
 | Blue Sparkling Awards Transition 04 | `jb.gold_sparkle_burst` | global mix stand-in | 22.56 | 35.85 | 4.97 | +17.59 |  |
 | Burning Dash Transition 01 | `jb.fireball_dash_1` | global mix stand-in | 25.98 | 43.46 | 4.82 | +21.16 |  |
 | Burning Dash Transition 02 | `jb.fireball_dash_2` | global mix stand-in | 19.98 | 46.00 | 4.78 | +15.21 |  |
@@ -61,17 +61,17 @@ floor. Stand-ins score far above it wherever the artwork covers the frame.
 | Business Presentation Vol 02 Transition 02 | `jb.stripe_slide_diagonal` | global mix stand-in | 31.97 | 84.82 | 4.79 | +27.18 |  |
 | Carousel Down | `jb.carousel_down` | global mix stand-in | 37.12 | 61.32 | 4.71 | +32.41 |  |
 | Carousel Down Rebound | `jb.carousel_down_rebound` | global mix stand-in | 25.11 | 48.82 | 4.69 | +20.42 |  |
-| Carousel Left | `jb.carousel_left` | global mix stand-in | 36.11 | 63.28 | 4.88 | +31.23 |  |
+| Carousel Left | `jb.carousel_left` | panel strip | 17.38 | 46.89 | 4.88 | +12.50 | fitted at 192 px; frames 21–31 (fast scroll) still off |
 | Carousel Right | `jb.carousel_right` | global mix stand-in | 34.99 | 65.66 | 4.98 | +30.01 |  |
 | Carousel Up | `jb.carousel_up` | global mix stand-in | 26.59 | 49.35 | 4.89 | +21.70 |  |
 | Cartoony Vlog Pack Transition 01 | `jb.candy_spiral` | global mix stand-in | 25.03 | 55.57 | 4.77 | +20.27 |  |
-| Chalk Swipe Left | `jb.chalk_swipe_left` | structural fit | 5.25 | 7.01 | 5.24 | +0.01 |  |
+| Chalk Swipe Left | `jb.chalk_swipe_left` | edge wipe | 5.25 | 7.01 | 5.24 | +0.01 | slanted edge in ~12 fps steps; the chalk texture of the edge is not drawn |
 | Christmas Gift Transition 03 | `jb.bokeh_flash` | global mix stand-in | 10.85 | 21.19 | 5.45 | +5.40 |  |
 | Cinematic Transition 03 | `jb.soft_light_leak` | global mix stand-in | 9.55 | 21.38 | 4.64 | +4.91 |  |
 | Cinematic Transition 09 | `jb.scratched_film_dip` | global mix stand-in | 7.93 | 19.90 | 4.88 | +3.04 |  |
 | Cinematic Travel Vlog Transition 01 | `jb.film_strip_slide` | global mix stand-in | 28.22 | 43.13 | 4.90 | +23.32 |  |
 | Classic Movies Transition 06 | `jb.red_flare_flash` | global mix stand-in | 9.74 | 26.30 | 4.83 | +4.91 |  |
-| Col Merge | `jb.sides_merge` | structural fit | 4.70 | 5.46 | 4.80 | -0.10 |  |
+| Col Merge | `jb.sides_merge` | edge wipe | 4.70 | 5.46 | 4.80 | -0.10 | two edges closing to the centre line |
 | Color Dissolve 3 | `jb.block_glow_dissolve` | global mix stand-in | 18.28 | 51.78 | 5.04 | +13.24 |  |
 | Color Distance | `jb.checker_scatter` | global mix stand-in | 9.78 | 28.52 | 5.07 | +4.71 |  |
 | Colorful Transition Pack Transition 01 | `jb.liquid_blob_wipe` | global mix stand-in | 11.73 | 50.88 | 4.89 | +6.84 |  |
@@ -83,31 +83,31 @@ floor. Stand-ins score far above it wherever the artwork covers the frame.
 | Creepy Pack Transition 02 | `jb.face_slide` | global mix stand-in | 25.77 | 42.82 | 4.86 | +20.91 |  |
 | Creepy Pack Transition 03 | `jb.lantern_sweep` | global mix stand-in | 36.01 | 64.97 | 4.85 | +31.16 |  |
 | Cross Whisk | `jb.block_whisk` | global mix stand-in | 15.43 | 31.54 | 4.54 | +10.89 |  |
-| Crystal Ball 1 | `jb.crystal_ball_iris` | global mix stand-in | 45.26 | 70.57 | 4.78 | +40.48 |  |
+| Crystal Ball 1 | `jb.crystal_ball_iris` | lens ball | 7.37 | 13.62 | 4.78 | +2.59 | ellipse → circle iris with bulge and mid flash colours |
 | Crystal Ball 2 | `jb.crystal_ball_lens` | global mix stand-in | 17.76 | 34.50 | 4.64 | +13.12 |  |
 | Cut Off | `jb.cut_off` | global mix stand-in | 12.52 | 37.13 | 4.82 | +7.70 |  |
 | Depth Slice | `jb.depth_panels` | global mix stand-in | 43.24 | 66.01 | 4.58 | +38.66 |  |
 | Diagonal Slice | `jb.split_slide` | global mix stand-in | 12.27 | 36.47 | 5.10 | +7.17 |  |
 | Dimensional Drop | `jb.panel_drop` | global mix stand-in | 27.21 | 54.58 | 4.87 | +22.34 |  |
-| Dissolve Skew 01 | `jb.diagonal_dissolve` | structural fit | 6.94 | 9.69 | 4.81 | +2.13 |  |
+| Dissolve Skew 01 | `jb.diagonal_dissolve` | ramp wipe | 6.94 | 9.69 | 4.81 | +2.13 | diagonal soft front; ~3 above the floor mid-way (front shape) |
 | Domino Cascade | `jb.domino_panels` | global mix stand-in | 39.08 | 65.67 | 5.40 | +33.68 |  |
 | Energy Sports Transition 02 | `jb.speed_bars` | global mix stand-in | 34.95 | 75.59 | 4.94 | +30.02 |  |
-| Erase Line Down | `jb.line_erase_down` | structural fit | 5.52 | 6.47 | 4.80 | +0.71 |  |
-| Erase Line Right | `jb.line_erase_right` | structural fit | 4.89 | 5.51 | 4.79 | +0.10 |  |
-| Fade Dissolve | `jb.sweep_dissolve` | structural fit | 7.07 | 7.64 | 4.88 | +2.19 |  |
-| Fade Grayscale | `jb.gray_fade` | structural fit | 6.26 | 7.94 | 5.02 | +1.24 |  |
-| Fade Single Track | `jb.wash_black` | structural fit | 3.65 | 7.03 | 5.17 | -1.52 |  |
-| Fade White | `jb.wash_white` | structural fit | 3.98 | 6.92 | 5.31 | -1.33 |  |
+| Erase Line Down | `jb.line_erase_down` | edge wipe | 5.52 | 6.47 | 4.80 | +0.71 | hard edge, fast–slow–fast timing table |
+| Erase Line Right | `jb.line_erase_right` | edge wipe | 4.89 | 5.51 | 4.79 | +0.10 | hard edge, fast–slow–fast timing table |
+| Fade Dissolve | `jb.sweep_dissolve` | soft edge × eased mix | 7.07 | 7.64 | 4.88 | +2.19 | left-to-right front 0.475 wide at x = 0.047 + 1.4 p, times an eased global weight |
+| Fade Grayscale | `jb.gray_fade` | global mix | 6.26 | 7.94 | 5.02 | +1.24 | dissolve through a desaturated mix (luma terms) |
+| Fade Single Track | `jb.wash_black` | global mix | 3.65 | 7.03 | 5.17 | -1.52 | dip to black, black on frames 29–32 |
+| Fade White | `jb.wash_white` | global mix | 3.98 | 6.92 | 5.31 | -1.33 | linear display-space dip to white, peak on the cut frame |
 | Falling Frame Transitions | `jb.falling_frame` | global mix stand-in | 32.74 | 47.77 | 4.76 | +27.98 |  |
 | Fast Whirl 1 | `jb.fast_whirl_1` | global mix stand-in | 11.38 | 29.74 | 4.96 | +6.42 |  |
 | Fast Whirl 2 | `jb.fast_whirl_2` | global mix stand-in | 11.18 | 29.94 | 4.97 | +6.21 |  |
-| Fast Wipe Down | `jb.fast_wipe_down` | structural fit | 4.64 | 5.50 | 4.71 | -0.07 |  |
-| Fast Wipe Up | `jb.fast_wipe_up` | structural fit | 4.48 | 5.30 | 4.78 | -0.30 |  |
+| Fast Wipe Down | `jb.fast_wipe_down` | existing `jb.fast_wipe_down` | 4.64 | 5.50 | 4.71 | -0.07 | alias only; already at the floor |
+| Fast Wipe Up | `jb.fast_wipe_up` | existing `jb.fast_wipe_up` | 4.48 | 5.30 | 4.78 | -0.30 | alias only; already at the floor |
 | Fear Halloween 2 | `jb.zoom_through` | global mix stand-in | 31.62 | 45.33 | 5.84 | +25.78 |  |
 | Film Grain Style Transition 01 | `jb.warm_glow_wash` | global mix stand-in | 6.62 | 23.63 | 4.83 | +1.79 |  |
 | Film Grit 1 | `jb.grit_flash_orange` | global mix stand-in | 8.45 | 40.45 | 4.79 | +3.66 |  |
 | Film Grit 2 | `jb.grit_frame` | global mix stand-in | 10.39 | 49.59 | 4.94 | +5.45 |  |
-| Flash | `jb.bright_flash` | global mix stand-in | 12.59 | 24.71 | 4.88 | +7.71 |  |
+| Flash | `jb.bright_flash` | flash (zoom + bloom) | 7.31 | 10.78 | 4.88 | +2.42 | bloom + overexposure, new clip lands at 1.11× zoom; mid frames ~10 |
 | Flashbulbs 02 | `jb.flashbulbs` | global mix stand-in | 9.74 | 39.57 | 4.71 | +5.03 |  |
 | Flora Collage Pack Transition 05 | `jb.diagonal_sweep` | global mix stand-in | 14.20 | 29.02 | 4.74 | +9.46 |  |
 | Fluorescent Flash | `jb.neon_flicker_flash` | global mix stand-in | 12.35 | 35.42 | 5.83 | +6.52 |  |
@@ -134,7 +134,7 @@ floor. Stand-ins score far above it wherever the artwork covers the frame.
 | Halloween Colorful Transition 15 | `jb.pumpkin_pop_wipe` | global mix stand-in | 14.89 | 34.98 | 4.70 | +10.19 |  |
 | Halloween Colorful Transition 17 | `jb.skull_hat_sweep` | global mix stand-in | 19.58 | 40.38 | 4.68 | +14.90 |  |
 | Halloween Colorful Transition 21 | `jb.bat_wing_wipe` | global mix stand-in | 14.18 | 45.53 | 4.67 | +9.51 |  |
-| Halloween Colorful Transition 23 | `jb.ghost_curve_wipe` | global mix stand-in | 21.09 | 33.01 | 4.69 | +16.40 |  |
+| Halloween Colorful Transition 23 | `jb.ghost_curve_wipe` | radial wipe + grade | 12.92 | 18.19 | 4.69 | +8.23 | ghost sprite not drawn |
 | Halloween Colorful Transition 25 | `jb.cat_curve_wipe` | global mix stand-in | 23.14 | 33.85 | 4.70 | +18.45 |  |
 | Halloween Film Pack Transition 02 | `jb.rust_slash` | global mix stand-in | 10.15 | 38.29 | 4.82 | +5.33 |  |
 | Halloween Film Transition 01 | `jb.rust_smear` | global mix stand-in | 9.40 | 46.79 | 4.96 | +4.44 |  |
@@ -142,10 +142,10 @@ floor. Stand-ins score far above it wherever the artwork covers the frame.
 | Halloween Party Transition 02 | `jb.lantern_glow` | global mix stand-in | 15.91 | 41.95 | 4.96 | +10.95 |  |
 | Halloween Party Transition 03 | `jb.bat_swarm` | global mix stand-in | 12.38 | 52.51 | 4.79 | +7.60 |  |
 | Halloween Scary Pack Transition 06 | `jb.blue_fire_smoke` | global mix stand-in | 28.78 | 54.21 | 4.99 | +23.79 |  |
-| Horizontal Cutout 1 | `jb.bar_cutout` | global mix stand-in | 24.57 | 41.80 | 4.71 | +19.87 |  |
+| Horizontal Cutout 1 | `jb.bar_cutout` | procedural bars | 14.96 | 29.89 | 4.71 | +10.26 | bar layout and timing estimated by eye; the bars' content offsets are not reproduced |
 | Horizontal Reel | `jb.card_reel` | global mix stand-in | 15.24 | 28.97 | 4.69 | +10.55 |  |
 | Horizontal Screen Cutting | `jb.band_cut_zoom` | global mix stand-in | 21.35 | 40.97 | 4.79 | +16.56 |  |
-| Horizontal Slice | `jb.slice_slide` | global mix stand-in | 18.65 | 35.79 | 4.97 | +13.67 |  |
+| Horizontal Slice | `jb.slice_slide` | strip slide | 9.41 | 19.11 | 4.97 | +4.44 | 10 strips, fitted edges and easing exponents; mid frames 15–19 (strip motion blur not modelled) |
 | Horrible Colorful Transition 02 | `jb.glitch_bands` | global mix stand-in | 15.69 | 39.61 | 4.70 | +10.99 |  |
 | Horrible Colorful Transition 13 | `jb.ghost_face_flash` | global mix stand-in | 29.39 | 68.68 | 4.71 | +24.68 |  |
 | Horrible Colorful Transition 24 | `jb.witch_silhouette_wipe` | global mix stand-in | 20.30 | 30.50 | 4.67 | +15.64 |  |
