@@ -53,6 +53,8 @@ pub const FILMORA_LANE2: &[(&str, &str)] = &[
     ("F163DDE7-90AF-077C-84B2-1498C379F735", "jb.camera_cards_7"),
     // 3D Camera Transitions 8
     ("BCD1F0EA-3EEA-EBE7-EAC8-6FE53723769E", "jb.camera_cards_8"),
+    // 3D Camera Transitions 9
+    ("39701EAA-6FF3-DDF1-B765-F2F4B76ED063", "jb.camera_cards_9"),
     // 3D Card
     ("1C56ABE1-F948-4426-AC71-6710D6362312", "jb.card_3d"),
     // Card Spin Left
