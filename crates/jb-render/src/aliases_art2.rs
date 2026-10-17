@@ -32,6 +32,9 @@ pub const FILMORA_ART2: &[(&str, &str, &str)] = &[
     ("9ACD289B-0E2C-4A81-8BFF-687BAEB6FC56", "jb.torn_paper_hole", "Paper Tear Transition 20"),
     ("0EB21BC5-6121-40A3-987A-217661816A98", "jb.torn_paper_rift", "Torn Paper Transition 09"),
     ("9C246287-A006-4F7D-A161-BAB117D39BAB", "jb.paper_roll_peel", "Grunge Scribble Vlog Transition 02"),
+    ("38E486E2-3A8B-4628-8E29-4D6E17EE9867", "jb.alternating_brush_strokes", "Stylish Brush Transition 20"),
+    ("309343C0-ED56-491B-9EEB-2C5BF3F553AA", "jb.slanted_brush_streaks", "Stylish Brush Transition 12"),
+    ("CF7E8635-849C-4D99-920C-3BEBDE7E70B2", "jb.painted_heart_strokes", "Stylish Brush Transition 03"),
 ];
 
 pub fn register(r: &mut Registry) {

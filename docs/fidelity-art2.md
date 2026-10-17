@@ -29,7 +29,7 @@ just before and after the window. "Before" is the stand-in, "After" our item.
 An alias was switched only when the contact sheet (reference over ours) looks
 right and the mean MAD is lower than the stand-in's.
 
-24 of 31 items upgraded.
+27 of 31 items upgraded.
 
 | Item | GUID | Renders as | Floor | Before | After | Notes |
 |---|---|---|---|---|---|---|
@@ -49,8 +49,8 @@ right and the mean MAD is lower than the stand-in's.
 | Brush Drift Transition 08 | `8498be69-834b-f111-9e87-50ebf65600b6` | jb.watercolor_strips | 2.27 | 10.91 / 22.89 | 9.96 / 16.93 |  |
 | Brush Drift Transition 09 | `8598be69-834b-f111-9e87-50ebf65600b6` | jb.watercolor_bands | 2.31 | 6.32 / 23.02 | 5.72 / 21.07 |  |
 | Brush Drift Transition 10 | `8698be69-834b-f111-9e87-50ebf65600b6` | jb.ink_blooms | 2.33 | 7.84 / 22.56 | 6.08 / 15.60 |  |
-| Colorful Brush Transition 05 | `d1c03638-dc96-f111-b463-d8bbc19410ee` | stand-in | 2.54 | 8.19 / 20.86 | — |  |
-| Colorful Brush Transition 07 | `cfc03638-dc96-f111-b463-d8bbc19410ee` | stand-in | 2.70 | 6.86 / 20.79 | — |  |
+| Colorful Brush Transition 05 | `d1c03638-dc96-f111-b463-d8bbc19410ee` | stand-in | 2.54 | 8.19 / 20.86 | — | stand-in: translucent multicoloured streak burst; the kit has no line-burst primitive and the fitted mix is already close |
+| Colorful Brush Transition 07 | `cfc03638-dc96-f111-b463-d8bbc19410ee` | stand-in | 2.70 | 6.86 / 20.79 | — | stand-in: translucent multicoloured streak sweep (same reason) |
 | Golden Brush Transition 01 | `c826f80c-db96-f111-b463-d8bbc19410ee` | jb.gold_tide | 2.62 | 19.18 / 38.46 | 15.40 / 28.25 |  |
 | Golden Brush Transition 02 | `de3499f9-d196-f111-b463-d8bbc19410ee` | jb.gold_curtain | 2.39 | 20.11 / 38.09 | 16.14 / 33.92 |  |
 | Golden Brush Transition 03 | `c726f80c-db96-f111-b463-d8bbc19410ee` | jb.gold_cross_strokes | 2.40 | 18.59 / 41.80 | 17.46 / 40.33 | full-gold frames are near the texture-noise limit (uncorrelated brushing) |
@@ -59,8 +59,8 @@ right and the mean MAD is lower than the stand-in's.
 | Golden Brush Transition 06 | `06868c04-ce96-f111-b463-d8bbc19410ee` | jb.gold_slash_run | 2.58 | 11.48 / 38.70 | 8.90 / 29.34 |  |
 | Golden Brush Transition 07 | `05868c04-ce96-f111-b463-d8bbc19410ee` | jb.gilded_torn_edge | 2.32 | 11.12 / 28.52 | 6.87 / 16.44 |  |
 | Golden Brush Transition 08 | `df3499f9-d196-f111-b463-d8bbc19410ee` | jb.gold_vortex | 2.59 | 23.17 / 39.47 | 20.71 / 43.67 | worst frame higher than the stand-in (the reference scatters speckles at the vortex edge) |
-| Stylish Brush Transition 03 | `CF7E8635-849C-4D99-920C-3BEBDE7E70B2` | stand-in | 2.31 | 13.69 / 29.08 | — |  |
-| Stylish Brush Transition 09 | `115818EE-EEF8-4904-AA17-6D3571B9B2BB` | stand-in | 2.29 | 9.98 / 27.50 | — |  |
-| Stylish Brush Transition 12 | `309343C0-ED56-491B-9EEB-2C5BF3F553AA` | stand-in | 2.35 | 15.94 / 28.72 | — |  |
-| Stylish Brush Transition 17 | `D725AB61-3F6B-44F9-8059-128298182DCC` | stand-in | 2.43 | 9.89 / 26.81 | — |  |
-| Stylish Brush Transition 20 | `38E486E2-3A8B-4628-8E29-4D6E17EE9867` | stand-in | 2.37 | 15.72 / 28.15 | — |  |
+| Stylish Brush Transition 03 | `CF7E8635-849C-4D99-920C-3BEBDE7E70B2` | jb.painted_heart_strokes | 2.31 | 13.69 / 29.08 | 9.41 / 23.33 |  |
+| Stylish Brush Transition 09 | `115818EE-EEF8-4904-AA17-6D3571B9B2BB` | stand-in | 2.29 | 9.98 / 27.50 | — | stand-in: diagonal stroke draft measured worse (quick MAD 16.0 vs 15.2); the motion starts before the window |
+| Stylish Brush Transition 12 | `309343C0-ED56-491B-9EEB-2C5BF3F553AA` | jb.slanted_brush_streaks | 2.35 | 15.94 / 28.72 | 13.19 / 28.89 | the old clip lingers as dry streaks until the cut, as in the reference |
+| Stylish Brush Transition 17 | `D725AB61-3F6B-44F9-8059-128298182DCC` | stand-in | 2.43 | 9.89 / 26.81 | — | stand-in: diagonal stroke draft measured worse (quick MAD 20.3 vs 14.6); lingering fragments fade out slowly |
+| Stylish Brush Transition 20 | `38E486E2-3A8B-4628-8E29-4D6E17EE9867` | jb.alternating_brush_strokes | 2.37 | 15.72 / 28.15 | 10.54 / 24.48 |  |

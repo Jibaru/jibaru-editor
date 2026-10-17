@@ -337,6 +337,62 @@ fn paper_peel() -> ArtItem {
     it
 }
 
+/// Round-headed horizontal strokes alternate across the frame, top to
+/// bottom, the last ones dry and streaky.
+fn alternating_strokes() -> ArtItem {
+    item(
+        "jb.alternating_brush_strokes",
+        "Alternating Brush Strokes",
+        "Broad horizontal brush strokes cross the frame alternately from the right and the left, finishing with dry streaky strokes along the edges.",
+        0.79,
+        vec![
+            Stroke::brush([1.1, 0.16], [-0.15, 0.22], 0.15, 0.0975, 0.3).ease(Ease::Out).rag(0.12).seed(1.0),
+            Stroke::brush([-0.1, 0.49], [1.15, 0.39], 0.1725, 0.1825, 0.385).ease(Ease::Out).rag(0.12).seed(3.3),
+            Stroke::brush([1.1, 0.68], [-0.15, 0.68], 0.12, 0.2525, 0.505).ease(Ease::Out).rag(0.12).seed(5.6),
+            Stroke::brush([-0.1, 0.92], [1.15, 0.92], 0.12, 0.38, 0.5275).ease(Ease::Out).rag(0.12).seed(7.9).dry(0.5).dry_until(0.6775),
+            Stroke::brush([-0.1, 0.09], [1.15, 0.07], 0.13, 0.5525, 0.7825).ease(Ease::Out).rag(0.12).seed(10.2).dry(0.5).dry_until(0.9325),
+        ],
+    )
+}
+
+/// Slanted strokes criss-cross the frame; the last broad dry strokes
+/// leave thin streaks of the old clip until the end.
+fn slanted_streaks() -> ArtItem {
+    item(
+        "jb.slanted_brush_streaks",
+        "Slanted Brush Streaks",
+        "Slanted brush strokes rise across the frame from both sides, then broad dry strokes cover it, leaving fine streaks of the old clip that linger to the end.",
+        0.9325,
+        vec![
+            Stroke::brush([-0.1993, 0.1309], [1.0706, -0.3079], 0.148, 0.1045, 0.3215).ease(Ease::Out).rag(0.12).seed(1.0),
+            Stroke::brush([-0.0181, 1.1999], [1.0908, 0.0153], 0.1145, 0.1555, 0.38).ease(Ease::Out).rag(0.12).seed(3.3),
+            Stroke::brush([0.0768, 1.3982], [1.0822, -0.0492], 0.1145, 0.2055, 0.43).ease(Ease::Out).rag(0.12).seed(5.6),
+            Stroke::brush([1.102, 0.0675], [-0.0507, 1.1116], 0.1525, 0.218, 0.383).ease(Ease::Out).rag(0.12).seed(7.9),
+            Stroke::brush([1.2407, 0.6026], [0.0681, 1.5747], 0.182, 0.3055, 0.53).ease(Ease::Out).rag(0.12).seed(10.2),
+            Stroke::brush([0.013, 1.3339], [1.1657, 0.2898], 0.2775, 0.3525, 0.555).ease(Ease::Out).rag(0.12).seed(12.5).dry(0.5),
+            Stroke::brush([-0.1504, 0.775], [0.9919, -0.3048], 0.3225, 0.3725, 0.575).ease(Ease::Out).rag(0.12).seed(14.8).dry(0.5),
+        ],
+    )
+}
+
+/// A heart is painted in two loops from its tip, then broad strokes fill
+/// the frame around it.
+fn painted_heart() -> ArtItem {
+    item(
+        "jb.painted_heart_strokes",
+        "Painted Heart Strokes",
+        "A brush paints a heart in two sweeping loops with the new clip, then broad horizontal strokes fill in the rest of the frame.",
+        0.69,
+        vec![
+            Stroke::brush([0.47, 0.95], [0.48, 0.36], 0.065, 0.058, 0.273).via([0.075, -0.038]).ease(Ease::Smooth).rag(0.1).jag(0.6).seed(1.0),
+            Stroke::brush([0.48, 0.36], [0.47, 0.95], 0.065, 0.253, 0.413).via([0.938, -0.038]).ease(Ease::Smooth).rag(0.1).jag(0.6).seed(2.0),
+            Stroke::brush([-0.1, 0.5], [1.15, 0.48], 0.178, 0.453, 0.551).ease(Ease::Out).rag(0.12).seed(3.0),
+            Stroke::brush([1.1, 0.2], [-0.15, 0.15], 0.16, 0.483, 0.686).ease(Ease::Out).rag(0.12).seed(4.0),
+            Stroke::brush([-0.1, 0.85], [1.15, 0.88], 0.16, 0.513, 0.766).ease(Ease::Out).rag(0.12).dry(0.4).dry_until(0.753).seed(5.0),
+        ],
+    )
+}
+
 /// Library listing, in display order (every item of [`items`]).
 pub const LIB_IDS: &[&str] = &["jb.brush_columns", "jb.dry_brush_sweeps", "jb.swelling_brush_stroke", "jb.brush_drift_three", "jb.diagonal_brush_drift", "jb.rising_brush_drift",
     "jb.crossing_brush_drift",
@@ -349,6 +405,9 @@ pub const LIB_IDS: &[&str] = &["jb.brush_columns", "jb.dry_brush_sweeps", "jb.sw
     "jb.torn_paper_hole",
     "jb.torn_paper_rift",
     "jb.paper_roll_peel",
+    "jb.alternating_brush_strokes",
+    "jb.slanted_brush_streaks",
+    "jb.painted_heart_strokes",
 ];
 
 pub fn items() -> Vec<ArtItem> {
@@ -363,5 +422,8 @@ pub fn items() -> Vec<ArtItem> {
         torn_hole(),
         torn_rift(),
         paper_peel(),
+        alternating_strokes(),
+        slanted_streaks(),
+        painted_heart(),
     ]
 }
