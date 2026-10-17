@@ -2,7 +2,7 @@
 //! for the kit in `art2_paint.rs`. Positions are uv (0..1, y down), widths
 //! fractions of the frame height, times progress.
 
-use super::art2_paint::{ArtItem, Ease, Stroke, Style};
+use super::art2_paint::{ArtItem, Ease, Paint, Stroke, Style, ASPECT};
 
 const CAT: &str = "Paint & Paper";
 
@@ -261,6 +261,82 @@ fn ink_blooms() -> ArtItem {
     )
 }
 
+/// A torn hole that opens from a point and widens until it fills the
+/// frame, its ragged edge trimmed with a white paper rim.
+fn torn_hole() -> ArtItem {
+    let blot = || Stroke::blot([0.4575, 0.7075], 0.0, 0.95, 0.1575, 0.595).stretch(2.025, 1.0).style(Style::Torn).rag(0.275).ease(Ease::In).seed(3.0);
+    let mut it = item(
+        "jb.torn_paper_hole",
+        "Torn Paper Hole",
+        "A small tear appears in the frame and rips wider and wider, its white paper edge rimming the new clip until it fills the frame.",
+        0.7,
+        vec![blot().paint(0).rim(0.014), blot()],
+    );
+    it.paints = vec![Paint::PAPER];
+    it
+}
+
+/// A straight line through the frame centre (x at `cx`) at `deg` degrees.
+fn rift_line(cx: f32, deg: f32) -> ([f32; 2], [f32; 2], [f32; 2]) {
+    let (s, c) = deg.to_radians().sin_cos();
+    let (x, l) = (cx * ASPECT, 1.35);
+    ([(x - c * l) / ASPECT, 0.5 - s * l], [cx, 0.5], [(x + c * l) / ASPECT, 0.5 + s * l])
+}
+
+/// A thin tear runs down the frame, then the rift swings round to the
+/// horizontal while it widens into a torn band that swallows the frame.
+fn torn_rift() -> ArtItem {
+    // (progress, angle, half width, centre x) keyframes of the rift.
+    let k: [(f32, f32, f32, f32); 5] = [(0.32, -83.0, 0.004, 0.36), (0.38, -58.75, 0.012, 0.45), (0.4, -38.75, 0.1, 0.5), (0.507, -3.0, 0.263, 0.5), (0.666, 0.0, 0.425, 0.5)];
+    let mut v = Vec::new();
+    for i in 0..4 {
+        let ((ta, da, wa, xa), (tb, db, wb, xb)) = (k[i], k[i + 1]);
+        let (a0, c0, b0) = rift_line(xa, da);
+        let (a1, c1, b1) = rift_line(xb, db);
+        let s = || {
+            let st = Stroke::brush(a0, b0, wa, ta, ta + 0.003)
+                .via(c0)
+                .ease(Ease::Linear)
+                .style(Style::Torn)
+                .rag(0.25)
+                .jag(0.0)
+                .morph(a1, c1, b1, ta, tb)
+                .grow(ta, tb, wb / wa)
+                .seed(2.0);
+            if i < 3 { st.fade_out(tb, tb + 0.001) } else { st }
+        };
+        v.push(s().paint(0).rim(0.012));
+        v.push(s());
+    }
+    let mut it = item(
+        "jb.torn_paper_rift",
+        "Torn Paper Rift",
+        "A hairline tear splits the frame top to bottom, swings round to the horizontal and rips open into a wide band with white paper edges.",
+        0.71,
+        v,
+    );
+    it.paints = vec![Paint::PAPER];
+    it
+}
+
+/// The old clip peels away diagonally from the top-left corner, rolling
+/// up into a glossy paper curl along a torn edge.
+fn paper_peel() -> ArtItem {
+    let roll = Paint { base: [0.62, 0.62, 0.64], light: [0.97, 0.97, 0.98], streak: 0.1, sheen: 0.6, wet: 0.0, grain: 0.02, shade: 0.55, alpha: 1.0 };
+    let mut it = item(
+        "jb.paper_roll_peel",
+        "Paper Roll Peel",
+        "The frame peels off diagonally from the top-left corner like a sheet of paper, rolling into a shiny curl that uncovers the new clip.",
+        0.6,
+        vec![
+            Stroke::sweep_dir(38.25, -1.055, 0.92, 0.31, 0.59).ease(Ease::Smooth).style(Style::Torn).rag(0.05).widths(0.1, 0.1).seed(4.0),
+            Stroke::sweep_dir(38.25, -1.025, 0.95, 0.31, 0.59).ease(Ease::Smooth).style(Style::Clean).rag(0.0).paint(0).rim(0.05).invert(),
+        ],
+    );
+    it.paints = vec![roll];
+    it
+}
+
 /// Library listing, in display order (every item of [`items`]).
 pub const LIB_IDS: &[&str] = &["jb.brush_columns", "jb.dry_brush_sweeps", "jb.swelling_brush_stroke", "jb.brush_drift_three", "jb.diagonal_brush_drift", "jb.rising_brush_drift",
     "jb.crossing_brush_drift",
@@ -270,6 +346,9 @@ pub const LIB_IDS: &[&str] = &["jb.brush_columns", "jb.dry_brush_sweeps", "jb.sw
     "jb.watercolor_strips",
     "jb.watercolor_bands",
     "jb.ink_blooms",
+    "jb.torn_paper_hole",
+    "jb.torn_paper_rift",
+    "jb.paper_roll_peel",
 ];
 
 pub fn items() -> Vec<ArtItem> {
@@ -281,5 +360,8 @@ pub fn items() -> Vec<ArtItem> {
         wash_strips(),
         wash_bands(),
         ink_blooms(),
+        torn_hole(),
+        torn_rift(),
+        paper_peel(),
     ]
 }

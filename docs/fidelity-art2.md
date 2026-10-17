@@ -29,16 +29,16 @@ just before and after the window. "Before" is the stand-in, "After" our item.
 An alias was switched only when the contact sheet (reference over ours) looks
 right and the mean MAD is lower than the stand-in's.
 
-21 of 31 items upgraded.
+24 of 31 items upgraded.
 
 | Item | GUID | Renders as | Floor | Before | After | Notes |
 |---|---|---|---|---|---|---|
 | Brush Art Design Pack Transition 08 | `3B7844DB-2D95-4136-BE2E-4D59D3FB0CF8` | jb.brush_columns | 2.37 | 20.19 / 29.28 | 7.71 / 10.32 |  |
-| Paper Tear Transition 20 | `9ACD289B-0E2C-4A81-8BFF-687BAEB6FC56` | stand-in | 2.29 | 14.08 / 45.26 | — |  |
+| Paper Tear Transition 20 | `9ACD289B-0E2C-4A81-8BFF-687BAEB6FC56` | jb.torn_paper_hole | 2.29 | 14.08 / 45.26 | 9.70 / 35.67 |  |
 | Beauty Brush Transition 1 | `b20e8acf-35d7-4958-aebc-64d2358c6b97` | jb.dry_brush_sweeps | 2.40 | 9.52 / 29.15 | 7.79 / 21.82 |  |
 | Beauty Brush Transition 2 | `2fe80ebb-e89e-4de9-b669-c9de540d15ea` | jb.swelling_brush_stroke | 2.39 | 12.21 / 28.85 | 7.16 / 26.86 |  |
-| Grunge Scribble Vlog Transition 02 | `9C246287-A006-4F7D-A161-BAB117D39BAB` | stand-in | 2.52 | 6.92 / 32.17 | — |  |
-| Torn Paper Transition 09 | `0EB21BC5-6121-40A3-987A-217661816A98` | stand-in | 2.88 | 12.11 / 33.28 | — |  |
+| Grunge Scribble Vlog Transition 02 | `9C246287-A006-4F7D-A161-BAB117D39BAB` | jb.paper_roll_peel | 2.52 | 6.92 / 32.17 | 6.41 / 32.65 | our curl is a flat glossy band; the reference curl is a 3D roll (worst frame slightly higher) |
+| Torn Paper Transition 09 | `0EB21BC5-6121-40A3-987A-217661816A98` | jb.torn_paper_rift | 2.88 | 12.11 / 33.28 | 6.86 / 21.69 |  |
 | Brush Drift Transition 01 | `7d98be69-834b-f111-9e87-50ebf65600b6` | jb.brush_drift_three | 2.30 | 7.94 / 27.97 | 4.28 / 21.47 |  |
 | Brush Drift Transition 02 | `8298be69-834b-f111-9e87-50ebf65600b6` | jb.diagonal_brush_drift | 2.30 | 8.06 / 26.93 | 5.23 / 19.21 |  |
 | Brush Drift Transition 03 | `8198be69-834b-f111-9e87-50ebf65600b6` | jb.rising_brush_drift | 2.27 | 7.63 / 25.89 | 5.03 / 19.60 |  |

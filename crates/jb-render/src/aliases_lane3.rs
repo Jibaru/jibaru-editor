@@ -82,7 +82,6 @@ pub const FILMORA_LANE3: &[(&str, &str, &str)] = &[
     ("AB52FC51-E764-43EF-9657-6B8D4682B8C7", "jb.gold_ribbon_3", "Golden Awards Transition 02"),
     ("3D48ACDA-D37A-45DA-A3D0-0CB7185CFDDF", "jb.golden_bloom_flash", "Golden Awards Transition 04"),
     ("0C81A5C9-D713-4CA9-A505-56F8DAE621CA", "jb.gold_glitter_flash", "Golden Awards Transition 05"),
-    ("9C246287-A006-4F7D-A161-BAB117D39BAB", "jb.torn_paper_wipe", "Grunge Scribble Vlog Transition 02"),
     ("1796F3A3-96E9-4C66-BBAF-41847B6D35D8", "jb.skull_wedge_wipe", "Halloween Colorful Transition 06"),
     ("699564A5-6532-43AA-BD1D-BE35CB2F8490", "jb.pumpkin_pop_wipe", "Halloween Colorful Transition 15"),
     ("E61AC3B1-6DAD-470B-A1D9-3D24EF6D6565", "jb.ghost_curve_wipe", "Halloween Colorful Transition 23"),
