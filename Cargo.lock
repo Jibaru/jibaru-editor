@@ -2533,6 +2533,7 @@ name = "jibaru-editor"
 version = "0.1.3"
 dependencies = [
  "anyhow",
+ "block2",
  "cpal",
  "image",
  "jb-core",
@@ -2540,6 +2541,9 @@ dependencies = [
  "jb-filmora",
  "jb-media",
  "jb-render",
+ "objc2-app-kit",
+ "objc2-foundation",
+ "objc2-web-kit",
  "serde",
  "serde_json",
  "tauri",

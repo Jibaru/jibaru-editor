@@ -69,7 +69,10 @@ cargo build --release -p jibaru-editor --features tauri/custom-protocol
 `JB_PLAYBACK_LOG=1` logs displayed/rendered fps and dropped frames while
 playing. `JB_AUTOMATION_DIR=<dir>` (development only) evaluates every `*.js`
 file dropped into `<dir>` in the webview, with the editor store exposed as
-`window.__jb`, for scripted UI tests.
+`window.__jb`, for scripted UI tests. On macOS, `await __jb.snapshot(path)`
+saves a TIFF of the window's webview at its backing scale, which is how the
+screenshots in `docs/images/` are taken (no screen-recording permission
+needed).
 
 ## FFmpeg licensing
 

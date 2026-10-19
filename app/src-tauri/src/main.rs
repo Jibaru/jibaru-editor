@@ -645,6 +645,43 @@ fn automation_log(text: String) {
     eprintln!("automation: {text}");
 }
 
+/// Test automation (development only, with `JB_AUTOMATION_DIR` set): saves a
+/// snapshot of the main webview at its backing scale as a TIFF file, for
+/// documentation screenshots without screen-recording access (macOS only).
+#[tauri::command]
+async fn automation_snapshot(window: tauri::WebviewWindow, path: String) -> Result<(), String> {
+    if std::env::var_os("JB_AUTOMATION_DIR").is_none() {
+        return Err("automation is disabled".into());
+    }
+    #[cfg(target_os = "macos")]
+    {
+        let (tx, rx) = std::sync::mpsc::channel::<Result<Vec<u8>, String>>();
+        window
+            .with_webview(move |wv| {
+                use objc2_app_kit::NSImage;
+                use objc2_foundation::NSError;
+                use objc2_web_kit::WKWebView;
+                let tx = tx.clone();
+                let done = block2::RcBlock::new(move |img: *mut NSImage, _err: *mut NSError| {
+                    // SAFETY: WebKit passes a valid image (or null on failure).
+                    let tiff = unsafe { img.as_ref() }.and_then(|i| i.TIFFRepresentation()).map(|d| d.to_vec());
+                    let _ = tx.send(tiff.ok_or_else(|| "snapshot failed".to_string()));
+                });
+                // SAFETY: on macOS the platform webview is a WKWebView.
+                let view = unsafe { &*(wv.inner() as *const WKWebView) };
+                unsafe { view.takeSnapshotWithConfiguration_completionHandler(None, &done) };
+            })
+            .map_err(|e| e.to_string())?;
+        let tiff = rx.recv_timeout(Duration::from_secs(10)).map_err(|e| e.to_string())??;
+        std::fs::write(&path, tiff).map_err(|e| format!("{path}: {e}"))
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = (window, path);
+        Err("snapshots are only available on macOS".into())
+    }
+}
+
 fn session_dirty(app: &AppHandle) -> bool {
     app.state::<AppState>().0.lock().map(|s| s.dirty()).unwrap_or(false)
 }
@@ -899,7 +936,8 @@ fn main() {
             allow_exit,
             set_menu_checked,
             autosave_dir,
-            automation_log
+            automation_log,
+            automation_snapshot,
         ])
         .build(tauri::generate_context!())
         .expect("error while building Jibaru Editor");

@@ -14,6 +14,10 @@
 [Agents & MCP](docs/agents.md) ·
 [Report a bug](https://github.com/Jibaru/jibaru-editor/issues)
 
+<br>
+
+<img src="docs/images/hero.webp" width="100%" alt="Jibaru Editor on macOS: transitions library, player showing a Summer Trip title over a mountain lake, video properties, and a multitrack timeline with titles, B-roll, transitions, markers, music and ambience waveforms">
+
 </div>
 
 ---
@@ -27,6 +31,44 @@ the [Model Context Protocol](https://modelcontextprotocol.io).
 
 It also opens and saves **Filmora `.wfp` projects**, so existing projects can
 be edited, rendered and handed back without conversion.
+
+## Screenshots
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/images/timeline.webp" alt="Timeline with two video and two audio tracks, transitions between clips, markers and waveforms">
+      <p align="center"><b>Multitrack timeline</b><br>Titles, B-roll, transitions, markers and audio waveforms</p>
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/images/transitions.webp" alt="Transitions library with rendered previews and the Cross Zoom transition playing in the player">
+      <p align="center"><b>Transitions with live previews</b><br>Every card is rendered by the engine and plays in the player</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/images/color.webp" alt="Color tab with presets, LUT and white balance controls next to a graded clip in the player">
+      <p align="center"><b>Color correction</b><br>Presets, LUTs, HSL, curves and color wheels</p>
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/images/effects-audio.webp" alt="Effects library, player and the audio properties of the music clip">
+      <p align="center"><b>Effects and audio</b><br>GPU effects, fades, pan, pitch and equalizer per clip</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/images/export.webp" alt="Export dialog rendering a 30-second 1080p project at 273 frames per second">
+      <p align="center"><b>Hardware-accelerated export</b><br>A 30 s 1080p project rendering at 273 fps</p>
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/images/terminal.webp" alt="Terminal running jb find-clips, jb exec with a set_transition command, and jb render with JSON output">
+      <p align="center"><b>Scriptable from the shell</b><br>The same engine through the <code>jb</code> CLI and <code>jb-mcp</code></p>
+    </td>
+  </tr>
+</table>
+
+The demo project is built entirely with the `jb` CLI from footage rendered by
+Jibaru's own procedural sample scenes, with an original CC0 soundtrack.
 
 ## Features
 
