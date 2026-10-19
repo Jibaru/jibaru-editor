@@ -192,6 +192,7 @@ covered in [docs/packaging.md](docs/packaging.md) and
 | Document | Contents |
 | --- | --- |
 | [docs/agents.md](docs/agents.md) | MCP server, CLI contract and editing command reference |
+| [skills/](skills/) | Agent skills for editing personal vlogs in a consistent house style |
 | [docs/building.md](docs/building.md) | Building and testing on macOS and Windows |
 | [docs/packaging.md](docs/packaging.md) | Bundling FFmpeg, signing and installers |
 | [docs/updates.md](docs/updates.md) | Auto-update and release process |
