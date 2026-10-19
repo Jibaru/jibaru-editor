@@ -37,7 +37,7 @@ be edited, rendered and handed back without conversion.
 - Unlimited undo and redo, autosave and backups
 
 ### Effects and color
-- 190+ transitions, effects, filters and in/out animations, rendered on the GPU
+- 800+ transitions, effects, filters and in/out animations, rendered on the GPU
 - Titles with fonts, stroke, shadow and background
 - Color correction: exposure, white balance, HSL, curves, color wheels and `.cube` LUTs
 - Masks, chroma key, blend modes, background blur, drop shadow, stabilization and lens correction
@@ -50,7 +50,7 @@ be edited, rendered and handed back without conversion.
 - Rust engine with wgpu compositing on Metal, Direct3D 12 and Vulkan
 - Hardware decoding and encoding (VideoToolbox, NVENC, Quick Sync, AMF)
 - Smooth 4K editing with automatic proxies (including GoPro `.LRV` files)
-- Exports 4K HEVC at roughly 3× real time on an Apple M4 Pro
+- Exports 4K HEVC at ~100 fps (over 3× real time) on an Apple M4 Pro
 
 ### Interoperability
 - Lossless read/write of Filmora `.wfp` projects: unedited projects round-trip byte for byte
