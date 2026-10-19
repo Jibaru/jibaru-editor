@@ -1,0 +1,4 @@
+node_modules/
+out/
+# Generated engine clips (regenerate with scripts/generate-clips.sh)
+public/clips/
