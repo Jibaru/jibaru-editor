@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "remotion studio",
     "clips": "bash scripts/generate-clips.sh",
-    "render:vertical": "remotion render PromoVertical out/jibaru-promo-vertical.mp4 --codec=h264 --crf=16",
-    "render:landscape": "remotion render PromoLandscape out/jibaru-promo-landscape.mp4 --codec=h264 --crf=16",
+    "music": "python3 scripts/compose-music.py",
+    "render:vertical": "remotion render PromoVertical out/jibaru-promo-vertical.mp4 --codec=h264 --crf=16 --audio-codec=aac --audio-bitrate=320k",
+    "render:landscape": "remotion render PromoLandscape out/jibaru-promo-landscape.mp4 --codec=h264 --crf=16 --audio-codec=aac --audio-bitrate=320k",
     "render:cover": "remotion still Cover out/jibaru-cover.png",
     "render:teaser": "remotion render Teaser out/jibaru-teaser.gif --codec=gif --every-nth-frame=2",
     "render": "npm run render:vertical && npm run render:landscape && npm run render:cover && npm run render:teaser",
